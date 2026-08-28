@@ -13,7 +13,7 @@
       <view class="hero-sub">有人愿意，安静听你说</view>
       <view class="hero-chip"><view class="dot-online"></view>当前 {{onlineCount}} 位服务者在线</view>
     </view>
-    <image class="hero-img" src="/images/hero.png" mode="aspectFill" />
+    <image class="hero-img" src="/images/hero.jpg" mode="aspectFill" />
   </view>
 
   <view class="tabs">

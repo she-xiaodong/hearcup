@@ -14,10 +14,9 @@ App({
     config: {
       // ⚠️ 测试开关：true=本地演示数据（离线可用）；false=连接真实后端（见 baseUrl）
       // 可在「我的 → 开发者自检」页切换，并持久化到 storage
-      useMock: true,
-      // 真实后端地址：真机调试必须填电脑的局域网 IP（localhost 手机访问不到）
-      // 微信开发者工具需勾选「不校验合法域名」
-      baseUrl: 'http://192.168.1.6:8099',
+      useMock: false,
+      // 真实后端地址（生产）：已部署到 shanlianba.com，HTTPS 已备案
+      baseUrl: 'https://shanlianba.com',
       listenerPrice: 1.0,
       counselorPrice: 2.0,
       minBalance: 3.0,
