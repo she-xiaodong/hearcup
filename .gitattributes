@@ -1,0 +1,24 @@
+# 统一换行符与编码，避免中文乱码
+* text=auto
+
+# 源码统一 LF
+*.go  text eol=lf
+*.js  text eol=lf
+*.json text eol=lf
+*.wxml text eol=lf
+*.wxss text eol=lf
+*.html text eol=lf
+*.css  text eol=lf
+*.md   text eol=lf
+*.py   text eol=lf
+*.mod  text eol=lf
+*.sum  text eol=lf
+
+# 二进制（不做换行转换）
+*.png  binary
+*.jpg  binary
+*.jpeg binary
+*.gif  binary
+*.docx binary
+*.p12  binary
+*.pem  binary

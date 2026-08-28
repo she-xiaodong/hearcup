@@ -1,0 +1,69 @@
+<view class="page">
+  <view class="hd">
+    <view class="hd-title">开发者自检</view>
+    <view class="hd-sub">真机联调用：逐段验证后端 / 微信登录 / 支付 / TRTC</view>
+  </view>
+
+  <!-- 配置区 -->
+  <view class="card">
+    <view class="card-title">连接配置</view>
+    <view class="row">
+      <view class="row-label">后端地址</view>
+      <input class="row-input" value="{{baseUrl}}" placeholder="http://192.168.1.6:8099" bindinput="onUrlInput" />
+    </view>
+    <view class="row">
+      <view class="row-label">演示数据</view>
+      <switch checked="{{useMock}}" bindchange="onToggleMock" color="#4FB8A8" />
+    </view>
+    <view class="hint">真机调试需关掉「演示数据」，且地址填电脑局域网 IP（本机为 192.168.1.6）。开发者工具请勾选「不校验合法域名」。</view>
+    <view class="btn-row">
+      <button class="btn-mini" bindtap="saveCfg">保存配置</button>
+      <button class="btn-mini btn-primary" bindtap="runAll">一键自检</button>
+    </view>
+  </view>
+
+  <!-- 结果区 -->
+  <view class="card">
+    <view class="card-title">自检结果</view>
+    <view wx:for="{{steps}}" wx:key="name" class="step">
+      <view class="step-dot" style="background:{{item.ok?'#4FB8A8':(item.ok===false?'#FF6B6B':'#C9CFD6')}}"></view>
+      <view class="step-body">
+        <view class="step-name">{{item.name}}</view>
+        <view class="step-detail">{{item.detail}}</view>
+      </view>
+      <view class="step-mark">{{item.ok?'✓':(item.ok===false?'✕':'·')}}</view>
+    </view>
+    <view wx:if="{{steps.length===0}}" class="empty">点上方「一键自检」开始</view>
+  </view>
+
+  <!-- 环境配置 -->
+  <view class="card" wx:if="{{env}}">
+    <view class="card-title">后端集成状态</view>
+    <view class="env-row"><text class="env-k">MySQL</text><text class="env-v {{env.mysql.enabled?'on':'off'}}">{{env.mysql.enabled?'已连接':'回退 JSON'}}</text></view>
+    <view class="env-row"><text class="env-k">腾讯 TRTC</text><text class="env-v {{env.trtc.enabled?'on':'off'}}">{{env.trtc.enabled?'AppID '+env.trtc.sdkappid:'未配置'}}</text></view>
+    <view class="env-row"><text class="env-k">微信登录</text><text class="env-v {{env.wechat_login.enabled?'on':'off'}}">{{env.wechat_login.enabled?'已配置 '+env.wechat_login.appid:'未配置'}}</text></view>
+    <view class="env-row"><text class="env-k">微信支付</text><text class="env-v {{env.wechat_pay.enabled?'on':'off'}}">{{env.wechat_pay.enabled?'商户号 '+env.wechat_pay.mchid:'未配置'}}</text></view>
+    <view class="env-row"><text class="env-k">支付回调</text><text class="env-v {{env.wechat_pay.notify_url.indexOf('example.com')>=0?'off':'on'}}">{{env.wechat_pay.notify_url}}</text></view>
+  </view>
+
+  <!-- 身份区 -->
+  <view class="card" wx:if="{{me}}">
+    <view class="card-title">当前身份</view>
+    <view class="env-row"><text class="env-k">openid</text><text class="env-v" user-select>{{me.openid}}</text></view>
+    <view class="env-row"><text class="env-k">来源</text><text class="env-v {{me.isRealWx?'on':'off'}}">{{me.isRealWx?'真实微信登录（code2Session 已通）':'演示账号（未走 code2Session）'}}</text></view>
+    <view class="env-row"><text class="env-k">unionid</text><text class="env-v">{{me.unionid || '（无，需绑定开放平台）'}}</text></view>
+    <view class="env-row"><text class="env-k">余额</text><text class="env-v">¥{{me.balance}}</text></view>
+  </view>
+
+  <!-- 支付/通话实测 -->
+  <view class="card" wx:if="{{!useMock}}">
+    <view class="card-title">真链路实测</view>
+    <view class="btn-row">
+      <button class="btn-mini" bindtap="testPay">充值 ¥10（真实支付）</button>
+      <button class="btn-mini" bindtap="testCall">呼叫测试（真实 UserSig）</button>
+    </view>
+    <view wx:if="{{payResult}}" class="result-box">{{payResult}}</view>
+    <view wx:if="{{callResult}}" class="result-box">{{callResult}}</view>
+    <view class="hint">后端限制单次最低 ¥10。真实支付会拉起微信收银台，付完钱会真的到账（进你自己的商户号）。但「余额入账」依赖支付回调——当前回调地址还是 example.com 占位，所以付完余额不会立刻增加，需先部署公网 HTTPS 并改 HEARCUP_WXPAY_NOTIFY_URL。呼叫仅验证能否取到房间号与 UserSig，不建立真实音视频连接。</view>
+  </view>
+</view>

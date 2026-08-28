@@ -1,0 +1,32 @@
+{
+  "pages": [
+    "pages/index/index",
+    "pages/calls/calls",
+    "pages/profile/profile",
+    "pages/detail/detail",
+    "pages/calling/calling",
+    "pages/recharge/recharge",
+    "pages/apply/apply",
+    "pages/devcheck/devcheck"
+  ],
+  "window": {
+    "navigationBarBackgroundColor": "#4FB8A8",
+    "navigationBarTitleText": "一杯心晴",
+    "navigationBarTextStyle": "white",
+    "backgroundColor": "#FBF7F2",
+    "backgroundTextStyle": "light"
+  },
+  "tabBar": {
+    "custom": true,
+    "color": "#8A8FA3",
+    "selectedColor": "#4FB8A8",
+    "backgroundColor": "#FFFFFF",
+    "list": [
+      { "pagePath": "pages/index/index", "text": "首页" },
+      { "pagePath": "pages/calls/calls", "text": "通话" },
+      { "pagePath": "pages/profile/profile", "text": "我的" }
+    ]
+  },
+  "style": "v2",
+  "sitemapLocation": "sitemap.json"
+}

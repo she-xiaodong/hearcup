@@ -1,0 +1,50 @@
+.hi { font-size: 36rpx; font-weight: 800; }
+.sub { font-size: 24rpx; margin-top: 4rpx; }
+
+.hero {
+  margin: 8rpx 32rpx 24rpx;
+  display: flex;
+  align-items: center;
+  gap: 16rpx;
+  background: linear-gradient(135deg, #E6F6F2 0%, #FFEDE5 100%);
+  overflow: hidden;
+}
+.hero-text { flex: 1; }
+.hero-title { font-size: 44rpx; font-weight: 800; color: var(--primary-deep); }
+.hero-sub { font-size: 26rpx; color: #5C6B66; margin: 6rpx 0 18rpx; }
+.hero-chip {
+  display: inline-flex;
+  align-items: center;
+  font-size: 24rpx;
+  background: rgba(255,255,255,0.7);
+  color: var(--primary-deep);
+  padding: 8rpx 20rpx;
+  border-radius: 999rpx;
+}
+/* 在线状态点（扁平设计，替代 emoji 圆点） */
+.dot-online {
+  width: 14rpx; height: 14rpx; border-radius: 50%;
+  background: #52C41A; margin-right: 10rpx; flex: none;
+}
+.hero-img { width: 220rpx; height: 180rpx; border-radius: 24rpx; flex-shrink: 0; }
+
+.tabs {
+  display: flex;
+  gap: 16rpx;
+  padding: 8rpx 32rpx 16rpx;
+}
+.tab {
+  font-size: 28rpx;
+  padding: 12rpx 36rpx;
+  border-radius: 999rpx;
+  background: #fff;
+  color: var(--text-sub);
+  box-shadow: var(--shadow-sm);
+}
+.tab-on {
+  background: linear-gradient(135deg, var(--primary) 0%, var(--primary-deep) 100%);
+  color: #fff;
+  font-weight: 600;
+}
+
+.list { padding: 8rpx 32rpx 0; }

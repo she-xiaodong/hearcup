@@ -1,0 +1,29 @@
+<view class="pc-card" bindtap="onTapCard">
+  <view class="pc-head">
+    <view class="avatar pc-avatar" style="background:{{provider.avatarColor}}"><view class="ico ico-{{provider.role==2?'lotus-w':'leaf-w'}}" style="width:42rpx;height:42rpx;"></view></view>
+    <view class="pc-info">
+      <view class="pc-name-row">
+        <text class="pc-name">{{provider.nickName}}</text>
+        <text class="role-badge {{provider.role==2?'role-counselor':'role-listener'}}">{{provider.role==2?'咨询师':'倾听师'}}</text>
+      </view>
+      <view class="pc-meta">
+        <text class="level">{{provider.levelText}}</text>
+        <text class="stars">★</text>
+        <text class="rating-num">{{provider.rating}}</text>
+        <text class="muted pc-sessions">{{provider.total_sessions}}次服务</text>
+      </view>
+    </view>
+  </view>
+
+  <view class="pc-tags">
+    <text wx:for="{{provider.expertise}}" wx:key="*this" class="tag">{{item}}</text>
+  </view>
+
+  <view class="pc-foot">
+    <view class="pc-price"><text class="pc-price-num">{{provider.price_per_minute}}</text><text class="muted"> 元/分钟</text></view>
+    <view class="pc-actions">
+      <view class="pc-call pc-call-voice" catchtap="onCall" data-type="1">语音</view>
+      <view class="pc-call pc-call-video" catchtap="onCall" data-type="2">视频</view>
+    </view>
+  </view>
+</view>

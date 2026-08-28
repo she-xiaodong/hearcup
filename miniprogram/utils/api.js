@@ -1,0 +1,202 @@
+// utils/api.js —— 小程序与后端的统一接口层
+// useMock=true（默认）：走本地演示数据，离线可用
+// useMock=false：请求真实后端（baseUrl 见 app.js globalData.config）
+// 后端接口严格对齐《需求文档》第五部分；字段映射在此完成。
+const mock = require('./mock.js')
+const store = require('./store.js')
+
+// 与后端种子标签表一致（id 从 1 开始）
+const TAGS = ['情感', '职场', '学业', '人际关系', '焦虑', '抑郁', '家庭', '自我成长']
+const ROLE_TEXT = { 1: '倾听师', 2: '咨询师' }
+const LEVEL_TEXT = { 1: '实习', 2: '认证', 3: '资深' }
+
+function cfg() { try { return (getApp() && getApp().globalData.config) || {} } catch (e) { return {} } }
+function getToken() { try { return wx.getStorageSync('hearcup_token') || '' } catch (e) { return '' } }
+function setToken(t) { try { wx.setStorageSync('hearcup_token', t) } catch (e) {} }
+function useMock() { return cfg().useMock === true }
+function base() { return cfg().baseUrl || '' }
+
+// 后端 providers 表 → 小程序卡片/详情所需形状
+function mapProvider(p) {
+  if (!p) return p
+  const role = p.role
+  const ids = (p.expertise || '').split(',').filter(Boolean).map(Number)
+  const expertise = ids.map(i => TAGS[i - 1] || ('标签' + i)).filter(Boolean)
+  return {
+    id: p.id,
+    nickName: p.nickname || p.real_name || ('用户' + p.id),
+    role: role,
+    avatarColor: role === 2 ? '#B5A8E0' : '#4FB8A8',
+    levelText: (LEVEL_TEXT[p.level] || '') + (ROLE_TEXT[role] || ''),
+    rating: p.rating || 0,
+    total_sessions: p.total_sessions || 0,
+    price_per_minute: p.price_per_minute || (role === 2 ? 2 : 1),
+    is_online: p.is_online === 1,
+    intro: p.intro || '',
+    expertise: expertise.length ? expertise : (p.expertise || []),
+    years_of_exp: p.years_of_exp || 0,
+    background: p.background || '',
+    certificate_no: p.certificate_no || ''
+  }
+}
+function mapMock(p) { return p }
+function mapRecord(r) {
+  // 后端 call_records → 前端展示
+  const dur = r.duration || 0
+  const m = Math.floor(dur / 60), s = dur % 60
+  const d = new Date((r.created_at || Date.now() / 1000) * 1000)
+  const p2 = n => String(n).padStart(2, '0')
+  return {
+    id: r.id,
+    providerName: r.provider_name || '',
+    callType: r.call_type || 1,
+    durationText: `${m}分${p2(s)}秒`,
+    amount: r.amount || 0,
+    time: `${p2(d.getMonth() + 1)}-${p2(d.getDate())} ${p2(d.getHours())}:${p2(d.getMinutes())}`,
+    rating: r.user_rating || 0
+  }
+}
+
+async function request(method, path, data, auth) {
+  if (useMock()) return { code: 0, data: null, _mock: true }
+  return new Promise((resolve) => {
+    wx.request({
+      url: base() + path,
+      method: method,
+      data: data || {},
+      header: Object.assign({ 'Content-Type': 'application/json' },
+        auth !== false ? { 'Authorization': 'Bearer ' + getToken() } : {}),
+      success(res) {
+        let body = res.data
+        if (typeof body === 'string') { try { body = JSON.parse(body) } catch (e) { body = { code: 1, msg: 'bad json' } } }
+        resolve(body || { code: 0, data: null })
+      },
+      fail(err) { resolve({ code: 1, msg: (err && err.errMsg) || 'network error' }) }
+    })
+  })
+}
+
+const api = {
+  // ===== 认证 =====
+  async login(code) {
+    const r = await request('POST', '/api/v1/auth/login', { code })
+    if (r._mock) { const u = store.getUser(); setToken('mock_token'); return { code: 0, data: { token: 'mock_token', user: u } } }
+    if (r.code === 0) { setToken(r.data.token); return r }
+    return r
+  },
+  async getBalance() {
+    const r = await request('GET', '/api/v1/user/balance')
+    if (r._mock) return { code: 0, data: { balance: store.getBalance() } }
+    return r
+  },
+
+  // ===== 服务者（用户端）=====
+  async getOnlineProviders(role) {
+    const r = await request('GET', '/api/v1/providers/online' + (role ? ('?role=' + role) : ''))
+    if (r._mock) {
+      const list = mock.providers.filter(p => p.is_online && (!role || p.role === role)).map(mapMock)
+      return { code: 0, data: { list } }
+    }
+    if (r.code === 0) return { code: 0, data: { list: (r.data.list || []).map(mapProvider) } }
+    return r
+  },
+  async getProvider(id) {
+    const r = await request('GET', '/api/v1/providers/' + id)
+    if (r._mock) {
+      const p = mock.providers.find(x => x.id === Number(id))
+      return { code: 0, data: { provider: mapMock(p), ratings: [] } }
+    }
+    if (r.code === 0) return { code: 0, data: { provider: mapProvider(r.data.provider), ratings: r.data.ratings || [] } }
+    return r
+  },
+
+  // ===== 呼叫（核心）=====
+  async invite(pid, type) {
+    const r = await request('POST', '/api/v1/call/invite', { provider_id: pid, call_type: type })
+    if (r._mock) return { code: 0, data: { room_id: 'mock_room_' + Date.now(), user_sig: 'sig', provider_sig: 'sig', sdk_app_id: 0 } }
+    return r
+  },
+  async endCall(roomId) {
+    const r = await request('POST', '/api/v1/call/end', { room_id: roomId })
+    if (r._mock) return { code: 0, data: { amount: 0 } }
+    return r
+  },
+  async rate(roomId, rating, comment) {
+    const r = await request('POST', '/api/v1/call/rating', { room_id: roomId, rating, comment })
+    if (r._mock) return { code: 0, data: { ok: true } }
+    return r
+  },
+  async getCallRecords(uid) {
+    const r = await request('GET', '/api/v1/call/records' + (uid ? ('?user_id=' + uid) : ''))
+    if (r._mock) return { code: 0, data: mock.callRecords.map(mapRecord) }
+    if (r.code === 0) return { code: 0, data: (r.data || []).map(mapRecord) }
+    return r
+  },
+
+  // ===== 充值 =====
+  async createRecharge(amount) {
+    const r = await request('POST', '/api/v1/recharge/create', { amount })
+    if (r._mock) { store.setBalance(store.getBalance() + Number(amount)); return { code: 0, data: { amount } } }
+    return r
+  },
+  async getRechargeRecords(uid) {
+    const r = await request('GET', '/api/v1/recharge/records' + (uid ? ('?user_id=' + uid) : ''))
+    if (r._mock) return { code: 0, data: [] }
+    return r
+  },
+
+  // ===== 服务者（服务者端）=====
+  async getProviderStatus() {
+    const r = await request('GET', '/api/v1/provider/status')
+    if (r._mock) {
+      const a = store.getApply()
+      if (!a) return { code: 0, data: { status: -1 } }
+      return { code: 0, data: Object.assign({ role: a.role }, a) }
+    }
+    return r
+  },
+  async applyProvider(form) {
+    const body = {
+      role: form.role,
+      real_name: form.nickName,
+      phone: form.phone,
+      id_card: form.idCard,
+      intro: form.intro,
+      expertise: (form.expertise || []).join(','),
+      certificates: (form.certImages || []).join(','),
+      certificate_no: form.certNo,
+      certificate_image: form.certImage,
+      years_of_exp: Number(form.years) || 0,
+      background: form.background
+    }
+    const r = await request('POST', '/api/v1/provider/apply', body)
+    if (r._mock) {
+      const apply = { role: form.role, status: 0, submittedAt: Date.now(), form }
+      store.setApply(apply)
+      return { code: 0, data: { id: 0, status: 0 } }
+    }
+    return r
+  },
+  async setOnline() {
+    const r = await request('PUT', '/api/v1/provider/online')
+    if (r._mock) { store.setProviderOnline(true); return { code: 0, data: { is_online: 1 } } }
+    return r
+  },
+  async setOffline() {
+    const r = await request('PUT', '/api/v1/provider/offline')
+    if (r._mock) { store.setProviderOnline(false); return { code: 0, data: { is_online: 0 } } }
+    return r
+  },
+  async getEarnings() {
+    const r = await request('GET', '/api/v1/provider/earnings')
+    if (r._mock) return { code: 0, data: store.getProviderMe() }
+    return r
+  },
+  async withdraw(amount) {
+    const r = await request('POST', '/api/v1/provider/withdraw', { amount })
+    if (r._mock) return { code: 0, data: { id: 0, status: 0 } }
+    return r
+  }
+}
+
+module.exports = api

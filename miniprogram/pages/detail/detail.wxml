@@ -1,0 +1,47 @@
+<view class="page-bg" wx:if="{{p}}">
+  <view class="card profile">
+    <view class="avatar big" style="background:{{p.avatarColor}}"><view class="ico ico-{{p.role==2?'lotus-w':'leaf-w'}}" style="width:64rpx;height:64rpx;"></view></view>
+    <view class="p-info">
+      <view class="p-name-row">
+        <text class="p-name">{{p.nickName}}</text>
+        <text class="role-badge {{p.role==2?'role-counselor':'role-listener'}}">{{p.role==2?'咨询师':'倾听师'}}</text>
+      </view>
+      <view class="p-meta">
+        <text class="level">{{p.levelText}}</text>
+        <text class="stars">★</text><text class="rating-num">{{p.rating}}</text>
+        <text class="muted">{{p.total_sessions}}次服务</text>
+      </view>
+    </view>
+  </view>
+
+  <view class="card">
+    <view class="section-title">擅长领域</view>
+    <view>
+      <text wx:for="{{p.expertise}}" wx:key="*this" class="tag">{{item}}</text>
+    </view>
+  </view>
+
+  <view class="card">
+    <view class="section-title">关于 TA</view>
+    <view class="p-intro">{{p.intro}}</view>
+    <block wx:if="{{p.role==2}}">
+      <view class="p-line" wx:if="{{p.years_of_exp}}">从业年限：{{p.years_of_exp}} 年</view>
+      <view class="p-line" wx:if="{{p.background}}">专业背景：{{p.background}}</view>
+      <view class="p-line" wx:if="{{p.certificate_no}}">证书编号：{{p.certificate_no}}</view>
+    </block>
+  </view>
+
+  <view class="card" wx:if="{{reviews.length}}">
+    <view class="section-title">听听大家说</view>
+    <view class="review" wx:for="{{reviews}}" wx:key="id">
+      <view class="stars">★ {{item.rating}}</view>
+      <view class="review-text">{{item.comment}}</view>
+    </view>
+  </view>
+
+  <view class="call-bar">
+    <button class="btn btn-ghost call-btn" bindtap="onCall" data-type="1"><view class="call-btn-inner"><view class="ico ico-mic" style="width:32rpx;height:32rpx;"></view>语音呼叫</view></button>
+    <button class="btn btn-peach call-btn" bindtap="onCall" data-type="2"><view class="call-btn-inner"><view class="ico ico-video-w" style="width:32rpx;height:32rpx;"></view>视频呼叫</view></button>
+  </view>
+  <view class="safe-bottom"></view>
+</view>

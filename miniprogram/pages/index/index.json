@@ -1,0 +1,7 @@
+{
+  "usingComponents": {
+    "provider-card": "/components/provider-card/provider-card"
+  },
+  "navigationBarTitleText": "一杯心晴",
+  "navigationStyle": "custom"
+}

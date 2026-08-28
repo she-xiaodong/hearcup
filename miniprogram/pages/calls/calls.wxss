@@ -1,0 +1,16 @@
+.summary { display: flex; margin: 0 32rpx 24rpx; }
+.sum-item { flex: 1; text-align: center; }
+.sum-num { font-size: 40rpx; font-weight: 800; color: var(--primary-deep); }
+.sum-item + .sum-item .sum-num { color: var(--peach); }
+
+.list { margin: 0 32rpx; }
+.call { display: flex; align-items: center; gap: 20rpx; padding: 24rpx 0; border-top: 1rpx solid var(--line); }
+.call:first-child { border-top: none; }
+.call-avatar { width: 84rpx; height: 84rpx; font-size: 38rpx; }
+.call-mid { flex: 1; }
+.call-name { font-size: 30rpx; font-weight: 700; }
+.call-sub { font-size: 22rpx; margin-top: 4rpx; }
+.call-right { text-align: right; }
+.call-amt { font-size: 28rpx; font-weight: 700; }
+.todo { font-size: 22rpx; }
+.tab-foot { height: calc(160rpx + env(safe-area-inset-bottom)); }

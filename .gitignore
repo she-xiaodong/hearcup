@@ -1,0 +1,25 @@
+# ==== 敏感配置（含真实凭据，绝不提交）====
+server/.env
+.env
+*.p12
+apiclient_key.pem
+apiclient_cert.pem
+
+# ==== 运行时数据 & 二进制 ====
+server/data/
+server/hearcup_server
+server/hearcup_server.exe
+*.log
+
+# ==== Node / 工具缓存 ====
+node_modules/
+
+# ==== 临时生成物 ====
+miniprogram/_icon_preview.html
+*.pyc
+__pycache__/
+
+# ==== 本地工作数据 & 部署脚本（勿提交）====
+.workbuddy/
+_deploy.py
+server/hearcup_server_linux

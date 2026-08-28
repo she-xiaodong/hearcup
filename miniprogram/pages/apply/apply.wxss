@@ -1,0 +1,43 @@
+.head { padding: 40rpx 32rpx 16rpx; }
+.h-title { font-size: 38rpx; font-weight: 800; }
+.head .muted { margin-top: 8rpx; }
+.head .back { display: inline-block; margin-top: 10rpx; color: var(--primary-deep); }
+
+.progress { display: flex; align-items: center; justify-content: center; padding: 40rpx 0 8rpx; }
+.dot { width: 56rpx; height: 56rpx; border-radius: 50%; background: var(--line); color: var(--text-sub); display: flex; align-items: center; justify-content: center; font-weight: 700; }
+.dot.on { background: var(--primary); color: #fff; }
+.line { width: 80rpx; height: 2rpx; background: var(--line); }
+
+.role-card { display: flex; align-items: center; gap: 24rpx; background: var(--card); border-radius: var(--radius); padding: 32rpx; margin: 20rpx 32rpx; box-shadow: var(--shadow-sm); border: 3rpx solid transparent; }
+.role-card.sel { border-color: var(--primary); box-shadow: var(--shadow); }
+.rc-icon { width: 64rpx; height: 64rpx; }
+.rc-body { flex: 1; }
+.rc-name { font-size: 32rpx; font-weight: 800; }
+.rc-desc { font-size: 24rpx; margin-top: 6rpx; line-height: 1.5; }
+.rc-check { color: var(--primary); font-weight: 800; font-size: 36rpx; }
+.next, .submit { margin: 32rpx; width: auto; }
+
+.form { margin: 0 32rpx; }
+.f-row { display: flex; align-items: center; padding: 24rpx 0; border-top: 1rpx solid var(--line); }
+.f-row:first-child { border-top: none; }
+.f-label { width: 160rpx; font-size: 28rpx; font-weight: 600; flex-shrink: 0; }
+.f-input { flex: 1; font-size: 28rpx; }
+.f-block { padding: 24rpx 0; border-top: 1rpx solid var(--line); }
+
+.chips { display: flex; flex-wrap: wrap; gap: 16rpx; margin-top: 16rpx; }
+.chip { font-size: 24rpx; padding: 10rpx 24rpx; border-radius: 999rpx; background: var(--bg); color: var(--text-sub); }
+.chip-on { background: var(--primary-soft); color: var(--primary-deep); font-weight: 600; }
+
+.imgs { display: flex; flex-wrap: wrap; gap: 16rpx; margin-top: 16rpx; }
+.img-thumb, .img-add { width: 150rpx; height: 150rpx; border-radius: 16rpx; overflow: hidden; }
+.img-thumb image { width: 100%; height: 100%; }
+.img-add { display: flex; align-items: center; justify-content: center; font-size: 60rpx; color: var(--text-sub); background: var(--bg); border: 2rpx dashed var(--line); }
+
+.f-textarea { width: 100%; min-height: 160rpx; margin-top: 16rpx; font-size: 28rpx; background: var(--bg); border-radius: 16rpx; padding: 20rpx; box-sizing: border-box; }
+
+.done { text-align: center; padding: 120rpx 48rpx; }
+.done-icon { width: 120rpx; height: 120rpx; margin: 0 auto; }
+.done-title { font-size: 40rpx; font-weight: 800; margin-top: 24rpx; }
+.done-sub { margin: 16rpx 0 48rpx; line-height: 1.7; }
+
+.tab-foot { height: calc(160rpx + env(safe-area-inset-bottom)); }

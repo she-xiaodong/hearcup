@@ -1,0 +1,142 @@
+@import "./styles/icons.wxss";
+/* app.wxss —— Hearcup 全局设计系统（聆心风格：温暖、治愈、倾听） */
+page {
+  /* 设计令牌 */
+  --primary: #4FB8A8;        /* 主色：薄荷绿，安静治愈 */
+  --primary-deep: #3A9E8F;
+  --primary-soft: #E6F6F2;   /* 主色浅底 */
+  --peach: #FF9E80;          /* 暖橙：温度、行动 */
+  --peach-soft: #FFEDE5;
+  --lavender: #B5A8E0;       /* 薰衣草：次标签 */
+  --lavender-soft: #F0ECFA;
+  --bg: #FBF7F2;             /* 暖米白背景 */
+  --card: #FFFFFF;
+  --text: #2D3142;           /* 主文字 */
+  --text-sub: #8A8FA3;       /* 次要文字 */
+  --line: #F0ECE6;           /* 分割线 */
+  --gold: #FFB400;           /* 评分星 */
+  --danger: #FF6B6B;
+  --radius: 28rpx;
+  --radius-sm: 16rpx;
+  --shadow: 0 8rpx 30rpx rgba(79, 184, 168, 0.12);
+  --shadow-sm: 0 4rpx 16rpx rgba(45, 49, 66, 0.06);
+
+  background: var(--bg);
+  color: var(--text);
+  font-family: -apple-system, "PingFang SC", "Helvetica Neue", Helvetica, sans-serif;
+  font-size: 28rpx;
+  line-height: 1.6;
+}
+
+view, text, button, input { box-sizing: border-box; }
+
+/* 通用容器 */
+.container { padding: 32rpx; }
+.page-bg {
+  min-height: 100vh;
+  background:
+    radial-gradient(120% 60% at 100% 0%, var(--primary-soft) 0%, rgba(255,255,255,0) 60%),
+    radial-gradient(120% 60% at 0% 0%, var(--peach-soft) 0%, rgba(255,255,255,0) 55%),
+    var(--bg);
+}
+
+/* 卡片 */
+.card {
+  background: var(--card);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow-sm);
+  padding: 32rpx;
+}
+
+/* 主按钮 */
+.btn {
+  border: none;
+  border-radius: 999rpx;
+  font-size: 30rpx;
+  font-weight: 600;
+  line-height: 84rpx;
+  height: 84rpx;
+  padding: 0 40rpx;
+}
+.btn::after { border: none; }
+.btn-primary { background: linear-gradient(135deg, var(--primary) 0%, var(--primary-deep) 100%); color: #fff; box-shadow: var(--shadow); }
+.btn-peach { background: linear-gradient(135deg, #FFB199 0%, var(--peach) 100%); color: #fff; box-shadow: 0 8rpx 24rpx rgba(255,158,128,0.35); }
+.btn-ghost { background: var(--primary-soft); color: var(--primary-deep); }
+.btn-block { width: 100%; }
+.btn[disabled] { opacity: 0.5; }
+
+/* 标签 */
+.tag {
+  display: inline-flex;
+  align-items: center;
+  font-size: 22rpx;
+  padding: 6rpx 18rpx;
+  border-radius: 999rpx;
+  background: var(--primary-soft);
+  color: var(--primary-deep);
+  margin-right: 12rpx;
+}
+.tag-peach { background: var(--peach-soft); color: #E0764F; }
+.tag-lav { background: var(--lavender-soft); color: #7A68B8; }
+
+/* 角色徽标 */
+.role-badge {
+  font-size: 22rpx;
+  padding: 4rpx 16rpx;
+  border-radius: 999rpx;
+  font-weight: 600;
+}
+.role-listener { background: var(--primary-soft); color: var(--primary-deep); }
+.role-counselor { background: var(--lavender-soft); color: #7A68B8; }
+
+/* 认证等级 */
+.level { font-size: 22rpx; color: var(--gold); }
+
+/* 头像（渐变底 + 扁平 SVG 角色图标：倾听师=叶 / 咨询师=花） */
+.avatar {
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #fff;
+  font-size: 40rpx;
+  flex-shrink: 0;
+  box-shadow: var(--shadow-sm);
+}
+
+/* 评分 */
+.stars { color: var(--gold); font-size: 24rpx; letter-spacing: 2rpx; }
+.rating-num { color: var(--gold); font-weight: 700; }
+
+/* 顶部栏（自定义，无原生 tabBar） */
+.topbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 24rpx 32rpx;
+}
+.balance-pill {
+  display: flex;
+  align-items: center;
+  gap: 8rpx;
+  background: #fff;
+  border-radius: 999rpx;
+  padding: 10rpx 24rpx;
+  font-size: 26rpx;
+  font-weight: 600;
+  color: var(--primary-deep);
+  box-shadow: var(--shadow-sm);
+}
+
+/* 区块标题 */
+.section-title { font-size: 34rpx; font-weight: 700; margin: 16rpx 0; }
+.muted { color: var(--text-sub); }
+.empty {
+  text-align: center;
+  color: var(--text-sub);
+  padding: 120rpx 0;
+  font-size: 28rpx;
+}
+
+/* 底部安全区（含自定义 tabBar 高度） */
+.safe-bottom { height: calc(160rpx + env(safe-area-inset-bottom)); }

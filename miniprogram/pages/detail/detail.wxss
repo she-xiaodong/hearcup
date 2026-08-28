@@ -1,0 +1,23 @@
+.profile { display: flex; align-items: center; gap: 24rpx; margin: 24rpx 32rpx; }
+.avatar.big { width: 120rpx; height: 120rpx; font-size: 56rpx; }
+.p-name-row { display: flex; align-items: center; gap: 12rpx; }
+.p-name { font-size: 36rpx; font-weight: 800; }
+.p-meta { display: flex; align-items: center; gap: 10rpx; margin-top: 8rpx; font-size: 24rpx; }
+
+.card { margin: 0 32rpx 24rpx; }
+.p-intro { font-size: 28rpx; color: #4A4F5C; line-height: 1.7; }
+.p-line { font-size: 26rpx; color: var(--text-sub); margin-top: 10rpx; }
+
+.review { padding: 16rpx 0; border-top: 1rpx solid var(--line); }
+.review-text { font-size: 26rpx; color: #4A4F5C; margin-top: 6rpx; }
+
+.call-bar {
+  position: fixed; left: 0; right: 0; bottom: 0;
+  display: flex; gap: 20rpx;
+  padding: 20rpx 32rpx calc(20rpx + env(safe-area-inset-bottom));
+  background: rgba(255,255,255,0.92);
+  backdrop-filter: blur(10rpx);
+  box-shadow: 0 -4rpx 20rpx rgba(45,49,66,0.06);
+}
+.call-btn { flex: 1; margin: 0; }
+.call-btn-inner { display: flex; align-items: center; justify-content: center; gap: 10rpx; }

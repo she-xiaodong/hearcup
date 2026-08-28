@@ -1,0 +1,42 @@
+.profile-head { display: flex; align-items: center; gap: 24rpx; margin: 24rpx 32rpx; }
+.head-avatar { width: 110rpx; height: 110rpx; font-size: 52rpx; }
+.head-name { font-size: 36rpx; font-weight: 800; }
+
+.balance-row { display: flex; align-items: center; justify-content: space-between; margin: 0 32rpx 24rpx; }
+.balance-num { font-size: 48rpx; font-weight: 800; color: var(--peach); margin-top: 6rpx; }
+.recharge-mini { margin: 0; line-height: 64rpx; height: 64rpx; padding: 0 32rpx; }
+
+/* 成为服务者 */
+.become { margin: 0 32rpx 24rpx; background: linear-gradient(135deg, #E6F6F2, #F0ECFA); border-radius: var(--radius); padding: 32rpx; }
+.become-title { font-size: 32rpx; font-weight: 800; }
+.become-sub { font-size: 24rpx; margin: 8rpx 0 20rpx; line-height: 1.6; }
+.become-roles { display: flex; gap: 16rpx; margin-bottom: 20rpx; }
+.become-role { flex: 1; background: #fff; border-radius: 16rpx; padding: 16rpx; text-align: center; }
+.become-role .er-icon { width: 44rpx; height: 44rpx; margin: 0 auto; }
+.become-role .er-name { font-size: 26rpx; font-weight: 700; margin-top: 4rpx; }
+
+/* 审核中 */
+.pending { margin: 0 32rpx 24rpx; background: #FFF7E6; border-radius: var(--radius); padding: 40rpx 32rpx; text-align: center; }
+.pending-icon { width: 72rpx; height: 72rpx; margin: 0 auto; }
+.pending-title { font-size: 30rpx; font-weight: 700; margin-top: 8rpx; }
+
+/* 服务者中心 */
+.provider { margin: 0 32rpx 24rpx; background: var(--card); border-radius: var(--radius); padding: 32rpx; box-shadow: var(--shadow-sm); }
+.pv-top { display: flex; align-items: center; justify-content: space-between; }
+.pv-title { font-size: 30rpx; font-weight: 800; }
+.pv-grid { display: flex; margin-top: 24rpx; }
+.pv-cell { flex: 1; text-align: center; position: relative; }
+.pv-cell::after { content: ''; position: absolute; right: 0; top: 10rpx; bottom: 10rpx; width: 1rpx; background: var(--line); }
+.pv-cell:last-child::after { display: none; }
+.pv-num { font-size: 34rpx; font-weight: 800; color: var(--primary-deep); }
+.pv-label { font-size: 22rpx; margin-top: 6rpx; }
+.pv-actions { display: flex; gap: 16rpx; margin-top: 24rpx; }
+.pv-actions .btn { flex: 1; line-height: 76rpx; height: 76rpx; font-size: 26rpx; }
+
+.menu { margin: 0 32rpx; }
+.mi-left { display: flex; align-items: center; gap: 16rpx; }
+.menu-item { display: flex; align-items: center; justify-content: space-between; padding: 28rpx 0; border-top: 1rpx solid var(--line); font-size: 30rpx; }
+.menu-item:first-child { border-top: none; }
+.menu-badge { color: var(--text-sub); font-size: 26rpx; }
+
+.tab-foot { height: calc(160rpx + env(safe-area-inset-bottom)); }

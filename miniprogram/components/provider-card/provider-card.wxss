@@ -1,0 +1,24 @@
+.pc-card {
+  background: var(--card);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow-sm);
+  padding: 28rpx;
+  margin-bottom: 24rpx;
+}
+.pc-head { display: flex; align-items: center; gap: 20rpx; }
+.pc-avatar { width: 96rpx; height: 96rpx; font-size: 44rpx; }
+.pc-info { flex: 1; min-width: 0; }
+.pc-name-row { display: flex; align-items: center; gap: 12rpx; }
+.pc-name { font-size: 32rpx; font-weight: 700; }
+.pc-meta { display: flex; align-items: center; gap: 10rpx; margin-top: 6rpx; font-size: 24rpx; }
+.pc-sessions { margin-left: 4rpx; }
+.pc-tags { margin: 20rpx 0 8rpx; min-height: 40rpx; }
+.pc-foot { display: flex; align-items: center; justify-content: space-between; margin-top: 8rpx; }
+.pc-price-num { font-size: 36rpx; font-weight: 800; color: var(--peach); }
+.pc-actions { display: flex; gap: 16rpx; }
+.pc-call {
+  font-size: 26rpx; font-weight: 600;
+  padding: 12rpx 30rpx; border-radius: 999rpx;
+}
+.pc-call-voice { background: var(--primary-soft); color: var(--primary-deep); }
+.pc-call-video { background: linear-gradient(135deg,#FFB199,var(--peach)); color: #fff; }

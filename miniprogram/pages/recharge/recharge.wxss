@@ -1,0 +1,29 @@
+.balance-card { margin: 24rpx 32rpx; text-align: center; background: linear-gradient(135deg, var(--primary) 0%, var(--primary-deep) 100%); color: #fff; }
+.balance-card .muted { color: rgba(255,255,255,0.85); }
+.balance-num { font-size: 64rpx; font-weight: 800; margin-top: 8rpx; }
+
+.tiers { display: flex; flex-wrap: wrap; gap: 20rpx; padding: 0 32rpx; }
+.tier {
+  width: calc((100% - 40rpx) / 3);
+  background: #fff; border-radius: var(--radius-sm);
+  box-shadow: var(--shadow-sm);
+  display: flex; align-items: baseline; justify-content: center; gap: 4rpx;
+  padding: 36rpx 0; border: 3rpx solid transparent;
+}
+.tier-num { font-size: 44rpx; font-weight: 800; color: var(--text); }
+.tier-unit { font-size: 24rpx; color: var(--text-sub); }
+.tier-on { border-color: var(--primary); background: var(--primary-soft); }
+.tier-on .tier-num { color: var(--primary-deep); }
+
+.custom { margin: 24rpx 32rpx; }
+.custom-input-row { display: flex; align-items: center; gap: 12rpx; border-bottom: 2rpx solid var(--line); padding-bottom: 12rpx; }
+.custom-yen { font-size: 40rpx; font-weight: 700; color: var(--text); }
+.custom-input { flex: 1; font-size: 40rpx; font-weight: 700; }
+
+.pay-bar { position: fixed; left: 0; right: 0; bottom: 0; padding: 20rpx 32rpx; background: rgba(255,255,255,0.95); backdrop-filter: blur(10rpx); }
+
+.records { margin: 24rpx 32rpx calc(160rpx + env(safe-area-inset-bottom)); }
+.rec { display: flex; align-items: center; justify-content: space-between; padding: 20rpx 0; border-top: 1rpx solid var(--line); }
+.rec-title { font-size: 28rpx; font-weight: 600; }
+.rec-time { font-size: 22rpx; margin-top: 4rpx; }
+.rec-status { font-size: 24rpx; color: var(--primary-deep); }
