@@ -13,7 +13,7 @@
     </view>
     <view class="row">
       <view class="row-label">演示数据</view>
-      <switch checked="{{useMock}}" bindchange="onToggleMock" color="#4FB8A8" />
+      <switch checked="{{useMock}}" bindchange="onToggleMock" color="#008C8C" />
     </view>
     <view class="hint">真机调试需关掉「演示数据」，且地址填电脑局域网 IP（本机为 192.168.1.6）。开发者工具请勾选「不校验合法域名」。</view>
     <view class="btn-row">
@@ -26,7 +26,7 @@
   <view class="card">
     <view class="card-title">自检结果</view>
     <view wx:for="{{steps}}" wx:key="name" class="step">
-      <view class="step-dot" style="background:{{item.ok?'#4FB8A8':(item.ok===false?'#FF6B6B':'#C9CFD6')}}"></view>
+      <view class="step-dot" style="background:{{item.ok?'#008C8C':(item.ok===false?'#FF6B6B':'#C9CFD6')}}"></view>
       <view class="step-body">
         <view class="step-name">{{item.name}}</view>
         <view class="step-detail">{{item.detail}}</view>

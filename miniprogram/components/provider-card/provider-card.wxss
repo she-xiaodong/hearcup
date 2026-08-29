@@ -21,4 +21,4 @@
   padding: 12rpx 30rpx; border-radius: 999rpx;
 }
 .pc-call-voice { background: var(--primary-soft); color: var(--primary-deep); }
-.pc-call-video { background: linear-gradient(135deg,#FFB199,var(--peach)); color: #fff; }
+.pc-call-video { background: linear-gradient(135deg,#00A8A8,var(--peach)); color: #fff; }

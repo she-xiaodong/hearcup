@@ -2,7 +2,7 @@
   <view class="card profile-head">
     <button class="avatar-btn" open-type="chooseAvatar" bind:chooseavatar="onChooseAvatar">
       <image wx:if="{{user.avatar}}" class="head-avatar-img" src="{{user.avatar}}" mode="aspectFill" />
-      <view wx:else class="avatar head-avatar" style="background:linear-gradient(135deg,#4FB8A8,#FF9E80)"><view class="ico ico-user-w" style="width:52rpx;height:52rpx;"></view></view>
+      <view wx:else class="avatar head-avatar" style="background:linear-gradient(135deg,#008C8C,#00A8A8)"><view class="ico ico-user-w" style="width:52rpx;height:52rpx;"></view></view>
     </button>
     <view class="head-info">
       <input class="head-name-input" type="nickname" placeholder="点击设置昵称" value="{{user.nickName}}" bindblur="onNicknameBlur" />
@@ -37,7 +37,7 @@
   <view wx:elif="{{isProvider}}" class="provider">
     <view class="pv-top">
       <view class="pv-title">倾听者中心</view>
-      <switch checked="{{me.isOnline}}" bindchange="toggleOnline" color="#4FB8A8" />
+      <switch checked="{{me.isOnline}}" bindchange="toggleOnline" color="#008C8C" />
     </view>
     <view class="pv-grid">
       <view class="pv-cell"><view class="pv-num">¥{{me.pendingIncome}}</view><view class="pv-label">未完成收入</view></view>

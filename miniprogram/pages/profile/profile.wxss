@@ -5,14 +5,14 @@
 .head-avatar-img { width: 110rpx; height: 110rpx; border-radius: 50%; }
 .head-name { font-size: 36rpx; font-weight: 800; }
 .head-name-input { font-size: 36rpx; font-weight: 800; height: 52rpx; line-height: 52rpx; }
-.h-no { margin-top: 4rpx; font-size: 24rpx; font-weight: 700; color: var(--primary-deep, #2E8B7A); letter-spacing: 1rpx; }
+.h-no { margin-top: 4rpx; font-size: 24rpx; font-weight: 700; color: var(--primary-deep, #007A7A); letter-spacing: 1rpx; }
 
 .balance-row { display: flex; align-items: center; justify-content: space-between; margin: 0 32rpx 24rpx; }
 .balance-num { font-size: 48rpx; font-weight: 800; color: var(--peach); margin-top: 6rpx; }
 .recharge-mini { margin: 0; line-height: 64rpx; height: 64rpx; padding: 0 32rpx; }
 
 /* 成为服务者 */
-.become { margin: 0 32rpx 24rpx; background: linear-gradient(135deg, #E6F6F2, #F0ECFA); border-radius: var(--radius); padding: 32rpx; }
+.become { margin: 0 32rpx 24rpx; background: linear-gradient(135deg, #E6F4F4, #D6ECEC); border-radius: var(--radius); padding: 32rpx; }
 .become-title { font-size: 32rpx; font-weight: 800; }
 .become-sub { font-size: 24rpx; margin: 8rpx 0 20rpx; line-height: 1.6; }
 .become-roles { display: flex; gap: 16rpx; margin-bottom: 20rpx; }

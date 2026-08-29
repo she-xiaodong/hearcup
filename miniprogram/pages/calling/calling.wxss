@@ -5,7 +5,7 @@
   align-items: center;
   justify-content: space-between;
   padding: calc(120rpx + env(safe-area-inset-top)) 40rpx calc(80rpx + env(safe-area-inset-bottom));
-  background: linear-gradient(160deg, #3A9E8F 0%, #2C7E73 55%, #244E5E 100%);
+  background: linear-gradient(160deg, #007A7A 0%, #2C7E73 55%, #244E5E 100%);
   color: #fff;
 }
 .call-screen.video { background: linear-gradient(160deg, #2C7E73 0%, #1F3A47 100%); }

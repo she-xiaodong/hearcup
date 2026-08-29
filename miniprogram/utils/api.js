@@ -26,7 +26,7 @@ function mapProvider(p) {
     id: p.id,
     nickName: p.nickname || p.real_name || ('用户' + p.id),
     role: 1,
-    avatarColor: '#4FB8A8',
+    avatarColor: '#008C8C',
     levelText: (LEVEL_TEXT[p.level] || '') + '倾听者',
     rating: p.rating || 0,
     total_sessions: p.total_sessions || 0,

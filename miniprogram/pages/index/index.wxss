@@ -6,7 +6,7 @@
   display: flex;
   align-items: center;
   gap: 16rpx;
-  background: linear-gradient(135deg, #E6F6F2 0%, #FFEDE5 100%);
+  background: linear-gradient(135deg, #E6F4F4 0%, #D6ECEC 100%);
   overflow: hidden;
 }
 .hero-text { flex: 1; }

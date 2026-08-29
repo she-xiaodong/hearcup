@@ -18,7 +18,7 @@
   flex: 1; margin: 0; font-size: 26rpx; padding: 16rpx 0; line-height: 1.4;
   background: #F2F6F7; color: #2C3A3F; border-radius: 14rpx;
 }
-.btn-mini.btn-primary { background: linear-gradient(135deg, #6FCFBA, #4FB8A8); color: #fff; font-weight: 600; }
+.btn-mini.btn-primary { background: linear-gradient(135deg, #6FCFBA, #008C8C); color: #fff; font-weight: 600; }
 
 /* 自检结果 */
 .step { display: flex; align-items: flex-start; padding: 18rpx 0; border-top: 1rpx solid #F2F5F6; }
@@ -34,7 +34,7 @@
 .env-row { display: flex; align-items: center; justify-content: space-between; padding: 14rpx 0; font-size: 26rpx; }
 .env-k { color: #5A6470; flex: none; }
 .env-v { color: #2C3A3F; text-align: right; word-break: break-all; margin-left: 20rpx; }
-.env-v.on { color: #4FB8A8; font-weight: 600; }
+.env-v.on { color: #008C8C; font-weight: 600; }
 .env-v.off { color: #FF8A8A; }
 
 .result-box {

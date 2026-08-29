@@ -1,14 +1,14 @@
 @import "./styles/icons.wxss";
-/* app.wxss —— Hearcup 全局设计系统（聆心风格：温暖、治愈、倾听） */
+/* app.wxss —— Hearcup 全局设计系统（青瓷 teal 主色 #008C8C） */
 page {
   /* 设计令牌 */
-  --primary: #4FB8A8;        /* 主色：薄荷绿，安静治愈 */
-  --primary-deep: #3A9E8F;
-  --primary-soft: #E6F6F2;   /* 主色浅底 */
-  --peach: #FF9E80;          /* 暖橙：温度、行动 */
-  --peach-soft: #FFEDE5;
-  --lavender: #B5A8E0;       /* 薰衣草：次标签 */
-  --lavender-soft: #F0ECFA;
+  --primary: #008C8C;        /* 主色：青瓷 teal */
+  --primary-deep: #007A7A;   /* 主色深（渐变端） */
+  --primary-soft: #E6F4F4;   /* 主色浅底 */
+  --peach: #008C8C;          /* 原暖橙，已统一为主色 */
+  --peach-soft: #E6F4F4;
+  --lavender: #00A8A8;       /* 原薰衣草，已统一为亮 teal */
+  --lavender-soft: #E6F4F4;
   --bg: #FBF7F2;             /* 暖米白背景 */
   --card: #FFFFFF;
   --text: #2D3142;           /* 主文字 */
@@ -18,7 +18,7 @@ page {
   --danger: #FF6B6B;
   --radius: 28rpx;
   --radius-sm: 16rpx;
-  --shadow: 0 8rpx 30rpx rgba(79, 184, 168, 0.12);
+  --shadow: 0 8rpx 30rpx rgba(0, 140, 140, 0.12);
   --shadow-sm: 0 4rpx 16rpx rgba(45, 49, 66, 0.06);
 
   background: var(--bg);
@@ -60,7 +60,7 @@ view, text, button, input { box-sizing: border-box; }
 }
 .btn::after { border: none; }
 .btn-primary { background: linear-gradient(135deg, var(--primary) 0%, var(--primary-deep) 100%); color: #fff; box-shadow: var(--shadow); }
-.btn-peach { background: linear-gradient(135deg, #FFB199 0%, var(--peach) 100%); color: #fff; box-shadow: 0 8rpx 24rpx rgba(255,158,128,0.35); }
+.btn-peach { background: linear-gradient(135deg, #00A8A8 0%, var(--peach) 100%); color: #fff; box-shadow: 0 8rpx 24rpx rgba(0,140,140,0.35); }
 .btn-ghost { background: var(--primary-soft); color: var(--primary-deep); }
 .btn-block { width: 100%; }
 .btn[disabled] { opacity: 0.5; }
@@ -76,8 +76,8 @@ view, text, button, input { box-sizing: border-box; }
   color: var(--primary-deep);
   margin-right: 12rpx;
 }
-.tag-peach { background: var(--peach-soft); color: #E0764F; }
-.tag-lav { background: var(--lavender-soft); color: #7A68B8; }
+.tag-peach { background: var(--peach-soft); color: #007A7A; }
+.tag-lav { background: var(--lavender-soft); color: #007A7A; }
 
 /* 角色徽标 */
 .role-badge {
@@ -87,7 +87,7 @@ view, text, button, input { box-sizing: border-box; }
   font-weight: 600;
 }
 .role-listener { background: var(--primary-soft); color: var(--primary-deep); }
-.role-counselor { background: var(--lavender-soft); color: #7A68B8; }
+.role-counselor { background: var(--lavender-soft); color: #007A7A; }
 
 /* 认证等级 */
 .level { font-size: 22rpx; color: var(--gold); }

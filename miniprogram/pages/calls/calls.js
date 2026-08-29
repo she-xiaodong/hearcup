@@ -16,7 +16,7 @@ Page({
     if (getApp().globalData.config.useMock) {
       const records = callRecords.map(r => ({
         ...r,
-        color: r.callType === 2 ? '#B5A8E0' : '#4FB8A8',
+        color: r.callType === 2 ? '#00A8A8' : '#008C8C',
         roleIcon: r.callType === 2
       }))
       this.applySummary(records)
@@ -26,7 +26,7 @@ Page({
     if (r.code === 0 && Array.isArray(r.data)) {
       const records = r.data.map(x => ({
         ...x,
-        color: x.callType === 2 ? '#B5A8E0' : '#4FB8A8',
+        color: x.callType === 2 ? '#00A8A8' : '#008C8C',
         roleIcon: x.callType === 2
       }))
       this.applySummary(records)
