@@ -21,3 +21,4 @@
 }
 .call-btn { flex: 1; margin: 0; }
 .call-btn-inner { display: flex; align-items: center; justify-content: center; gap: 10rpx; }
+.call-price { font-size: 20rpx; opacity: 0.85; line-height: 1.2; margin-top: 2rpx; }

@@ -19,6 +19,7 @@ App({
       baseUrl: 'https://shanlianba.com',
       listenerPrice: 1.0,
       counselorPrice: 2.0,
+      videoRate: 1.5,
       minBalance: 3.0,
       platformRate: 0.2
     }

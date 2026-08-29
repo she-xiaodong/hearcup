@@ -8,7 +8,12 @@ const demoReviews = [
 ]
 
 Page({
-  data: { p: null, reviews: demoReviews },
+  data: { p: null, reviews: demoReviews, videoPrice: 0 },
+
+  videoPriceOf(p) {
+    const rate = Number((getApp().globalData.config || {}).videoRate) || 1.5
+    return Math.round(p.price_per_minute * rate * 10) / 10
+  },
 
   async onLoad(q) {
     const id = Number(q.id)
@@ -16,13 +21,13 @@ Page({
       const p = store.getProviders().find(x => x.id === id)
       if (!p) { wx.showToast({ title: '未找到服务者', icon: 'none' }); return }
       wx.setNavigationBarTitle({ title: p.nickName })
-      this.setData({ p })
+      this.setData({ p, videoPrice: this.videoPriceOf(p) })
       return
     }
     const r = await api.getProvider(id)
     if (r.code === 0 && r.data && r.data.provider) {
       wx.setNavigationBarTitle({ title: r.data.provider.nickName })
-      this.setData({ p: r.data.provider, reviews: r.data.ratings || demoReviews })
+      this.setData({ p: r.data.provider, reviews: r.data.ratings || demoReviews, videoPrice: this.videoPriceOf(r.data.provider) })
     } else {
       wx.showToast({ title: '未找到服务者', icon: 'none' })
     }

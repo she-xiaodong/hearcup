@@ -80,6 +80,8 @@ func ensureSchema(db *sql.DB) error {
 			return err
 		}
 	}
+	// 迁移：旧库 t_config 补 video_rate 列（列已存在时报错直接忽略，幂等）
+	_, _ = db.Exec("ALTER TABLE t_config ADD COLUMN video_rate DOUBLE DEFAULT 1.5")
 	return nil
 }
 
@@ -154,8 +156,12 @@ func (s *Store) persistMySQL() {
 	_ = replaceRows(s.sql, "admins", []string{"id", "username", "password", "real_name", "role", "status", "last_login_at", "created_at", "updated_at"}, arows)
 
 	// config
-	_ = replaceRows(s.sql, "t_config", []string{"id", "price_listener", "price_counselor", "platform_rate", "min_balance", "overdraft", "min_withdraw"},
-		[][]interface{}{{1, db.Config.PriceListener, db.Config.PriceCounselor, db.Config.PlatformRate, db.Config.MinBalance, db.Config.Overdraft, db.Config.MinWithdraw}})
+	vr := db.Config.VideoRate
+	if vr <= 0 {
+		vr = 1.5
+	}
+	_ = replaceRows(s.sql, "t_config", []string{"id", "price_listener", "price_counselor", "video_rate", "platform_rate", "min_balance", "overdraft", "min_withdraw"},
+		[][]interface{}{{1, db.Config.PriceListener, db.Config.PriceCounselor, vr, db.Config.PlatformRate, db.Config.MinBalance, db.Config.Overdraft, db.Config.MinWithdraw}})
 }
 
 // 从 MySQL 载入内存。若表为空，返回 false（调用方负责 seed）。
@@ -254,9 +260,16 @@ func (s *Store) loadFromMySQL() bool {
 	arows.Close()
 	s.db.SeqAdmin = maxA
 
-	// config
-	_ = db.QueryRow("SELECT price_listener,price_counselor,platform_rate,min_balance,overdraft,min_withdraw FROM t_config WHERE id=1").
-		Scan(&s.db.Config.PriceListener, &s.db.Config.PriceCounselor, &s.db.Config.PlatformRate, &s.db.Config.MinBalance, &s.db.Config.Overdraft, &s.db.Config.MinWithdraw)
+	// config（video_rate 为后加列，扫描失败时保持默认 1.5）
+	var vr float64
+	if err := db.QueryRow("SELECT price_listener,price_counselor,video_rate,platform_rate,min_balance,overdraft,min_withdraw FROM t_config WHERE id=1").
+		Scan(&s.db.Config.PriceListener, &s.db.Config.PriceCounselor, &vr, &s.db.Config.PlatformRate, &s.db.Config.MinBalance, &s.db.Config.Overdraft, &s.db.Config.MinWithdraw); err == nil && vr > 0 {
+		s.db.Config.VideoRate = vr
+	} else {
+		_ = db.QueryRow("SELECT price_listener,price_counselor,platform_rate,min_balance,overdraft,min_withdraw FROM t_config WHERE id=1").
+			Scan(&s.db.Config.PriceListener, &s.db.Config.PriceCounselor, &s.db.Config.PlatformRate, &s.db.Config.MinBalance, &s.db.Config.Overdraft, &s.db.Config.MinWithdraw)
+		s.db.Config.VideoRate = 1.5
+	}
 
 	return true
 }

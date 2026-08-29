@@ -134,6 +134,7 @@ type Admin struct {
 type Config struct {
 	PriceListener  float64 `json:"price_listener"`  // 倾听师单价 1元/分
 	PriceCounselor float64 `json:"price_counselor"` // 咨询师单价 2元/分
+	VideoRate      float64 `json:"video_rate"`      // 视频通话加价倍率：语音=基础价，视频=基础价×倍率（默认1.5）
 	PlatformRate   float64 `json:"platform_rate"`   // 平台抽成 0.2
 	MinBalance     float64 `json:"min_balance"`      // 起呼最低余额 3元
 	Overdraft      float64 `json:"overdraft"`        // 透支额度 2元
@@ -192,7 +193,7 @@ func loadStore(path string) *Store {
 		Tags:      map[int64]*Tag{},
 		Admins:    map[int64]*Admin{},
 		Config: Config{
-			PriceListener: 1.0, PriceCounselor: 2.0, PlatformRate: 0.2,
+			PriceListener: 1.0, PriceCounselor: 2.0, VideoRate: 1.5, PlatformRate: 0.2,
 			MinBalance: 3.0, Overdraft: 2.0, MinWithdraw: 100.0,
 		},
 	}}

@@ -243,11 +243,21 @@ func hCallInvite(w http.ResponseWriter, r *http.Request) {
 	u.Frozen += store.db.Config.MinBalance
 	p.IsBusy = 1
 
+	// 计费单价：语音=基础价；视频=基础价×加价倍率（四舍五入到分）
+	unitPrice := p.PricePerMinute
+	if body.CallType == 2 {
+		rate := store.db.Config.VideoRate
+		if rate <= 0 {
+			rate = 1.5
+		}
+		unitPrice = float64(int(p.PricePerMinute*rate*100+0.5)) / 100
+	}
+
 	store.db.SeqCall++
 	roomID := fmt.Sprintf("call_%d_%d", now(), body.ProviderID)
 	rec := &CallRecord{
 		ID: store.db.SeqCall, UserID: uid, ProviderID: body.ProviderID, RoomID: roomID,
-		CallType: body.CallType, StartTime: now(), UnitPrice: p.PricePerMinute,
+		CallType: body.CallType, StartTime: now(), UnitPrice: unitPrice,
 		Status: 0, CreatedAt: now(), UpdatedAt: now(),
 	}
 	store.db.Calls[rec.ID] = rec
@@ -258,6 +268,7 @@ func hCallInvite(w http.ResponseWriter, r *http.Request) {
 		"room_id": roomID, "user_sig": userSig, "provider_sig": provSig,
 		"sdk_app_id": appCfg.TRTCAppID, "user_id": fmt.Sprintf("user_%d", uid),
 		"provider_user_id": fmt.Sprintf("provider_%d", p.UserID),
+		"call_type": body.CallType, "unit_price": unitPrice,
 	})
 }
 
