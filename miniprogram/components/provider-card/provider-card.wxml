@@ -1,6 +1,6 @@
 <view class="pc-card" bindtap="onTapCard">
   <view class="pc-head">
-    <view class="avatar pc-avatar" style="background:{{provider.avatarColor}}"><view class="ico ico-leaf-w" style="width:42rpx;height:42rpx;"></view></view>
+    <image class="pc-avatar-img" src="{{provider.avatar || '/images/default_avatar.png'}}" mode="aspectFill" />
     <view class="pc-info">
       <view class="pc-name-row">
         <text class="pc-name">{{provider.nickName}}</text>

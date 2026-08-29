@@ -1,5 +1,5 @@
 .profile { display: flex; align-items: center; gap: 24rpx; margin: 24rpx 32rpx; }
-.avatar.big { width: 120rpx; height: 120rpx; font-size: 56rpx; }
+.detail-avatar-img { width: 120rpx; height: 120rpx; border-radius: 50%; flex-shrink: 0; }
 .p-name-row { display: flex; align-items: center; gap: 12rpx; }
 .p-name { font-size: 36rpx; font-weight: 800; }
 .p-meta { display: flex; align-items: center; gap: 10rpx; margin-top: 8rpx; font-size: 24rpx; }

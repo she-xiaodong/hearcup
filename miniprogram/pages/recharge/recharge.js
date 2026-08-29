@@ -61,20 +61,55 @@ Page({
       }, 1200)
       return
     }
-    // 真实环境：/api/v1/recharge/create → wx.requestPayment → /api/v1/pay/callback 入账
+    // 真实环境：/api/v1/recharge/create → wx.requestPayment → 微信回调入账
     const r = await api.createRecharge(amount)
     wx.hideLoading()
-    if (r.code === 0) {
-      const b = await api.getBalance()
-      if (b.code === 0 && b.data) {
-        store.setBalance(b.data.balance)
-        this.setData({ balanceCoins: getApp().toCoins(b.data.balance) })
-      }
-      wx.showToast({ title: `充值成功 +${(r.data && r.data.coins) || coins} ${this.data.coinName}`, icon: 'success' })
-      setTimeout(() => wx.navigateBack(), 900)
-    } else {
-      wx.showToast({ title: (r.msg || '充值失败'), icon: 'none' })
+    if (r.code !== 0) {
+      wx.showToast({ title: (r.msg || '下单失败'), icon: 'none' })
+      return
     }
+    const data = r.data || {}
+    // 需要真实支付：拉起微信支付
+    if (data.need_pay && data.pay_params) {
+      const pp = data.pay_params
+      wx.requestPayment({
+        timeStamp: pp.timeStamp,
+        nonceStr: pp.nonceStr,
+        package: pp.package,
+        signType: pp.signType || 'RSA',
+        paySign: pp.paySign,
+        success: () => {
+          wx.showToast({ title: '支付成功', icon: 'success' })
+          setTimeout(() => this.refreshBalance(), 1000)
+        },
+        fail: (e) => {
+          const msg = (e && e.errMsg) || ''
+          if (msg.indexOf('cancel') > -1) {
+            wx.showToast({ title: '已取消支付', icon: 'none' })
+          } else {
+            wx.showToast({ title: '支付失败：' + msg, icon: 'none' })
+          }
+        }
+      })
+      return
+    }
+    // 模拟入账（本地/演示环境，后端直接标记已支付）
+    const b = await api.getBalance()
+    if (b.code === 0 && b.data) {
+      store.setBalance(b.data.balance)
+      this.setData({ balanceCoins: getApp().toCoins(b.data.balance) })
+    }
+    wx.showToast({ title: `充值成功 +${(data.coins) || coins} ${this.data.coinName}`, icon: 'success' })
+    setTimeout(() => wx.navigateBack(), 900)
+  },
+
+  async refreshBalance() {
+    const b = await api.getBalance()
+    if (b.code === 0 && b.data) {
+      store.setBalance(b.data.balance)
+      this.setData({ balanceCoins: getApp().toCoins(b.data.balance) })
+    }
+    wx.navigateBack()
   },
 
   now() {

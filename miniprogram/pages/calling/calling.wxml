@@ -5,7 +5,7 @@
   </view>
 
   <view class="call-center">
-    <view class="avatar call-avatar" style="background:{{p.avatarColor}}"><view class="ico ico-leaf-w" style="width:90rpx;height:90rpx;"></view></view>
+    <image class="call-avatar-img" src="{{p.avatar || '/images/default_avatar.png'}}" mode="aspectFill" />
     <view class="call-name">{{p.nickName}}</view>
     <view class="call-role">{{callType===2?'视频通话':'语音通话'}} · {{unitCoins}} H币/分钟</view>
   </view>

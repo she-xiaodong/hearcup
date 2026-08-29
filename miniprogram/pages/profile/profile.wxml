@@ -1,8 +1,7 @@
 <view class="page-bg">
   <view class="card profile-head">
     <button class="avatar-btn" open-type="chooseAvatar" bind:chooseavatar="onChooseAvatar">
-      <image wx:if="{{user.avatar}}" class="head-avatar-img" src="{{user.avatar}}" mode="aspectFill" />
-      <view wx:else class="avatar head-avatar" style="background:linear-gradient(135deg,#008C8C,#00A8A8)"><view class="ico ico-user-w" style="width:52rpx;height:52rpx;"></view></view>
+      <image class="head-avatar-img" src="{{user.avatar || '/images/default_avatar.png'}}" mode="aspectFill" />
     </button>
     <view class="head-info">
       <input class="head-name-input" type="nickname" placeholder="点击设置昵称" value="{{user.nickName}}" bindblur="onNicknameBlur" />

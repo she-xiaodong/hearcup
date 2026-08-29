@@ -1,6 +1,6 @@
 <view class="page-bg" wx:if="{{p}}">
   <view class="card profile">
-    <view class="avatar big" style="background:{{p.avatarColor}}"><view class="ico ico-leaf-w" style="width:64rpx;height:64rpx;"></view></view>
+    <image class="detail-avatar-img" src="{{p.avatar || '/images/default_avatar.png'}}" mode="aspectFill" />
     <view class="p-info">
       <view class="p-name-row">
         <text class="p-name">{{p.nickName}}</text>
