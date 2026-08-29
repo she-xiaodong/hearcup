@@ -19,5 +19,5 @@
   transition: color .2s;
 }
 .tab-item.on { color: #008C8C; }
-.tab-icon { line-height: 1; }
+.tab-icon { width: 48rpx; height: 48rpx; }
 .tab-text { font-size: 22rpx; }

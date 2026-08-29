@@ -3,9 +3,9 @@ Component({
   data: {
     selected: 0,
     list: [
-      { pagePath: '/pages/index/index', text: '首页', iconClass: 't-home' },
-      { pagePath: '/pages/calls/calls', text: '通话', iconClass: 't-phone' },
-      { pagePath: '/pages/profile/profile', text: '我的', iconClass: 't-user' }
+      { pagePath: '/pages/index/index', text: '首页', iconPath: '/images/tab_home.png', selectedIconPath: '/images/tab_home_on.png' },
+      { pagePath: '/pages/calls/calls', text: '通话', iconPath: '/images/tab_phone.png', selectedIconPath: '/images/tab_phone_on.png' },
+      { pagePath: '/pages/profile/profile', text: '我的', iconPath: '/images/tab_user.png', selectedIconPath: '/images/tab_user_on.png' }
     ]
   },
   methods: {

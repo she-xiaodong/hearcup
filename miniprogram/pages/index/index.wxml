@@ -1,10 +1,6 @@
 <view class="page-bg">
   <view class="topbar" style="padding-top: {{statusBarHeight}}px;">
-    <view>
-      <view class="hi">你好，{{userInfo.nickName}}</view>
-      <view class="muted sub">今天，也允许自己慢慢来</view>
-    </view>
-    <view class="balance-pill" bindtap="goRecharge"><view class="ico ico-wallet ico-sm"></view><text>余额 {{balance}}</text></view>
+    <image class="top-logo" src="/images/logo1.png" mode="aspectFit" />
   </view>
 
   <view class="hero card">

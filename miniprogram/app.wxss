@@ -127,6 +127,11 @@ view, text, button, input { box-sizing: border-box; }
   color: var(--primary-deep);
   box-shadow: var(--shadow-sm);
 }
+.top-logo {
+  height: 64rpx;
+  width: 220rpx;
+  display: block;
+}
 
 /* 区块标题 */
 .section-title { font-size: 34rpx; font-weight: 700; margin: 16rpx 0; }
