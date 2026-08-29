@@ -581,11 +581,14 @@ func hRechargeCreate(w http.ResponseWriter, r *http.Request) {
 	// 真实微信支付：仅对「真实微信 openid」发起下单；mock 用户（openid_ 前缀）走演示入账，
 	// 既保证本地 e2e 不被真实支付打断，又对真实用户走完整支付链路。
 	if appCfg.WXPayMchID != "" && appCfg.WXAppID != "" && !strings.HasPrefix(u.Openid, "openid_") {
+		fmt.Println("[pay] 发起微信下单 openid=", u.Openid, " order=", orderNo, " amount=", body.Amount)
 		payParams, err := createWxPayOrder(u.Openid, orderNo, body.Amount)
 		if err != nil {
+			fmt.Println("[pay] 下单失败:", err)
 			fail(w, "微信下单失败: "+err.Error())
 			return
 		}
+		fmt.Println("[pay] 下单成功 package=", payParams["package"])
 		store.save()
 		sendOK(w, map[string]interface{}{
 			"order_no": orderNo, "amount": body.Amount,

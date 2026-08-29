@@ -171,11 +171,12 @@ func hWxPayCallback(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	var tx struct {
-		OutTradeNo   string `json:"out_trade_no"`
-		TradeState   string `json:"trade_state"`
+		OutTradeNo    string `json:"out_trade_no"`
+		TradeState    string `json:"trade_state"`
 		TransactionID string `json:"transaction_id"`
 	}
 	_ = json.Unmarshal([]byte(plain), &tx)
+	fmt.Println("[pay] 回调收到 trade_state=", tx.TradeState, " out_trade_no=", tx.OutTradeNo)
 	if tx.TradeState != "SUCCESS" {
 		sendOK(w, map[string]interface{}{"code": "SUCCESS", "message": "已接收"})
 		return
