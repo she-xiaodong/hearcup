@@ -55,10 +55,21 @@
   svg{max-width:100%}
   .bar{fill:var(--mint)}
   .bar2{fill:var(--lav)}
+  .u-avatar{width:30px;height:30px;border-radius:50%;object-fit:cover;display:block}
+  .u-avatar-ph{width:30px;height:30px;border-radius:50%;background:#e3f5f0;color:var(--mint-d);display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700}
+  tr.clickable{cursor:pointer}
+  tr.clickable:hover td{background:#f6faf8}
+  .modal-mask{position:fixed;inset:0;background:rgba(0,0,0,.4);display:flex;align-items:center;justify-content:center;z-index:50;padding:20px}
+  .modal-box{background:#fff;border-radius:16px;width:760px;max-width:100%;max-height:86vh;overflow:auto;padding:22px}
+  .modal-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px}
+  .modal-meta{color:var(--muted);font-size:12px;margin-bottom:16px}
+  .modal-box h4{margin:16px 0 8px;font-size:14px;color:var(--text)}
+  .modal-box table{font-size:12px}
 </style>
 </head>
 <body>
 <div id="app"></div>
+<div id="modal" style="display:none"></div>
 
 <script>
 const API = '';
@@ -73,7 +84,7 @@ async function api(method, path, body){
   return await r.json();
 }
 function el(html){ const d=document.createElement('div'); d.innerHTML=html; return d.firstElementChild; }
-function roleText(r){ return r==1?'倾听师':'咨询师'; }
+function roleText(r){ return '倾听者'; }
 function statusTag(s){
   const m={0:['wait','待审核'],1:['pass','已通过'],2:['rej','已拒绝'],3:['ban','已禁用']};
   const [c,t]=m[s]||['off','未知']; return `<span class="tag ${c}">${t}</span>`;
@@ -84,6 +95,7 @@ function ico(name){
     cup:'<path d="M5 9h11v4a5 5 0 0 1-5 5H10a5 5 0 0 1-5-5V9z"/><path d="M16 10h2.5a2 2 0 0 1 0 4H16"/><path d="M8 3v2M11 3v2"/>',
     dashboard:'<path d="M4 20V4M4 20h16"/><rect x="7.5" y="12" width="3" height="6"/><rect x="12.5" y="8" width="3" height="10"/><rect x="17.5" y="14" width="3" height="4"/>',
     providers:'<circle cx="9" cy="8" r="3.2"/><path d="M3.5 20c0-3.3 2.7-5.5 5.5-5.5s5.5 2.2 5.5 5.5"/><circle cx="17" cy="9" r="2.4"/><path d="M16 14.5c2.2.4 3.5 2.2 3.5 5"/>',
+    users:'<circle cx="9" cy="8" r="3"/><path d="M3 20c0-3 2.7-5 6-5s6 2 6 5"/><circle cx="17" cy="9" r="2.5"/><path d="M15.5 15c2.4.3 3.5 2.4 3.5 5"/>',
     apps:'<rect x="5" y="3.5" width="14" height="17" rx="2.5"/><path d="M9 3.5V7h6V3.5"/><path d="M8.5 12l1.6 1.6L8.5 15M15.5 12l-1.6 1.6L15.5 15"/>',
     orders:'<rect x="3" y="6" width="18" height="12" rx="2.5"/><path d="M3 10h18"/><circle cx="17" cy="14.5" r="1.3"/>',
     withdraws:'<rect x="3" y="6" width="18" height="13" rx="2.5"/><path d="M3 10h18"/><path d="M16.5 14.5h2"/>',
@@ -117,6 +129,7 @@ function render(){
     <div class="side">
       <div class="logo">${ico('cup')} Hearcup</div>
       <div class="nav-item" data-v="dashboard">${ico('dashboard')}数据看板</div>
+      <div class="nav-item" data-v="users">${ico('users')}用户管理</div>
       <div class="nav-item" data-v="providers">${ico('providers')}服务者管理</div>
       <div class="nav-item" data-v="apps">${ico('apps')}入驻审核</div>
       <div class="nav-item" data-v="orders">${ico('orders')}订单财务</div>
@@ -138,6 +151,7 @@ async function renderMain(){
   document.querySelectorAll('.nav-item[data-v]').forEach(n=>n.classList.toggle('active', n.dataset.v===STATE.view));
   const m=document.getElementById('main');
   if(STATE.view==='dashboard') m.innerHTML = await viewDashboard();
+  else if(STATE.view==='users') m.innerHTML = await viewUsers();
   else if(STATE.view==='providers') m.innerHTML = await viewProviders();
   else if(STATE.view==='apps') m.innerHTML = await viewApps();
   else if(STATE.view==='orders') m.innerHTML = await viewOrders();
@@ -161,6 +175,57 @@ async function viewDashboard(){
     <svg viewBox="0 0 250 130" width="100%" height="160">${bars}</svg>
   </div>`;
 }
+
+function fmtTime(ts){ if(!ts) return '-'; const d=new Date(ts*1000); const p=n=>String(n).padStart(2,'0'); return `${d.getFullYear()}-${p(d.getMonth()+1)}-${p(d.getDate())} ${p(d.getHours())}:${p(d.getMinutes())}`; }
+function uAvatar(u){
+  if(u.avatar) return `<img class="u-avatar" src="${u.avatar}" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'"/><span class="u-avatar-ph" style="display:none">${(u.nickname||'?').slice(0,1)}</span>`;
+  return `<span class="u-avatar-ph">${(u.nickname||'?').slice(0,1)}</span>`;
+}
+async function viewUsers(){
+  const d=await api('GET','/api/v1/admin/users');
+  const list=(d.data&&d.data.list)||[];
+  const rows=list.map(u=>`<tr class="clickable" onclick="viewUserDetail(${u.id})">
+    <td style="font-weight:600">${u.h_no||'-'}</td>
+    <td>${uAvatar(u)}</td>
+    <td>${u.nickname||'-'}</td>
+    <td>¥${(u.balance||0).toFixed(2)}</td>
+    <td>${u.call_count||0}</td>
+    <td>¥${(u.total_spent||0).toFixed(2)}</td>
+    <td>${u.recharge_count||0}</td>
+    <td>¥${(u.total_recharged||0).toFixed(2)}</td>
+    <td class="muted">${fmtTime(u.created_at)}</td>
+  </tr>`).join('');
+  return `<div class="topbar"><h2>用户管理（${d.data?.total??list.length}）</h2></div>
+  <div class="panel"><table>
+    <thead><tr><th>H号</th><th>头像</th><th>昵称</th><th>余额</th><th>通话次数</th><th>消费总额</th><th>充值次数</th><th>充值总额</th><th>注册时间</th></tr></thead>
+    <tbody>${rows||'<tr><td colspan=9 class="muted">暂无用户</td></tr>'}</tbody>
+  </table></div>
+  <div class="muted" style="padding:0 4px">点击任意行查看该用户的通话 / 充值明细</div>`;
+}
+async function viewUserDetail(id){
+  const d=await api('GET','/api/v1/admin/users/'+id);
+  if(d.code!==0){ alert(d.msg||'加载失败'); return; }
+  const u=d.data.user, calls=d.data.calls||[], recs=d.data.recharges||[];
+  const callRows=calls.map(c=>`<tr><td>${c.provider_name||'-'}</td><td>${c.call_type==1?'语音':'视频'}</td><td>${Math.round((c.duration||0)/60)}分</td><td>¥${(c.amount||0).toFixed(2)}</td><td class="muted">${fmtTime(c.created_at)}</td></tr>`).join('');
+  const recRows=recs.map(r=>`<tr><td>${r.order_no||'-'}</td><td>¥${(r.amount||0).toFixed(2)}</td><td>${r.pay_status==1?'<span class="tag pass">已支付</span>':'<span class="tag wait">待支付</span>'}</td><td class="muted">${fmtTime(r.created_at)}</td></tr>`).join('');
+  document.getElementById('modal').style.display='block';
+  document.getElementById('modal').innerHTML = `
+  <div class="modal-mask" onclick="closeModal()">
+    <div class="modal-box" onclick="event.stopPropagation()">
+      <div class="modal-head">
+        <div>${uAvatar(u)} <strong style="margin-left:8px">${u.nickname||'-'}</strong> <span class="tag on">H号 ${u.h_no||'-'}</span></div>
+        <button class="ghost sm" onclick="closeModal()">关闭</button>
+      </div>
+      <div class="modal-meta">余额 ¥${(u.balance||0).toFixed(2)} · 冻结 ¥${(u.frozen||0).toFixed(2)} · 手机 ${u.phone||'-'} · 注册 ${fmtTime(u.created_at)}</div>
+      <div class="modal-meta" style="word-break:break-all">openid：${u.openid||'-'}</div>
+      <h4>通话记录（${calls.length}）</h4>
+      <table><thead><tr><th>服务者</th><th>类型</th><th>时长</th><th>扣费</th><th>时间</th></tr></thead><tbody>${callRows||'<tr><td colspan=5 class="muted">暂无通话</td></tr>'}</tbody></table>
+      <h4>充值记录（${recs.length}）</h4>
+      <table><thead><tr><th>订单号</th><th>金额</th><th>状态</th><th>时间</th></tr></thead><tbody>${recRows||'<tr><td colspan=4 class="muted">暂无充值</td></tr>'}</tbody></table>
+    </div>
+  </div>`;
+}
+function closeModal(){ const m=document.getElementById('modal'); if(m){ m.style.display='none'; m.innerHTML=''; } }
 
 async function viewProviders(){
   const d=await api('GET','/api/v1/admin/providers');
@@ -187,7 +252,7 @@ async function viewApps(){
   const rows=list.map(p=>`<tr>
     <td>${p.real_name}</td><td>${roleText(p.role)}</td><td>${p.phone}</td>
     <td>${p.intro?.slice(0,20)}…</td>
-    <td>${p.role==2? (p.certificate_no||'-'):'—'}</td>
+    <td>${p.certificate_no||'—'}</td>
     <td>
       <button class="sm" onclick="approve(${p.id},true)">通过</button>
       <button class="sm warn" onclick="approve(${p.id},false)">拒绝</button>

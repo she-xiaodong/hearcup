@@ -613,10 +613,6 @@ func hProviderApply(w http.ResponseWriter, r *http.Request) {
 		fail(w, "必填项缺失")
 		return
 	}
-	if body.BankAccountName == "" || body.BankCardNo == "" || body.BankName == "" {
-		fail(w, "请填写收款银行卡信息（持卡人/卡号/开户银行）")
-		return
-	}
 	store.mu.Lock()
 	defer store.mu.Unlock()
 	// 复用已有申请
@@ -634,8 +630,6 @@ func hProviderApply(w http.ResponseWriter, r *http.Request) {
 		Certificates: body.Certificates, TrainingProof: body.TrainingProof,
 		CertificateNo: body.CertificateNo, CertificateImage: body.CertificateImage,
 		YearsOfExp: body.YearsOfExp, Background: body.Background,
-		BankAccountName: body.BankAccountName, BankCardNo: body.BankCardNo,
-		BankName: body.BankName, BankBranch: body.BankBranch,
 		PricePerMinute: price, Level: 1, IsOnline: 0, IsBusy: 0, Rating: 0,
 		TotalSessions: 0, TotalEarnings: 0, Withdrawable: 0, DailyLimit: 10,
 		TodaySessions: 0, Status: 0, CreatedAt: now(), UpdatedAt: now(),
@@ -1194,7 +1188,7 @@ func boolText(b bool) string {
 	return "未配置（走演示兜底）"
 }
 
-// GET /api/v1/admin/users —— 用户列表（真机扫码后确认真实 openid 是否落库）
+// GET /api/v1/admin/users —— 用户列表（含 H号/头像/余额 + 通话/消费/充值聚合统计）
 func hAdminUsers(w http.ResponseWriter, r *http.Request) {
 	_, ok := requireAdmin(r)
 	if !ok {
@@ -1203,18 +1197,44 @@ func hAdminUsers(w http.ResponseWriter, r *http.Request) {
 	}
 	store.mu.Lock()
 	defer store.mu.Unlock()
+
+	// 聚合：通话次数 + 消费总额（已结束的通话扣费）
+	callCount := map[int64]int{}
+	spent := map[int64]float64{}
+	for _, c := range store.db.Calls {
+		callCount[c.UserID]++
+		if c.Status == 1 {
+			spent[c.UserID] += c.Amount
+		}
+	}
+	// 聚合：充值次数 + 充值总额（已支付）
+	rechargeCount := map[int64]int{}
+	recharged := map[int64]float64{}
+	for _, o := range store.db.Recharges {
+		rechargeCount[o.UserID]++
+		if o.PayStatus == 1 {
+			recharged[o.UserID] += o.Amount
+		}
+	}
+
 	list := make([]map[string]interface{}, 0, len(store.db.Users))
 	for _, u := range store.db.Users {
 		list = append(list, map[string]interface{}{
 			"id":         u.ID,
+			"h_no":       u.HNo,
 			"openid":     u.Openid,
 			"unionid":    u.Unionid,
 			"is_real_wx": !strings.HasPrefix(u.Openid, "openid_"),
 			"nickname":   u.Nickname,
+			"avatar":     u.Avatar,
 			"balance":    u.Balance,
 			"frozen":     u.Frozen,
 			"status":     u.Status,
-			"created_at": u.CreatedAt,
+			"call_count":      callCount[u.ID],
+			"total_spent":     round2(spent[u.ID]),
+			"recharge_count":  rechargeCount[u.ID],
+			"total_recharged": round2(recharged[u.ID]),
+			"created_at":      u.CreatedAt,
 		})
 	}
 	// 按注册时间倒序，最新的排前面，方便找刚扫码登录的用户
@@ -1222,4 +1242,60 @@ func hAdminUsers(w http.ResponseWriter, r *http.Request) {
 		return list[i]["created_at"].(int64) > list[j]["created_at"].(int64)
 	})
 	sendOK(w, map[string]interface{}{"total": len(list), "list": list})
+}
+
+// GET /api/v1/admin/users/:id —— 单个用户详情（基本信息 + 通话/消费/充值记录）
+func hAdminUserDetail(w http.ResponseWriter, r *http.Request, params map[string]string) {
+	_, ok := requireAdmin(r)
+	if !ok {
+		fail(w, "无权限")
+		return
+	}
+	id, _ := strconv.ParseInt(params["id"], 10, 64)
+	store.mu.Lock()
+	defer store.mu.Unlock()
+
+	u, ok := store.db.Users[id]
+	if !ok {
+		fail(w, "用户不存在")
+		return
+	}
+
+	// 通话记录（也是消费来源）
+	calls := []map[string]interface{}{}
+	for _, c := range store.db.Calls {
+		if c.UserID != id {
+			continue
+		}
+		calls = append(calls, map[string]interface{}{
+			"id": c.ID, "call_type": c.CallType, "duration": c.Duration,
+			"amount": c.Amount, "status": c.Status,
+			"provider_name": store.db.Providers[c.ProviderID].RealName,
+			"created_at":    c.CreatedAt,
+		})
+	}
+	sort.Slice(calls, func(i, j int) bool { return calls[i]["created_at"].(int64) > calls[j]["created_at"].(int64) })
+
+	// 充值记录
+	recharges := []map[string]interface{}{}
+	for _, o := range store.db.Recharges {
+		if o.UserID != id {
+			continue
+		}
+		recharges = append(recharges, map[string]interface{}{
+			"order_no": o.OrderNo, "amount": o.Amount, "pay_status": o.PayStatus,
+			"pay_time": o.PayTime, "created_at": o.CreatedAt,
+		})
+	}
+	sort.Slice(recharges, func(i, j int) bool { return recharges[i]["created_at"].(int64) > recharges[j]["created_at"].(int64) })
+
+	sendOK(w, map[string]interface{}{
+		"user": map[string]interface{}{
+			"id": u.ID, "h_no": u.HNo, "nickname": u.Nickname, "avatar": u.Avatar,
+			"phone": u.Phone, "openid": u.Openid, "balance": u.Balance, "frozen": u.Frozen,
+			"status": u.Status, "created_at": u.CreatedAt,
+		},
+		"calls":     calls,
+		"recharges": recharges,
+	})
 }

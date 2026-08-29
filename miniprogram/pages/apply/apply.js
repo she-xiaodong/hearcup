@@ -8,8 +8,7 @@ Page({
     step: 0,
     allTags: tags.map(t => ({ name: t, selected: false })),
     form: {
-      nickName: '', phone: '', idCard: '', expertise: [], certImages: [], intro: '',
-      bankAccountName: '', bankCardNo: '', bankName: '', bankBranch: ''
+      nickName: '', phone: '', idCard: '', expertise: [], certImages: [], intro: ''
     }
   },
 
@@ -45,9 +44,6 @@ Page({
     if (!f.idCard.trim()) return '请填写身份证号'
     if (f.expertise.length === 0) return '请至少选择一个擅长领域'
     if (f.certImages.length === 0) return '请至少上传一张资质证书'
-    if (!f.bankAccountName.trim()) return '请填写持卡人姓名'
-    if (!f.bankCardNo.trim()) return '请填写银行卡号'
-    if (!f.bankName.trim()) return '请填写开户银行'
     return ''
   },
 

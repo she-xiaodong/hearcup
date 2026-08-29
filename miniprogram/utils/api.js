@@ -165,11 +165,7 @@ const api = {
       certificate_no: form.certNo,
       certificate_image: form.certImage,
       years_of_exp: Number(form.years) || 0,
-      background: form.background,
-      bank_account_name: form.bankAccountName,
-      bank_card_no: form.bankCardNo,
-      bank_name: form.bankName,
-      bank_branch: form.bankBranch
+      background: form.background
     }
     const r = await request('POST', '/api/v1/provider/apply', body)
     if (r._mock) {

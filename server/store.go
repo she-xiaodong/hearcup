@@ -59,11 +59,6 @@ type Provider struct {
 	ApprovedAt       int64   `json:"approved_at"`
 	CreatedAt        int64   `json:"created_at"`
 	UpdatedAt        int64   `json:"updated_at"`
-	// 收款信息（倾听者提现用，银行卡号建议生产环境加密存储）
-	BankAccountName string `json:"bank_account_name"` // 持卡人姓名
-	BankCardNo      string `json:"bank_card_no"`      // 银行卡号
-	BankName        string `json:"bank_name"`         // 开户银行（如「招商银行」）
-	BankBranch      string `json:"bank_branch"`       // 开户支行
 	// 关联字段（不持久化）
 	Nickname string `json:"nickname"`
 	Avatar   string `json:"avatar"`

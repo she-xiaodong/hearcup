@@ -61,6 +61,7 @@ var routes = []route{
 	{http.MethodPost, "/api/v1/admin/login", hAdminLogin},
 	{http.MethodGet, "/api/v1/admin/dashboard", hAdminDashboard},
 	{http.MethodGet, "/api/v1/admin/users", hAdminUsers},
+	{http.MethodGet, "/api/v1/admin/users/:id", ph(hAdminUserDetail)},
 	{http.MethodGet, "/api/v1/debug/env", hDebugEnv},
 	{http.MethodGet, "/api/v1/admin/providers", hAdminProviders},
 	{http.MethodGet, "/api/v1/admin/providers/applications", hAdminApplications},

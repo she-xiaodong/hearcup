@@ -48,7 +48,6 @@ func ensureSchema(db *sql.DB) error {
 			price_per_minute DOUBLE, level INT, is_online INT, is_busy INT,
 			rating DOUBLE, total_sessions INT, total_earnings DOUBLE, withdrawable DOUBLE,
 			daily_limit INT, today_sessions INT, status INT, reject_reason VARCHAR(256),
-			bank_account_name VARCHAR(64), bank_card_no VARCHAR(64), bank_name VARCHAR(64), bank_branch VARCHAR(128),
 			approved_at BIGINT, created_at BIGINT, updated_at BIGINT)`,
 		`CREATE TABLE IF NOT EXISTS recharges (
 			id BIGINT PRIMARY KEY, user_id BIGINT, order_no VARCHAR(64), amount DOUBLE,
@@ -93,11 +92,11 @@ func ensureSchema(db *sql.DB) error {
 	_, _ = db.Exec("UPDATE t_config SET coin_name='H币' WHERE coin_name='心晴币'")
 	// 迁移：用户 H号（旧库补 h_no 列）
 	_, _ = db.Exec("ALTER TABLE users ADD COLUMN h_no VARCHAR(16)")
-	// 迁移：倾听者收款银行卡信息（旧库补 4 列）
-	_, _ = db.Exec("ALTER TABLE providers ADD COLUMN bank_account_name VARCHAR(64) DEFAULT ''")
-	_, _ = db.Exec("ALTER TABLE providers ADD COLUMN bank_card_no VARCHAR(64) DEFAULT ''")
-	_, _ = db.Exec("ALTER TABLE providers ADD COLUMN bank_name VARCHAR(64) DEFAULT ''")
-	_, _ = db.Exec("ALTER TABLE providers ADD COLUMN bank_branch VARCHAR(128) DEFAULT ''")
+	// 迁移：清理 v1.6 临时加的银行卡列（改为微信零钱提现，不再用银行卡）
+	_, _ = db.Exec("ALTER TABLE providers DROP COLUMN bank_account_name")
+	_, _ = db.Exec("ALTER TABLE providers DROP COLUMN bank_card_no")
+	_, _ = db.Exec("ALTER TABLE providers DROP COLUMN bank_name")
+	_, _ = db.Exec("ALTER TABLE providers DROP COLUMN bank_branch")
 	// 迁移：头像扩容为 MEDIUMTEXT（存 base64 data URI）
 	_, _ = db.Exec("ALTER TABLE users MODIFY avatar MEDIUMTEXT")
 	return nil
@@ -134,9 +133,9 @@ func (s *Store) persistMySQL() {
 	// providers
 	prows := [][]interface{}{}
 	for _, p := range db.Providers {
-		prows = append(prows, []interface{}{p.ID, p.UserID, p.Role, p.RealName, p.IDCard, p.Phone, p.Intro, p.Expertise, p.Certificates, p.TrainingProof, p.CertificateNo, p.CertificateImage, p.YearsOfExp, p.Background, p.PricePerMinute, p.Level, p.IsOnline, p.IsBusy, p.Rating, p.TotalSessions, p.TotalEarnings, p.Withdrawable, p.DailyLimit, p.TodaySessions, p.Status, p.RejectReason, p.BankAccountName, p.BankCardNo, p.BankName, p.BankBranch, p.ApprovedAt, p.CreatedAt, p.UpdatedAt})
+		prows = append(prows, []interface{}{p.ID, p.UserID, p.Role, p.RealName, p.IDCard, p.Phone, p.Intro, p.Expertise, p.Certificates, p.TrainingProof, p.CertificateNo, p.CertificateImage, p.YearsOfExp, p.Background, p.PricePerMinute, p.Level, p.IsOnline, p.IsBusy, p.Rating, p.TotalSessions, p.TotalEarnings, p.Withdrawable, p.DailyLimit, p.TodaySessions, p.Status, p.RejectReason, p.ApprovedAt, p.CreatedAt, p.UpdatedAt})
 	}
-	_ = replaceRows(s.sql, "providers", []string{"id", "user_id", "role", "real_name", "id_card", "phone", "intro", "expertise", "certificates", "training_proof", "certificate_no", "certificate_image", "years_of_exp", "background", "price_per_minute", "level", "is_online", "is_busy", "rating", "total_sessions", "total_earnings", "withdrawable", "daily_limit", "today_sessions", "status", "reject_reason", "bank_account_name", "bank_card_no", "bank_name", "bank_branch", "approved_at", "created_at", "updated_at"}, prows)
+	_ = replaceRows(s.sql, "providers", []string{"id", "user_id", "role", "real_name", "id_card", "phone", "intro", "expertise", "certificates", "training_proof", "certificate_no", "certificate_image", "years_of_exp", "background", "price_per_minute", "level", "is_online", "is_busy", "rating", "total_sessions", "total_earnings", "withdrawable", "daily_limit", "today_sessions", "status", "reject_reason", "approved_at", "created_at", "updated_at"}, prows)
 
 	// recharges
 	rrows := [][]interface{}{}
@@ -222,11 +221,11 @@ func (s *Store) loadFromMySQL() bool {
 	s.db.SeqUser = maxU
 
 	// providers
-	prows, _ := db.Query("SELECT id,user_id,role,real_name,id_card,phone,intro,expertise,certificates,training_proof,certificate_no,certificate_image,years_of_exp,background,price_per_minute,level,is_online,is_busy,rating,total_sessions,total_earnings,withdrawable,daily_limit,today_sessions,status,reject_reason,bank_account_name,bank_card_no,bank_name,bank_branch,approved_at,created_at,updated_at FROM providers")
+	prows, _ := db.Query("SELECT id,user_id,role,real_name,id_card,phone,intro,expertise,certificates,training_proof,certificate_no,certificate_image,years_of_exp,background,price_per_minute,level,is_online,is_busy,rating,total_sessions,total_earnings,withdrawable,daily_limit,today_sessions,status,reject_reason,approved_at,created_at,updated_at FROM providers")
 	var maxP int64
 	for prows.Next() {
 		p := &Provider{}
-		_ = prows.Scan(&p.ID, &p.UserID, &p.Role, &p.RealName, &p.IDCard, &p.Phone, &p.Intro, &p.Expertise, &p.Certificates, &p.TrainingProof, &p.CertificateNo, &p.CertificateImage, &p.YearsOfExp, &p.Background, &p.PricePerMinute, &p.Level, &p.IsOnline, &p.IsBusy, &p.Rating, &p.TotalSessions, &p.TotalEarnings, &p.Withdrawable, &p.DailyLimit, &p.TodaySessions, &p.Status, &p.RejectReason, &p.BankAccountName, &p.BankCardNo, &p.BankName, &p.BankBranch, &p.ApprovedAt, &p.CreatedAt, &p.UpdatedAt)
+		_ = prows.Scan(&p.ID, &p.UserID, &p.Role, &p.RealName, &p.IDCard, &p.Phone, &p.Intro, &p.Expertise, &p.Certificates, &p.TrainingProof, &p.CertificateNo, &p.CertificateImage, &p.YearsOfExp, &p.Background, &p.PricePerMinute, &p.Level, &p.IsOnline, &p.IsBusy, &p.Rating, &p.TotalSessions, &p.TotalEarnings, &p.Withdrawable, &p.DailyLimit, &p.TodaySessions, &p.Status, &p.RejectReason, &p.ApprovedAt, &p.CreatedAt, &p.UpdatedAt)
 		s.db.Providers[p.ID] = p
 		maxP = max64(maxP, p.ID)
 	}
