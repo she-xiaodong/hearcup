@@ -2,8 +2,8 @@
 // 角色：统一为倾听者；认证等级 level 1=实习 2=认证 3=资深
 
 const tags = [
-  '焦虑', '抑郁', '失眠', '职场压力', '亲密关系', '原生家庭',
-  '学业', '自我成长', '情绪管理', '孤独', '社交恐惧', '迷茫'
+  '恋爱', '婚姻', '家庭', '职场', '校园', '亲子',
+  '情绪压力', '自我成长', '人际关系'
 ]
 
 const providers = [
@@ -12,7 +12,7 @@ const providers = [
     level: 3, levelText: '资深倾听者', rating: 4.9, total_sessions: 1260,
     price_per_minute: 2.0, is_online: true,
     intro: '国家二级心理咨询师，8年临床陪伴经验。擅长用温暖而专业的方式，陪你梳理情绪、看见关系里的自己。',
-    expertise: ['焦虑', '亲密关系', '自我成长', '原生家庭'],
+    expertise: ['恋爱', '婚姻', '情绪压力', '自我成长'],
     years_of_exp: 8, background: '北师大临床心理学硕士，受训于中德班CBT连续项目。',
     certificate_no: '18230000xxxx'
   },
@@ -21,21 +21,21 @@ const providers = [
     level: 2, levelText: '认证倾听者', rating: 4.8, total_sessions: 540,
     price_per_minute: 1.0, is_online: true,
     intro: '在这里你可以什么都不说，也可以说很多。我愿意做那个安静接住你的人。',
-    expertise: ['孤独', '情绪管理', '失眠', '迷茫']
+    expertise: ['人际关系', '情绪压力', '自我成长']
   },
   {
     id: 1003, role: 1, nickName: '阿树', avatarColor: '#00A8A8',
     level: 2, levelText: '认证倾听者', rating: 4.7, total_sessions: 312,
     price_per_minute: 1.0, is_online: true,
     intro: '程序员转行的倾听者，懂熬夜、懂内耗、懂说不出口的累。慢慢来，不急。',
-    expertise: ['职场压力', '焦虑', '社交恐惧']
+    expertise: ['职场', '情绪压力', '人际关系']
   },
   {
     id: 1004, role: 2, nickName: '苏晚', avatarColor: '#008C8C',
     level: 3, levelText: '资深倾听者', rating: 5.0, total_sessions: 2080,
     price_per_minute: 2.0, is_online: false,
     intro: '专注青年情绪与关系议题，用抱持性的空间陪你长出自己的力量。',
-    expertise: ['抑郁', '亲密关系', '原生家庭', '自我成长'],
+    expertise: ['恋爱', '婚姻', '家庭', '自我成长'],
     years_of_exp: 11, background: '中科院心理所博士，EFT情绪聚焦取向。',
     certificate_no: '11230000xxxx'
   },
@@ -44,14 +44,14 @@ const providers = [
     level: 1, levelText: '实习倾听者', rating: 4.6, total_sessions: 86,
     price_per_minute: 1.0, is_online: true,
     intro: '还在学习，但足够真诚。愿意陪你聊聊那些白天说不出的话。',
-    expertise: ['学业', '孤独', '迷茫']
+    expertise: ['校园', '人际关系', '情绪压力']
   },
   {
     id: 1006, role: 1, nickName: '老周', avatarColor: '#008C8C',
     level: 2, levelText: '认证倾听者', rating: 4.8, total_sessions: 720,
     price_per_minute: 1.0, is_online: false,
     intro: '中年大叔一枚，听过的故事比喝过的茶还多。生活的事，咱慢慢唠。',
-    expertise: ['职场压力', '亲密关系', '情绪管理']
+    expertise: ['职场', '婚姻', '亲子']
   }
 ]
 

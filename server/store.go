@@ -37,7 +37,7 @@ type Provider struct {
 	IDCard           string  `json:"id_card"`
 	Phone            string  `json:"phone"`
 	Intro            string  `json:"intro"`
-	Expertise        string  `json:"expertise"` // 逗号分隔 tag_id
+	Expertise        string  `json:"expertise"` // 逗号分隔的擅长领域（文字标签）
 	Certificates     string  `json:"certificates"`
 	TrainingProof    string  `json:"training_proof"`
 	CertificateNo    string  `json:"certificate_no"`
@@ -59,6 +59,11 @@ type Provider struct {
 	ApprovedAt       int64   `json:"approved_at"`
 	CreatedAt        int64   `json:"created_at"`
 	UpdatedAt        int64   `json:"updated_at"`
+	// 收款信息（倾听者提现用，银行卡号建议生产环境加密存储）
+	BankAccountName string `json:"bank_account_name"` // 持卡人姓名
+	BankCardNo      string `json:"bank_card_no"`      // 银行卡号
+	BankName        string `json:"bank_name"`         // 开户银行（如「招商银行」）
+	BankBranch      string `json:"bank_branch"`       // 开户支行
 	// 关联字段（不持久化）
 	Nickname string `json:"nickname"`
 	Avatar   string `json:"avatar"`
@@ -248,8 +253,8 @@ func (s *Store) seed() {
 	s.db.SeqAdmin = 0
 	s.db.SeqTag = 0
 
-	// 标签
-	for i, name := range []string{"情感", "职场", "学业", "人际关系", "焦虑", "抑郁", "家庭", "自我成长"} {
+	// 标签（擅长领域，文字标签）
+	for i, name := range []string{"恋爱", "婚姻", "家庭", "职场", "校园", "亲子", "情绪压力", "自我成长", "人际关系"} {
 		s.db.SeqTag++
 		s.db.Tags[s.db.SeqTag] = &Tag{ID: int(s.db.SeqTag), Name: name, Sort: i}
 	}
@@ -266,7 +271,7 @@ func (s *Store) seed() {
 	s.db.SeqProvider++
 	lily := &Provider{
 		ID: s.db.SeqProvider, UserID: lu.ID, Role: 1, RealName: "李莉", Phone: "13800000001",
-		Intro: "温柔倾听，陪你度过情绪低谷。", Expertise: "1,5,8", Certificates: "cert_lily_1.jpg",
+		Intro: "温柔倾听，陪你度过情绪低谷。", Expertise: "恋爱,家庭,自我成长", Certificates: "cert_lily_1.jpg",
 		PricePerMinute: 1.0, Level: 2, IsOnline: 1, IsBusy: 0, Rating: 4.8, TotalSessions: 120,
 		TotalEarnings: 360.0, Withdrawable: 360.0, DailyLimit: 10, TodaySessions: 0,
 		Status: 1, ApprovedAt: t, CreatedAt: t, UpdatedAt: t,
@@ -280,7 +285,7 @@ func (s *Store) seed() {
 	s.db.SeqProvider++
 	zhang := &Provider{
 		ID: s.db.SeqProvider, UserID: cu.ID, Role: 1, RealName: "张明", Phone: "13800000002",
-		Intro: "国家二级心理咨询师，专注焦虑与职业规划。", Expertise: "2,3,6", Certificates: "cert_zhang_1.jpg",
+		Intro: "国家二级心理咨询师，专注情绪与职业规划。", Expertise: "情绪压力,职场,婚姻", Certificates: "cert_zhang_1.jpg",
 		TrainingProof: "train_zhang.jpg", CertificateNo: "XK201900123", CertificateImage: "cert_zhang_pro.jpg",
 		YearsOfExp: 8, Background: "北师大心理学硕士", PricePerMinute: 2.0, Level: 3, IsOnline: 1, IsBusy: 0,
 		Rating: 4.9, TotalSessions: 300, TotalEarnings: 1200.0, Withdrawable: 1200.0, DailyLimit: 10,
@@ -295,7 +300,7 @@ func (s *Store) seed() {
 	s.db.SeqProvider++
 	wang := &Provider{
 		ID: s.db.SeqProvider, UserID: wu.ID, Role: 1, RealName: "王五", Phone: "13800000003",
-		Intro: "想成为倾听者，帮助更多人。", Expertise: "4,5", Certificates: "cert_wang_1.jpg",
+		Intro: "想成为倾听者，帮助更多人。", Expertise: "校园,人际关系", Certificates: "cert_wang_1.jpg",
 		PricePerMinute: 1.0, Level: 1, IsOnline: 0, IsBusy: 0, Rating: 0, TotalSessions: 0,
 		TotalEarnings: 0, Withdrawable: 0, DailyLimit: 10, TodaySessions: 0,
 		Status: 0, CreatedAt: t, UpdatedAt: t,

@@ -64,7 +64,8 @@ const api = require('./utils/api.js')
   const app = await api.applyProvider({
     role: 1, nickName: '小程序测试员', phone: '13900000999', idCard: '110xxx',
     intro: '这是一段足够长的个人简介，用于验证小程序端入驻提交。',
-    expertise: ['情感', '焦虑'], certImages: ['cert1.jpg']
+    expertise: ['恋爱', '情绪压力'], certImages: ['cert1.jpg'],
+    bankAccountName: '测试员', bankCardNo: '6222021234567890', bankName: '招商银行', bankBranch: '北京中关村支行'
   })
   step('applyProvider（倾听者）', app.code === 0)
 

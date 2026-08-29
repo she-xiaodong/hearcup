@@ -613,6 +613,10 @@ func hProviderApply(w http.ResponseWriter, r *http.Request) {
 		fail(w, "必填项缺失")
 		return
 	}
+	if body.BankAccountName == "" || body.BankCardNo == "" || body.BankName == "" {
+		fail(w, "请填写收款银行卡信息（持卡人/卡号/开户银行）")
+		return
+	}
 	store.mu.Lock()
 	defer store.mu.Unlock()
 	// 复用已有申请
@@ -630,6 +634,8 @@ func hProviderApply(w http.ResponseWriter, r *http.Request) {
 		Certificates: body.Certificates, TrainingProof: body.TrainingProof,
 		CertificateNo: body.CertificateNo, CertificateImage: body.CertificateImage,
 		YearsOfExp: body.YearsOfExp, Background: body.Background,
+		BankAccountName: body.BankAccountName, BankCardNo: body.BankCardNo,
+		BankName: body.BankName, BankBranch: body.BankBranch,
 		PricePerMinute: price, Level: 1, IsOnline: 0, IsBusy: 0, Rating: 0,
 		TotalSessions: 0, TotalEarnings: 0, Withdrawable: 0, DailyLimit: 10,
 		TodaySessions: 0, Status: 0, CreatedAt: now(), UpdatedAt: now(),

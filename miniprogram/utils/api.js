@@ -5,8 +5,8 @@
 const mock = require('./mock.js')
 const store = require('./store.js')
 
-// 与后端种子标签表一致（id 从 1 开始）
-const TAGS = ['情感', '职场', '学业', '人际关系', '焦虑', '抑郁', '家庭', '自我成长']
+// 擅长领域标签库（与后端 seed 标签表、mock.js tags 一致）
+const TAGS = ['恋爱', '婚姻', '家庭', '职场', '校园', '亲子', '情绪压力', '自我成长', '人际关系']
 const ROLE_TEXT = { 1: '倾听者', 2: '倾听者' } // 统一「倾听者」
 const LEVEL_TEXT = { 1: '实习', 2: '认证', 3: '资深' }
 
@@ -19,9 +19,8 @@ function base() { return cfg().baseUrl || '' }
 // 后端 providers 表 → 小程序卡片/详情所需形状
 function mapProvider(p) {
   if (!p) return p
-  const role = p.role || 1
-  const ids = (p.expertise || '').split(',').filter(Boolean).map(Number)
-  const expertise = ids.map(i => TAGS[i - 1] || ('标签' + i)).filter(Boolean)
+  // expertise 现为逗号分隔的文字标签，直接拆分展示
+  const expertise = (p.expertise || '').split(',').map(s => s.trim()).filter(Boolean)
   return {
     id: p.id,
     nickName: p.nickname || p.real_name || ('用户' + p.id),
@@ -166,7 +165,11 @@ const api = {
       certificate_no: form.certNo,
       certificate_image: form.certImage,
       years_of_exp: Number(form.years) || 0,
-      background: form.background
+      background: form.background,
+      bank_account_name: form.bankAccountName,
+      bank_card_no: form.bankCardNo,
+      bank_name: form.bankName,
+      bank_branch: form.bankBranch
     }
     const r = await request('POST', '/api/v1/provider/apply', body)
     if (r._mock) {

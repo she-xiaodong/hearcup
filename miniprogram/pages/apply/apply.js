@@ -6,9 +6,10 @@ const api = require('../../utils/api.js')
 Page({
   data: {
     step: 0,
-    allTags: tags,
+    allTags: tags.map(t => ({ name: t, selected: false })),
     form: {
-      nickName: '', phone: '', idCard: '', expertise: [], certImages: [], intro: ''
+      nickName: '', phone: '', idCard: '', expertise: [], certImages: [], intro: '',
+      bankAccountName: '', bankCardNo: '', bankName: '', bankBranch: ''
     }
   },
 
@@ -18,11 +19,12 @@ Page({
   },
 
   toggleTag(e) {
-    const t = e.currentTarget.dataset.t
-    const exp = this.data.form.expertise.slice()
-    const i = exp.indexOf(t)
-    if (i > -1) exp.splice(i, 1); else exp.push(t)
-    this.setData({ 'form.expertise': exp })
+    const name = e.currentTarget.dataset.t
+    const allTags = this.data.allTags.map(item =>
+      item.name === name ? { name: item.name, selected: !item.selected } : item
+    )
+    const expertise = allTags.filter(item => item.selected).map(item => item.name)
+    this.setData({ allTags, 'form.expertise': expertise })
   },
 
   chooseCert() {
@@ -41,7 +43,11 @@ Page({
     if (!f.nickName.trim()) return '请填写昵称'
     if (!/^1\d{10}$/.test(f.phone)) return '请填写正确的手机号'
     if (!f.idCard.trim()) return '请填写身份证号'
+    if (f.expertise.length === 0) return '请至少选择一个擅长领域'
     if (f.certImages.length === 0) return '请至少上传一张资质证书'
+    if (!f.bankAccountName.trim()) return '请填写持卡人姓名'
+    if (!f.bankCardNo.trim()) return '请填写银行卡号'
+    if (!f.bankName.trim()) return '请填写开户银行'
     return ''
   },
 
