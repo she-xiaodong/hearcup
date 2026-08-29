@@ -36,9 +36,11 @@ Page({
   applySummary(records) {
     const total = records.reduce((s, r) => s + (r.amount || 0), 0)
     const rated = records.filter(r => r.rating).length
+    // 金额统一以H币展示（内部按元记账，1元=10H币）
+    records.forEach(r => { r.coins = getApp().toCoins(r.amount || 0) })
     this.setData({
       records, totalCount: records.length,
-      totalAmount: total.toFixed(2), ratedCount: rated
+      totalAmount: getApp().toCoins(total), ratedCount: rated
     })
   }
 })

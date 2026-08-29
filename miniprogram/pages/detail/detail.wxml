@@ -1,10 +1,10 @@
 <view class="page-bg" wx:if="{{p}}">
   <view class="card profile">
-    <view class="avatar big" style="background:{{p.avatarColor}}"><view class="ico ico-{{p.role==2?'lotus-w':'leaf-w'}}" style="width:64rpx;height:64rpx;"></view></view>
+    <view class="avatar big" style="background:{{p.avatarColor}}"><view class="ico ico-leaf-w" style="width:64rpx;height:64rpx;"></view></view>
     <view class="p-info">
       <view class="p-name-row">
         <text class="p-name">{{p.nickName}}</text>
-        <text class="role-badge {{p.role==2?'role-counselor':'role-listener'}}">{{p.role==2?'咨询师':'倾听师'}}</text>
+        <text class="role-badge role-listener">倾听者</text>
       </view>
       <view class="p-meta">
         <text class="level">{{p.levelText}}</text>
@@ -24,11 +24,9 @@
   <view class="card">
     <view class="section-title">关于 TA</view>
     <view class="p-intro">{{p.intro}}</view>
-    <block wx:if="{{p.role==2}}">
-      <view class="p-line" wx:if="{{p.years_of_exp}}">从业年限：{{p.years_of_exp}} 年</view>
-      <view class="p-line" wx:if="{{p.background}}">专业背景：{{p.background}}</view>
-      <view class="p-line" wx:if="{{p.certificate_no}}">证书编号：{{p.certificate_no}}</view>
-    </block>
+    <view class="p-line" wx:if="{{p.years_of_exp}}">从业年限：{{p.years_of_exp}} 年</view>
+    <view class="p-line" wx:if="{{p.background}}">专业背景：{{p.background}}</view>
+    <view class="p-line" wx:if="{{p.certificate_no}}">证书编号：{{p.certificate_no}}</view>
   </view>
 
   <view class="card" wx:if="{{reviews.length}}">
@@ -40,8 +38,8 @@
   </view>
 
   <view class="call-bar">
-    <button class="btn btn-peach call-btn" bindtap="onCall" data-type="1"><view class="call-btn-inner"><view class="ico ico-mic-w" style="width:32rpx;height:32rpx;"></view><view>语音呼叫<view class="call-price">¥{{p.price_per_minute}}/分钟</view></view></view></button>
-    <button class="btn btn-ghost call-btn" bindtap="onCall" data-type="2"><view class="call-btn-inner"><view class="ico ico-video" style="width:32rpx;height:32rpx;"></view><view>视频呼叫<view class="call-price">¥{{videoPrice}}/分钟</view></view></view></button>
+    <button class="btn btn-peach call-btn" bindtap="onCall" data-type="1"><view class="call-btn-inner"><view class="ico ico-mic-w" style="width:32rpx;height:32rpx;"></view><view>语音呼叫<view class="call-price">{{voiceCoins}} H币/分钟</view></view></view></button>
+    <button class="btn btn-ghost call-btn" bindtap="onCall" data-type="2"><view class="call-btn-inner"><view class="ico ico-video" style="width:32rpx;height:32rpx;"></view><view>视频呼叫<view class="call-price">{{videoCoins}} H币/分钟</view></view></view></button>
   </view>
   <view class="safe-bottom"></view>
 </view>

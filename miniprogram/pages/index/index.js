@@ -9,7 +9,7 @@ Page({
     userInfo: {},
     balance: '0.00',
     onlineCount: 0,
-    roles: [{ id: 0, name: '全部' }, { id: 1, name: '倾听师' }, { id: 2, name: '咨询师' }],
+    roles: [{ id: 0, name: '全部倾听者' }],
     activeRole: 0,
     list: []
   },
@@ -32,7 +32,7 @@ Page({
       const providers = store.getProviders()
       const online = providers.filter(p => p.is_online)
       this.setData({
-        userInfo: user, balance: user.balance.toFixed(2),
+        userInfo: user, balance: getApp().toCoins(user.balance),
         onlineCount: online.length, list: this.filter(online, this.data.activeRole)
       })
       return
@@ -46,7 +46,7 @@ Page({
     if (bal.code === 0 && bal.data) store.setBalance(bal.data.balance)
     this.setData({
       userInfo: user,
-      balance: (bal.data ? bal.data.balance : user.balance).toFixed(2),
+      balance: getApp().toCoins(bal.data ? bal.data.balance : user.balance),
       onlineCount: list.length, list
     })
   },
@@ -74,7 +74,7 @@ Page({
     if (balance < cfg.minBalance) {
       wx.showModal({
         title: '余额不足',
-        content: `发起呼叫需至少 ¥${cfg.minBalance}，是否去充值？`,
+        content: `发起呼叫需至少 ${getApp().toCoins(cfg.minBalance)} ${getApp().globalData.config.coinName || 'H币'}，是否去充值？`,
         confirmText: '去充值',
         success: (r) => { if (r.confirm) this.goRecharge() }
       })

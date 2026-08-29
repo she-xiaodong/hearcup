@@ -1,8 +1,10 @@
 package main
 
 import (
+	"crypto/rand"
 	"database/sql"
 	"encoding/json"
+	"math/big"
 	"os"
 	"path/filepath"
 	"sync"
@@ -12,24 +14,25 @@ import (
 // ============ 数据模型（对应需求文档第四部分 7 张表）============
 
 type User struct {
-	ID       int64   `json:"id"`
-	Openid   string  `json:"openid"`
-	Unionid  string  `json:"unionid"`
-	Phone    string  `json:"phone"`
-	Nickname string  `json:"nickname"`
-	Avatar   string  `json:"avatar"`
-	Gender   int     `json:"gender"`
-	Balance  float64 `json:"balance"`
-	Frozen   float64 `json:"frozen_balance"`
-	Status   int     `json:"status"`
-	CreatedAt int64  `json:"created_at"`
-	UpdatedAt int64  `json:"updated_at"`
+	ID        int64   `json:"id"`
+	Openid    string  `json:"openid"`
+	Unionid   string  `json:"unionid"`
+	Phone     string  `json:"phone"`
+	HNo       string  `json:"h_no"` // H号：8位不重复数字，容量将尽自动升 9 位、10 位……
+	Nickname  string  `json:"nickname"`
+	Avatar    string  `json:"avatar"`
+	Gender    int     `json:"gender"`
+	Balance   float64 `json:"balance"`
+	Frozen    float64 `json:"frozen_balance"`
+	Status    int     `json:"status"`
+	CreatedAt int64   `json:"created_at"`
+	UpdatedAt int64   `json:"updated_at"`
 }
 
 type Provider struct {
 	ID               int64   `json:"id"`
 	UserID           int64   `json:"user_id"`
-	Role             int     `json:"role"` // 1=倾听师 2=咨询师
+	Role             int     `json:"role"` // 统一「倾听者」（历史字段，恒为 1）
 	RealName         string  `json:"real_name"`
 	IDCard           string  `json:"id_card"`
 	Phone            string  `json:"phone"`
@@ -130,11 +133,21 @@ type Admin struct {
 	UpdatedAt int64  `json:"updated_at"`
 }
 
+type Feedback struct {
+	ID        int64  `json:"id"`
+	UserID    int64  `json:"user_id"`
+	Content   string `json:"content"`
+	Contact   string `json:"contact"`
+	CreatedAt int64  `json:"created_at"`
+}
+
 // 平台费率配置（需求 6.1 / 3.3.5）
 type Config struct {
 	PriceListener  float64 `json:"price_listener"`  // 倾听师单价 1元/分
 	PriceCounselor float64 `json:"price_counselor"` // 咨询师单价 2元/分
 	VideoRate      float64 `json:"video_rate"`      // 视频通话加价倍率：语音=基础价，视频=基础价×倍率（默认1.5）
+	CoinRate       float64 `json:"coin_rate"`       // 虚拟币换算比例：1元 = coin_rate 个 H币（默认10）
+	CoinName       string  `json:"coin_name"`       // 虚拟币名称（默认「H币」）
 	PlatformRate   float64 `json:"platform_rate"`   // 平台抽成 0.2
 	MinBalance     float64 `json:"min_balance"`      // 起呼最低余额 3元
 	Overdraft      float64 `json:"overdraft"`        // 透支额度 2元
@@ -151,6 +164,7 @@ type DB struct {
 	Withdraws map[int64]*WithdrawRecord `json:"withdraws"`
 	Tags      map[int64]*Tag           `json:"tags"`
 	Admins    map[int64]*Admin         `json:"admins"`
+	Feedbacks map[int64]*Feedback      `json:"feedbacks"`
 	SeqUser     int64 `json:"seq_user"`
 	SeqProvider int64 `json:"seq_provider"`
 	SeqRecharge int64 `json:"seq_recharge"`
@@ -158,6 +172,7 @@ type DB struct {
 	SeqWithdraw int64 `json:"seq_withdraw"`
 	SeqTag      int64 `json:"seq_tag"`
 	SeqAdmin    int64 `json:"seq_admin"`
+	SeqFeedback int64 `json:"seq_feedback"`
 	Config     Config `json:"config"`
 }
 
@@ -166,6 +181,10 @@ type Store struct {
 	db   *DB
 	path string
 	sql  *sql.DB // MySQL 连接；nil 时回退 JSON 文件
+
+	// H号分配索引（运行时，加载后重建；不持久化到 DB 结构）
+	hNoUsed   map[string]bool
+	hNoDigits int
 }
 
 var store *Store
@@ -192,8 +211,9 @@ func loadStore(path string) *Store {
 		Withdraws: map[int64]*WithdrawRecord{},
 		Tags:      map[int64]*Tag{},
 		Admins:    map[int64]*Admin{},
+		Feedbacks: map[int64]*Feedback{},
 		Config: Config{
-			PriceListener: 1.0, PriceCounselor: 2.0, VideoRate: 1.5, PlatformRate: 0.2,
+			PriceListener: 1.0, PriceCounselor: 2.0, VideoRate: 1.5, CoinRate: 10, CoinName: "H币", PlatformRate: 0.2,
 			MinBalance: 3.0, Overdraft: 2.0, MinWithdraw: 100.0,
 		},
 	}}
@@ -201,6 +221,7 @@ func loadStore(path string) *Store {
 	s.sql = openMySQL(appCfg.MySQLDSN)
 	if s.sql != nil {
 		if s.loadFromMySQL() {
+			s.normalize()
 			return s
 		}
 		// 空库 → 种子并落库
@@ -211,6 +232,7 @@ func loadStore(path string) *Store {
 	// 回退 JSON 文件
 	if b, err := os.ReadFile(path); err == nil {
 		_ = json.Unmarshal(b, s.db)
+		s.normalize()
 		return s
 	}
 	s.seed()
@@ -218,7 +240,7 @@ func loadStore(path string) *Store {
 	return s
 }
 
-// 种子数据：1 用户、2 在线服务者（1倾听师1咨询师）、管理员、标签
+// 种子数据：1 用户、2 在线倾听者、1 待审核申请、管理员、标签
 func (s *Store) seed() {
 	t := now()
 	s.db.SeqUser = 0
@@ -237,7 +259,7 @@ func (s *Store) seed() {
 	u := &User{ID: s.db.SeqUser, Openid: "openid_user_demo", Nickname: "小耳朵", Avatar: "", Gender: 0, Balance: 50.0, Frozen: 0, Status: 1, CreatedAt: t, UpdatedAt: t}
 	s.db.Users[u.ID] = u
 
-	// 倾听师
+	// 倾听者
 	s.db.SeqUser++
 	lu := &User{ID: s.db.SeqUser, Openid: "openid_listener_lily", Nickname: "Lily", Avatar: "", Gender: 1, Balance: 0, Frozen: 0, Status: 1, CreatedAt: t, UpdatedAt: t}
 	s.db.Users[lu.ID] = lu
@@ -251,13 +273,13 @@ func (s *Store) seed() {
 	}
 	s.db.Providers[lily.ID] = lily
 
-	// 咨询师
+	// 倾听者（资深）
 	s.db.SeqUser++
 	cu := &User{ID: s.db.SeqUser, Openid: "openid_counselor_zhang", Nickname: "张博士", Avatar: "", Gender: 1, Balance: 0, Frozen: 0, Status: 1, CreatedAt: t, UpdatedAt: t}
 	s.db.Users[cu.ID] = cu
 	s.db.SeqProvider++
 	zhang := &Provider{
-		ID: s.db.SeqProvider, UserID: cu.ID, Role: 2, RealName: "张明", Phone: "13800000002",
+		ID: s.db.SeqProvider, UserID: cu.ID, Role: 1, RealName: "张明", Phone: "13800000002",
 		Intro: "国家二级心理咨询师，专注焦虑与职业规划。", Expertise: "2,3,6", Certificates: "cert_zhang_1.jpg",
 		TrainingProof: "train_zhang.jpg", CertificateNo: "XK201900123", CertificateImage: "cert_zhang_pro.jpg",
 		YearsOfExp: 8, Background: "北师大心理学硕士", PricePerMinute: 2.0, Level: 3, IsOnline: 1, IsBusy: 0,
@@ -273,7 +295,7 @@ func (s *Store) seed() {
 	s.db.SeqProvider++
 	wang := &Provider{
 		ID: s.db.SeqProvider, UserID: wu.ID, Role: 1, RealName: "王五", Phone: "13800000003",
-		Intro: "想成为倾听师，帮助更多人。", Expertise: "4,5", Certificates: "cert_wang_1.jpg",
+		Intro: "想成为倾听者，帮助更多人。", Expertise: "4,5", Certificates: "cert_wang_1.jpg",
 		PricePerMinute: 1.0, Level: 1, IsOnline: 0, IsBusy: 0, Rating: 0, TotalSessions: 0,
 		TotalEarnings: 0, Withdrawable: 0, DailyLimit: 10, TodaySessions: 0,
 		Status: 0, CreatedAt: t, UpdatedAt: t,
@@ -287,6 +309,84 @@ func (s *Store) seed() {
 	s.db.SeqAdmin++
 	op := &Admin{ID: s.db.SeqAdmin, Username: "operator", Password: sha256hex("op123456"), RealName: "运营小妹", Role: "operator", Status: 1, CreatedAt: t, UpdatedAt: t}
 	s.db.Admins[op.ID] = op
+
+	// 为种子用户分配 H号
+	s.assignHNoToMissing()
+}
+
+// ---------- H号（用户唯一数字号码）----------
+
+// 重建 H号已用索引：扫描现有用户，记录已占用的 H号与最大位数。
+func (s *Store) rebuildHNoIndex() {
+	s.hNoUsed = map[string]bool{}
+	digits := 8
+	for _, u := range s.db.Users {
+		if u.HNo != "" {
+			s.hNoUsed[u.HNo] = true
+			if len(u.HNo) > digits {
+				digits = len(u.HNo)
+			}
+		}
+	}
+	s.hNoDigits = digits
+}
+
+// 给 H号缺失的用户补发 H号（用于种子数据与旧数据迁移），返回是否有新分配。
+func (s *Store) assignHNoToMissing() bool {
+	changed := false
+	for _, u := range s.db.Users {
+		if u.HNo == "" {
+			u.HNo = s.generateHNo()
+			changed = true
+		}
+	}
+	return changed
+}
+
+// 启动时数据规范化：补发缺失 H号 + 统一历史角色为「倾听者」
+func (s *Store) normalize() {
+	changed := s.assignHNoToMissing()
+	for _, p := range s.db.Providers {
+		if p.Role != 1 {
+			p.Role = 1
+			changed = true
+		}
+	}
+	if changed {
+		s.save()
+	}
+}
+
+// 生成一个不重复的 H号：默认 8 位数字，容量将尽（已用 ≥ 90%）或连续冲突过多时自动升位。
+func (s *Store) generateHNo() string {
+	if s.hNoUsed == nil {
+		s.rebuildHNoIndex()
+	}
+	digits := s.hNoDigits
+	if digits < 8 {
+		digits = 8
+	}
+	for attempt := 0; ; attempt++ {
+		min := new(big.Int).Exp(big.NewInt(10), big.NewInt(int64(digits-1)), nil) // 10^(digits-1)
+		max := new(big.Int).Exp(big.NewInt(10), big.NewInt(int64(digits)), nil)   // 10^digits
+		span := new(big.Int).Sub(max, min)
+		n, err := rand.Int(rand.Reader, span)
+		if err == nil {
+			no := new(big.Int).Add(n, min).String()
+			if !s.hNoUsed[no] {
+				s.hNoUsed[no] = true
+				s.hNoDigits = digits
+				return no
+			}
+		}
+		// 升位条件：连续冲突过多，或已用号码数 ≥ 当前位数容量的 90%
+		capacity := new(big.Int).Sub(max, min).Int64()
+		if attempt > 100000 || (capacity > 0 && int64(len(s.hNoUsed)) >= capacity*9/10) {
+			digits++
+			s.hNoDigits = digits
+			attempt = 0
+		}
+	}
 }
 
 func dataDir() string {

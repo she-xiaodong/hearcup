@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"math"
 	"net/http"
 	"sort"
 	"strconv"
@@ -115,7 +116,8 @@ func hAuthLogin(w http.ResponseWriter, r *http.Request) {
 	}
 	if uid == 0 {
 		store.db.SeqUser++
-		u := &User{ID: store.db.SeqUser, Openid: openid, Unionid: unionid, Nickname: "用户" + strconv.FormatInt(store.db.SeqUser, 10), Balance: 0, Status: 1, CreatedAt: now(), UpdatedAt: now()}
+		hNo := store.generateHNo()
+		u := &User{ID: store.db.SeqUser, Openid: openid, Unionid: unionid, HNo: hNo, Nickname: "用户" + hNo, Balance: 0, Status: 1, CreatedAt: now(), UpdatedAt: now()}
 		store.db.Users[u.ID] = u
 		uid = u.ID
 	} else if unionid != "" {
@@ -137,6 +139,64 @@ func hUserProfile(w http.ResponseWriter, r *http.Request) {
 	sendOK(w, store.db.Users[uid])
 }
 
+// 更新昵称 / 头像（头像为 base64 data URI，用户点头像经 chooseAvatar 获取）
+func hUserUpdateProfile(w http.ResponseWriter, r *http.Request) {
+	uid, ok := requireUser(r)
+	if !ok {
+		fail(w, "未登录")
+		return
+	}
+	var body struct {
+		Nickname string `json:"nickname"`
+		Avatar   string `json:"avatar"`
+	}
+	readJSON(r, &body)
+	store.mu.Lock()
+	defer store.mu.Unlock()
+	u := store.db.Users[uid]
+	if body.Nickname != "" {
+		u.Nickname = strings.TrimSpace(body.Nickname)
+		if len([]rune(u.Nickname)) > 20 {
+			u.Nickname = string([]rune(u.Nickname)[:20])
+		}
+	}
+	if body.Avatar != "" {
+		u.Avatar = body.Avatar
+	}
+	u.UpdatedAt = now()
+	store.save()
+	sendOK(w, store.db.Users[uid])
+}
+
+// 意见反馈
+func hFeedback(w http.ResponseWriter, r *http.Request) {
+	uid, ok := requireUser(r)
+	if !ok {
+		fail(w, "未登录")
+		return
+	}
+	var body struct {
+		Content string `json:"content"`
+		Contact string `json:"contact"`
+	}
+	readJSON(r, &body)
+	if strings.TrimSpace(body.Content) == "" {
+		fail(w, "请填写反馈内容")
+		return
+	}
+	store.mu.Lock()
+	defer store.mu.Unlock()
+	store.db.SeqFeedback++
+	fb := &Feedback{
+		ID: store.db.SeqFeedback, UserID: uid,
+		Content: strings.TrimSpace(body.Content), Contact: strings.TrimSpace(body.Contact),
+		CreatedAt: now(),
+	}
+	store.db.Feedbacks[fb.ID] = fb
+	store.save()
+	sendOK(w, map[string]interface{}{"id": fb.ID, "msg": "已收到你的反馈，谢谢！"})
+}
+
 func hUserBalance(w http.ResponseWriter, r *http.Request) {
 	uid, ok := requireUser(r)
 	if !ok {
@@ -146,7 +206,30 @@ func hUserBalance(w http.ResponseWriter, r *http.Request) {
 	store.mu.Lock()
 	defer store.mu.Unlock()
 	u := store.db.Users[uid]
-	sendOK(w, map[string]interface{}{"balance": u.Balance, "frozen_balance": u.Frozen})
+	sendOK(w, map[string]interface{}{
+		"balance": u.Balance, "frozen_balance": u.Frozen,
+		"coin_rate": coinRate(), "coin_name": coinName(),
+		"balance_coins": round2(u.Balance * coinRate()),
+	})
+}
+
+// 虚拟币换算（1元 = coin_rate 个 H币）
+func coinRate() float64 {
+	if store.db.Config.CoinRate > 0 {
+		return store.db.Config.CoinRate
+	}
+	return 10
+}
+
+func coinName() string {
+	if store.db.Config.CoinName != "" {
+		return store.db.Config.CoinName
+	}
+	return "H币"
+}
+
+func round2(v float64) float64 {
+	return math.Round(v*100) / 100
 }
 
 // ---------- 服务者（用户端）----------
@@ -269,6 +352,7 @@ func hCallInvite(w http.ResponseWriter, r *http.Request) {
 		"sdk_app_id": appCfg.TRTCAppID, "user_id": fmt.Sprintf("user_%d", uid),
 		"provider_user_id": fmt.Sprintf("provider_%d", p.UserID),
 		"call_type": body.CallType, "unit_price": unitPrice,
+		"unit_price_coins": round2(unitPrice * coinRate()), "coin_name": coinName(),
 	})
 }
 
@@ -463,6 +547,7 @@ func hRechargeCreate(w http.ResponseWriter, r *http.Request) {
 		store.save()
 		sendOK(w, map[string]interface{}{
 			"order_no": orderNo, "amount": body.Amount,
+			"coins": round2(body.Amount * coinRate()), "coin_name": coinName(),
 			"need_pay": true, "pay_params": payParams,
 		})
 		return
@@ -482,7 +567,11 @@ func hRechargeCreate(w http.ResponseWriter, r *http.Request) {
 		u.Balance += body.Amount
 	}
 	store.save()
-	sendOK(w, order)
+	sendOK(w, map[string]interface{}{
+		"id": order.ID, "order_no": orderNo, "amount": body.Amount,
+		"coins": round2(body.Amount * coinRate()), "coin_name": coinName(),
+		"pay_status": order.PayStatus, "pay_time": order.PayTime,
+	})
 }
 
 func hRechargeRecords(w http.ResponseWriter, r *http.Request) {
@@ -519,16 +608,9 @@ func hProviderApply(w http.ResponseWriter, r *http.Request) {
 	}
 	var body Provider
 	readJSON(r, &body)
-	if body.Role != 1 && body.Role != 2 {
-		fail(w, "角色必须是 1(倾听师) 或 2(咨询师)")
-		return
-	}
+	body.Role = 1 // 统一「倾听者」，不再区分倾听师/咨询师
 	if body.RealName == "" || body.Phone == "" || body.Intro == "" || body.Expertise == "" {
 		fail(w, "必填项缺失")
-		return
-	}
-	if body.Role == 2 && (body.CertificateNo == "" || body.CertificateImage == "" || body.YearsOfExp <= 0 || body.Background == "") {
-		fail(w, "咨询师需填写证书编号/证书照片/从业年限/专业背景")
 		return
 	}
 	store.mu.Lock()
@@ -542,11 +624,8 @@ func hProviderApply(w http.ResponseWriter, r *http.Request) {
 	}
 	store.db.SeqProvider++
 	price := store.db.Config.PriceListener
-	if body.Role == 2 {
-		price = store.db.Config.PriceCounselor
-	}
 	p := &Provider{
-		ID: store.db.SeqProvider, UserID: uid, Role: body.Role, RealName: body.RealName,
+		ID: store.db.SeqProvider, UserID: uid, Role: 1, RealName: body.RealName,
 		IDCard: body.IDCard, Phone: body.Phone, Intro: body.Intro, Expertise: body.Expertise,
 		Certificates: body.Certificates, TrainingProof: body.TrainingProof,
 		CertificateNo: body.CertificateNo, CertificateImage: body.CertificateImage,
@@ -655,8 +734,17 @@ func hProviderEarnings(w http.ResponseWriter, r *http.Request) {
 			})
 		}
 	}
+	// 已完成收入 = 累计已打款的提现金额；未完成收入 = 尚未提现的可提现余额
+	completedIncome := 0.0
+	for _, wd := range store.db.Withdraws {
+		if wd.ProviderID == me.ID && wd.Status == 2 {
+			completedIncome += wd.Amount
+		}
+	}
 	sendOK(w, map[string]interface{}{
-		"withdrawable": me.Withdrawable, "total_earnings": me.TotalEarnings,
+		"pending_income":   round2(me.Withdrawable), // 未完成收入（可提现余额）
+		"completed_income": round2(completedIncome), // 已完成收入（已打款）
+		"withdrawable":     me.Withdrawable, "total_earnings": me.TotalEarnings,
 		"today_income": todayIncome, "details": details,
 	})
 }

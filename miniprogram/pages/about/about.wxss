@@ -1,0 +1,10 @@
+.about-hero { text-align: center; padding: 72rpx 32rpx 56rpx; background: linear-gradient(160deg, #E6F6F2, #F0ECFA); }
+.about-logo { font-size: 48rpx; font-weight: 800; color: var(--primary-deep, #2E8B7A); letter-spacing: 4rpx; }
+.about-slogan { margin-top: 12rpx; font-size: 26rpx; color: var(--text-sub); }
+
+.about-body { margin: 24rpx 32rpx; padding: 32rpx; }
+.about-text { font-size: 28rpx; line-height: 1.8; margin: 12rpx 0 8rpx; }
+.section-title { font-size: 30rpx; font-weight: 800; margin-top: 28rpx; }
+.section-title:first-child { margin-top: 0; }
+
+.tab-foot { height: 120rpx; }

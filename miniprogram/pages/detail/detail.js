@@ -8,11 +8,16 @@ const demoReviews = [
 ]
 
 Page({
-  data: { p: null, reviews: demoReviews, videoPrice: 0 },
+  data: { p: null, reviews: demoReviews, videoPrice: 0, voiceCoins: '', videoCoins: '' },
 
   videoPriceOf(p) {
     const rate = Number((getApp().globalData.config || {}).videoRate) || 1.5
     return Math.round(p.price_per_minute * rate * 10) / 10
+  },
+
+  // 价格统一以H币展示（内部仍按元计费，1元=10H币）
+  coins(yuan) {
+    return getApp().toCoins(yuan)
   },
 
   async onLoad(q) {
@@ -21,13 +26,14 @@ Page({
       const p = store.getProviders().find(x => x.id === id)
       if (!p) { wx.showToast({ title: '未找到服务者', icon: 'none' }); return }
       wx.setNavigationBarTitle({ title: p.nickName })
-      this.setData({ p, videoPrice: this.videoPriceOf(p) })
+      this.setData({ p, videoPrice: this.videoPriceOf(p), voiceCoins: this.coins(p.price_per_minute), videoCoins: this.coins(this.videoPriceOf(p)) })
       return
     }
     const r = await api.getProvider(id)
     if (r.code === 0 && r.data && r.data.provider) {
       wx.setNavigationBarTitle({ title: r.data.provider.nickName })
-      this.setData({ p: r.data.provider, reviews: r.data.ratings || demoReviews, videoPrice: this.videoPriceOf(r.data.provider) })
+      const p = r.data.provider
+      this.setData({ p, reviews: r.data.ratings || demoReviews, videoPrice: this.videoPriceOf(p), voiceCoins: this.coins(p.price_per_minute), videoCoins: this.coins(this.videoPriceOf(p)) })
     } else {
       wx.showToast({ title: '未找到服务者', icon: 'none' })
     }
@@ -39,7 +45,7 @@ Page({
     if (store.getBalance() < cfg.minBalance) {
       wx.showModal({
         title: '余额不足',
-        content: `发起呼叫需至少 ¥${cfg.minBalance}，是否去充值？`,
+        content: `发起呼叫需至少 ${getApp().toCoins(cfg.minBalance)} H币，是否去充值？`,
         confirmText: '去充值',
         success: (r) => { if (r.confirm) wx.navigateTo({ url: '/pages/recharge/recharge' }) }
       })

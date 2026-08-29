@@ -5,9 +5,9 @@
   </view>
 
   <view class="call-center">
-    <view class="avatar call-avatar" style="background:{{p.avatarColor}}"><view class="ico ico-{{p.role==2?'lotus-w':'leaf-w'}}" style="width:90rpx;height:90rpx;"></view></view>
+    <view class="avatar call-avatar" style="background:{{p.avatarColor}}"><view class="ico ico-leaf-w" style="width:90rpx;height:90rpx;"></view></view>
     <view class="call-name">{{p.nickName}}</view>
-    <view class="call-role">{{callType===2?'视频通话':'语音通话'}} · ¥{{unitPrice}}/分钟</view>
+    <view class="call-role">{{callType===2?'视频通话':'语音通话'}} · {{unitCoins}} H币/分钟</view>
   </view>
 
   <view class="call-controls">

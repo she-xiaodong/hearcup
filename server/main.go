@@ -34,7 +34,9 @@ func ph(fn func(http.ResponseWriter, *http.Request, map[string]string)) http.Han
 var routes = []route{
 	{http.MethodPost, "/api/v1/auth/login", hAuthLogin},
 	{http.MethodGet, "/api/v1/user/profile", hUserProfile},
+	{http.MethodPost, "/api/v1/user/profile", hUserUpdateProfile},
 	{http.MethodGet, "/api/v1/user/balance", hUserBalance},
+	{http.MethodPost, "/api/v1/feedback", hFeedback},
 
 	{http.MethodGet, "/api/v1/providers/online", hProvidersOnline},
 	{http.MethodGet, "/api/v1/providers/:id", ph(hProviderDetail)},

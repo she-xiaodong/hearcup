@@ -1,0 +1,20 @@
+<view class="page-bg">
+  <view class="about-hero">
+    <view class="about-logo">一杯心晴</view>
+    <view class="about-slogan">有人愿意，安静听你说</view>
+  </view>
+
+  <view class="card about-body">
+    <view class="section-title">关于我们</view>
+    <view class="about-text">「一杯心晴」是一个即时语音、视频心理陪伴平台。我们相信，每个人在情绪低落、迷茫焦虑的时候，都值得被认真听见。</view>
+    <view class="about-text">在这里，你可以随时连线一位经过审核的倾听者，用一通电话，把压在心里的那些话，慢慢说出口。</view>
+
+    <view class="section-title">我们的倾听者</view>
+    <view class="about-text">所有倾听者都经过实名认证与资质审核，用专业与温度陪伴你。通话按分钟计费，明码标价，安全透明。</view>
+
+    <view class="section-title">联系我们</view>
+    <view class="about-text">如果你有任何问题或建议，欢迎通过「意见反馈」告诉我们，我们会尽快回复。</view>
+  </view>
+
+  <view class="tab-foot"></view>
+</view>

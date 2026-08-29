@@ -1,0 +1,26 @@
+<view class="page-bg">
+  <block wx:if="{{!submitted}}">
+    <view class="card form">
+      <view class="f-block">
+        <view class="f-label">反馈内容</view>
+        <textarea class="f-textarea" placeholder="说说你的建议或遇到的问题" value="{{content}}" bindinput="onContent" maxlength="500" />
+      </view>
+      <view class="f-block">
+        <view class="f-label">联系方式（选填）</view>
+        <input class="f-input" placeholder="手机号或微信号，方便我们回复你" value="{{contact}}" bindinput="onContact" />
+      </view>
+    </view>
+    <button class="btn btn-primary btn-block submit" bindtap="submit">提交反馈</button>
+  </block>
+
+  <block wx:else>
+    <view class="done">
+      <view class="done-icon ico ico-sprout"></view>
+      <view class="done-title">已收到你的反馈</view>
+      <view class="muted done-sub">感谢你的建议，我们会认真对待每一条反馈。</view>
+      <button class="btn btn-primary btn-block" bindtap="backHome">返回「我的」</button>
+    </view>
+  </block>
+
+  <view class="tab-foot"></view>
+</view>

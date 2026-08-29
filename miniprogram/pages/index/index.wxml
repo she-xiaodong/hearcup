@@ -4,14 +4,14 @@
       <view class="hi">你好，{{userInfo.nickName}}</view>
       <view class="muted sub">今天，也允许自己慢慢来</view>
     </view>
-    <view class="balance-pill" bindtap="goRecharge"><view class="ico ico-wallet ico-sm"></view><text>余额 ¥{{balance}}</text></view>
+    <view class="balance-pill" bindtap="goRecharge"><view class="ico ico-wallet ico-sm"></view><text>余额 {{balance}}</text></view>
   </view>
 
   <view class="hero card">
     <view class="hero-text">
       <view class="hero-title">一杯心晴</view>
       <view class="hero-sub">有人愿意，安静听你说</view>
-      <view class="hero-chip"><view class="dot-online"></view>当前 {{onlineCount}} 位服务者在线</view>
+      <view class="hero-chip"><view class="dot-online"></view>当前 {{onlineCount}} 位倾听者在线</view>
     </view>
     <image class="hero-img" src="/images/hero.jpg" mode="aspectFill" />
   </view>
@@ -22,7 +22,7 @@
 
   <view class="list">
     <provider-card wx:for="{{list}}" wx:key="id" provider="{{item}}" bind:call="onCall" />
-    <view wx:if="{{list.length===0}}" class="empty">暂无服务者在线，请稍后再来</view>
+    <view wx:if="{{list.length===0}}" class="empty">暂无倾听者在线，请稍后再来</view>
   </view>
 
   <view class="safe-bottom"></view>

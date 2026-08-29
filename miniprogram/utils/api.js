@@ -7,7 +7,7 @@ const store = require('./store.js')
 
 // 与后端种子标签表一致（id 从 1 开始）
 const TAGS = ['情感', '职场', '学业', '人际关系', '焦虑', '抑郁', '家庭', '自我成长']
-const ROLE_TEXT = { 1: '倾听师', 2: '咨询师' }
+const ROLE_TEXT = { 1: '倾听者', 2: '倾听者' } // 统一「倾听者」
 const LEVEL_TEXT = { 1: '实习', 2: '认证', 3: '资深' }
 
 function cfg() { try { return (getApp() && getApp().globalData.config) || {} } catch (e) { return {} } }
@@ -19,18 +19,18 @@ function base() { return cfg().baseUrl || '' }
 // 后端 providers 表 → 小程序卡片/详情所需形状
 function mapProvider(p) {
   if (!p) return p
-  const role = p.role
+  const role = p.role || 1
   const ids = (p.expertise || '').split(',').filter(Boolean).map(Number)
   const expertise = ids.map(i => TAGS[i - 1] || ('标签' + i)).filter(Boolean)
   return {
     id: p.id,
     nickName: p.nickname || p.real_name || ('用户' + p.id),
-    role: role,
-    avatarColor: role === 2 ? '#B5A8E0' : '#4FB8A8',
-    levelText: (LEVEL_TEXT[p.level] || '') + (ROLE_TEXT[role] || ''),
+    role: 1,
+    avatarColor: '#4FB8A8',
+    levelText: (LEVEL_TEXT[p.level] || '') + '倾听者',
     rating: p.rating || 0,
     total_sessions: p.total_sessions || 0,
-    price_per_minute: p.price_per_minute || (role === 2 ? 2 : 1),
+    price_per_minute: p.price_per_minute || 1,
     is_online: p.is_online === 1,
     intro: p.intro || '',
     expertise: expertise.length ? expertise : (p.expertise || []),
@@ -157,7 +157,6 @@ const api = {
   },
   async applyProvider(form) {
     const body = {
-      role: form.role,
       real_name: form.nickName,
       phone: form.phone,
       id_card: form.idCard,
@@ -171,7 +170,7 @@ const api = {
     }
     const r = await request('POST', '/api/v1/provider/apply', body)
     if (r._mock) {
-      const apply = { role: form.role, status: 0, submittedAt: Date.now(), form }
+      const apply = { role: 1, status: 0, submittedAt: Date.now(), form }
       store.setApply(apply)
       return { code: 0, data: { id: 0, status: 0 } }
     }
@@ -195,6 +194,23 @@ const api = {
   async withdraw(amount) {
     const r = await request('POST', '/api/v1/provider/withdraw', { amount })
     if (r._mock) return { code: 0, data: { id: 0, status: 0 } }
+    return r
+  },
+
+  // ===== 用户资料 / 反馈 =====
+  async updateProfile(nickname, avatar) {
+    const r = await request('POST', '/api/v1/user/profile', { nickname, avatar })
+    if (r._mock) {
+      const u = store.getUser()
+      if (nickname) u.nickName = nickname
+      if (avatar) u.avatar = avatar
+      return { code: 0, data: u }
+    }
+    return r
+  },
+  async submitFeedback(content, contact) {
+    const r = await request('POST', '/api/v1/feedback', { content, contact })
+    if (r._mock) return { code: 0, data: { id: 0, msg: '已收到' } }
     return r
   }
 }

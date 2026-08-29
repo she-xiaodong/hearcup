@@ -37,7 +37,7 @@ func ensureSchema(db *sql.DB) error {
 	stmts := []string{
 		`CREATE TABLE IF NOT EXISTS users (
 			id BIGINT PRIMARY KEY, openid VARCHAR(128), unionid VARCHAR(128),
-			phone VARCHAR(32), nickname VARCHAR(64), avatar VARCHAR(512),
+			phone VARCHAR(32), h_no VARCHAR(16), nickname VARCHAR(64), avatar MEDIUMTEXT,
 			gender INT, balance DOUBLE, frozen_balance DOUBLE, status INT,
 			created_at BIGINT, updated_at BIGINT)`,
 		`CREATE TABLE IF NOT EXISTS providers (
@@ -68,6 +68,9 @@ func ensureSchema(db *sql.DB) error {
 			id BIGINT PRIMARY KEY, username VARCHAR(64), password VARCHAR(128),
 			real_name VARCHAR(64), role VARCHAR(32), status INT,
 			last_login_at BIGINT, created_at BIGINT, updated_at BIGINT)`,
+		`CREATE TABLE IF NOT EXISTS feedbacks (
+			id BIGINT PRIMARY KEY, user_id BIGINT, content TEXT, contact VARCHAR(128),
+			created_at BIGINT)`,
 		`CREATE TABLE IF NOT EXISTS t_config (
 			id INT PRIMARY KEY, price_listener DOUBLE, price_counselor DOUBLE,
 			platform_rate DOUBLE, min_balance DOUBLE, overdraft DOUBLE, min_withdraw DOUBLE)`,
@@ -82,6 +85,15 @@ func ensureSchema(db *sql.DB) error {
 	}
 	// 迁移：旧库 t_config 补 video_rate 列（列已存在时报错直接忽略，幂等）
 	_, _ = db.Exec("ALTER TABLE t_config ADD COLUMN video_rate DOUBLE DEFAULT 1.5")
+	// 迁移：虚拟币换算配置（coin_rate 默认 10：1元=10 H币；coin_name 默认「H币」）
+	_, _ = db.Exec("ALTER TABLE t_config ADD COLUMN coin_rate DOUBLE DEFAULT 10")
+	_, _ = db.Exec("ALTER TABLE t_config ADD COLUMN coin_name VARCHAR(32) DEFAULT 'H币'")
+	// 旧数据「心晴币」→「H币」（幂等）
+	_, _ = db.Exec("UPDATE t_config SET coin_name='H币' WHERE coin_name='心晴币'")
+	// 迁移：用户 H号（旧库补 h_no 列）
+	_, _ = db.Exec("ALTER TABLE users ADD COLUMN h_no VARCHAR(16)")
+	// 迁移：头像扩容为 MEDIUMTEXT（存 base64 data URI）
+	_, _ = db.Exec("ALTER TABLE users MODIFY avatar MEDIUMTEXT")
 	return nil
 }
 
@@ -109,9 +121,9 @@ func (s *Store) persistMySQL() {
 	// users
 	urows := [][]interface{}{}
 	for _, u := range db.Users {
-		urows = append(urows, []interface{}{u.ID, u.Openid, u.Unionid, u.Phone, u.Nickname, u.Avatar, u.Gender, u.Balance, u.Frozen, u.Status, u.CreatedAt, u.UpdatedAt})
+		urows = append(urows, []interface{}{u.ID, u.Openid, u.Unionid, u.Phone, u.HNo, u.Nickname, u.Avatar, u.Gender, u.Balance, u.Frozen, u.Status, u.CreatedAt, u.UpdatedAt})
 	}
-	_ = replaceRows(s.sql, "users", []string{"id", "openid", "unionid", "phone", "nickname", "avatar", "gender", "balance", "frozen_balance", "status", "created_at", "updated_at"}, urows)
+	_ = replaceRows(s.sql, "users", []string{"id", "openid", "unionid", "phone", "h_no", "nickname", "avatar", "gender", "balance", "frozen_balance", "status", "created_at", "updated_at"}, urows)
 
 	// providers
 	prows := [][]interface{}{}
@@ -155,13 +167,28 @@ func (s *Store) persistMySQL() {
 	}
 	_ = replaceRows(s.sql, "admins", []string{"id", "username", "password", "real_name", "role", "status", "last_login_at", "created_at", "updated_at"}, arows)
 
+	// feedbacks
+	frows := [][]interface{}{}
+	for _, f := range db.Feedbacks {
+		frows = append(frows, []interface{}{f.ID, f.UserID, f.Content, f.Contact, f.CreatedAt})
+	}
+	_ = replaceRows(s.sql, "feedbacks", []string{"id", "user_id", "content", "contact", "created_at"}, frows)
+
 	// config
 	vr := db.Config.VideoRate
 	if vr <= 0 {
 		vr = 1.5
 	}
-	_ = replaceRows(s.sql, "t_config", []string{"id", "price_listener", "price_counselor", "video_rate", "platform_rate", "min_balance", "overdraft", "min_withdraw"},
-		[][]interface{}{{1, db.Config.PriceListener, db.Config.PriceCounselor, vr, db.Config.PlatformRate, db.Config.MinBalance, db.Config.Overdraft, db.Config.MinWithdraw}})
+	cr := db.Config.CoinRate
+	if cr <= 0 {
+		cr = 10
+	}
+	cn := db.Config.CoinName
+	if cn == "" {
+		cn = "H币"
+	}
+	_ = replaceRows(s.sql, "t_config", []string{"id", "price_listener", "price_counselor", "video_rate", "coin_rate", "coin_name", "platform_rate", "min_balance", "overdraft", "min_withdraw"},
+		[][]interface{}{{1, db.Config.PriceListener, db.Config.PriceCounselor, vr, cr, cn, db.Config.PlatformRate, db.Config.MinBalance, db.Config.Overdraft, db.Config.MinWithdraw}})
 }
 
 // 从 MySQL 载入内存。若表为空，返回 false（调用方负责 seed）。
@@ -171,14 +198,14 @@ func (s *Store) loadFromMySQL() bool {
 	}
 	db := s.sql
 	// users
-	urows, err := db.Query("SELECT id,openid,unionid,phone,nickname,avatar,gender,balance,frozen_balance,status,created_at,updated_at FROM users")
+	urows, err := db.Query("SELECT id,openid,unionid,phone,h_no,nickname,avatar,gender,balance,frozen_balance,status,created_at,updated_at FROM users")
 	if err != nil {
 		return false
 	}
 	var maxU int64
 	for urows.Next() {
 		u := &User{}
-		_ = urows.Scan(&u.ID, &u.Openid, &u.Unionid, &u.Phone, &u.Nickname, &u.Avatar, &u.Gender, &u.Balance, &u.Frozen, &u.Status, &u.CreatedAt, &u.UpdatedAt)
+		_ = urows.Scan(&u.ID, &u.Openid, &u.Unionid, &u.Phone, &u.HNo, &u.Nickname, &u.Avatar, &u.Gender, &u.Balance, &u.Frozen, &u.Status, &u.CreatedAt, &u.UpdatedAt)
 		s.db.Users[u.ID] = u
 		maxU = max64(maxU, u.ID)
 	}
@@ -260,15 +287,44 @@ func (s *Store) loadFromMySQL() bool {
 	arows.Close()
 	s.db.SeqAdmin = maxA
 
-	// config（video_rate 为后加列，扫描失败时保持默认 1.5）
-	var vr float64
-	if err := db.QueryRow("SELECT price_listener,price_counselor,video_rate,platform_rate,min_balance,overdraft,min_withdraw FROM t_config WHERE id=1").
-		Scan(&s.db.Config.PriceListener, &s.db.Config.PriceCounselor, &vr, &s.db.Config.PlatformRate, &s.db.Config.MinBalance, &s.db.Config.Overdraft, &s.db.Config.MinWithdraw); err == nil && vr > 0 {
-		s.db.Config.VideoRate = vr
+	// feedbacks
+	fbrows, _ := db.Query("SELECT id,user_id,content,contact,created_at FROM feedbacks")
+	var maxFb int64
+	for fbrows.Next() {
+		f := &Feedback{}
+		_ = fbrows.Scan(&f.ID, &f.UserID, &f.Content, &f.Contact, &f.CreatedAt)
+		s.db.Feedbacks[f.ID] = f
+		maxFb = max64(maxFb, f.ID)
+	}
+	fbrows.Close()
+	s.db.SeqFeedback = maxFb
+
+	// config（video_rate / coin_rate / coin_name 为后加列，扫描失败时保持默认值）
+	var vr, cr float64
+	var cn string
+	if err := db.QueryRow("SELECT price_listener,price_counselor,video_rate,coin_rate,coin_name,platform_rate,min_balance,overdraft,min_withdraw FROM t_config WHERE id=1").
+		Scan(&s.db.Config.PriceListener, &s.db.Config.PriceCounselor, &vr, &cr, &cn, &s.db.Config.PlatformRate, &s.db.Config.MinBalance, &s.db.Config.Overdraft, &s.db.Config.MinWithdraw); err == nil {
+		if vr > 0 {
+			s.db.Config.VideoRate = vr
+		} else {
+			s.db.Config.VideoRate = 1.5
+		}
+		if cr > 0 {
+			s.db.Config.CoinRate = cr
+		} else {
+			s.db.Config.CoinRate = 10
+		}
+		if cn != "" {
+			s.db.Config.CoinName = cn
+		} else {
+			s.db.Config.CoinName = "H币"
+		}
 	} else {
 		_ = db.QueryRow("SELECT price_listener,price_counselor,platform_rate,min_balance,overdraft,min_withdraw FROM t_config WHERE id=1").
 			Scan(&s.db.Config.PriceListener, &s.db.Config.PriceCounselor, &s.db.Config.PlatformRate, &s.db.Config.MinBalance, &s.db.Config.Overdraft, &s.db.Config.MinWithdraw)
 		s.db.Config.VideoRate = 1.5
+		s.db.Config.CoinRate = 10
+		s.db.Config.CoinName = "H币"
 	}
 
 	return true

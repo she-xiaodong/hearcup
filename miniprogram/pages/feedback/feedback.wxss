@@ -1,0 +1,15 @@
+.form { margin: 24rpx 32rpx; padding: 8rpx 32rpx; }
+.f-block { padding: 24rpx 0; border-top: 1rpx solid var(--line); }
+.f-block:first-child { border-top: none; }
+.f-label { font-size: 28rpx; font-weight: 600; }
+.f-input { width: 100%; margin-top: 16rpx; font-size: 28rpx; background: var(--bg); border-radius: 16rpx; padding: 20rpx; box-sizing: border-box; }
+.f-textarea { width: 100%; min-height: 220rpx; margin-top: 16rpx; font-size: 28rpx; background: var(--bg); border-radius: 16rpx; padding: 20rpx; box-sizing: border-box; }
+
+.submit { margin: 8rpx 32rpx; width: auto; }
+
+.done { text-align: center; padding: 120rpx 48rpx; }
+.done-icon { width: 120rpx; height: 120rpx; margin: 0 auto; }
+.done-title { font-size: 40rpx; font-weight: 800; margin-top: 24rpx; }
+.done-sub { margin: 16rpx 0 48rpx; line-height: 1.7; }
+
+.tab-foot { height: calc(160rpx + env(safe-area-inset-bottom)); }

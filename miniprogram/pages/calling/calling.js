@@ -5,7 +5,7 @@ Page({
   data: {
     p: null, callType: 1, status: 'calling', statusText: '正在呼叫…',
     seconds: 0, timerText: '00:00', muted: false, videoOn: false,
-    roomId: '', feeText: '', unitPrice: 0
+    roomId: '', feeText: '', unitPrice: 0, unitCoins: ''
   },
 
   async onLoad(q) {
@@ -22,7 +22,7 @@ Page({
     // 语音=基础价；视频=基础价×加价倍率（与后端计费一致）
     const rate = Number((getApp().globalData.config || {}).videoRate) || 1.5
     const unitPrice = type === 2 ? Math.round(p.price_per_minute * rate * 100) / 100 : p.price_per_minute
-    this.setData({ p, callType: type, videoOn: type === 2, unitPrice })
+    this.setData({ p, callType: type, videoOn: type === 2, unitPrice, unitCoins: getApp().toCoins(unitPrice) })
 
     // 真实环境：调用 /api/v1/call/invite 换取 room_id/user_sig（此处为 MVP，未接入真实 TRTC SDK）
     if (!getApp().globalData.config.useMock) {
@@ -30,7 +30,7 @@ Page({
       if (inv.code === 0 && inv.data) {
         this.setData({ roomId: inv.data.room_id })
         if (typeof inv.data.unit_price === 'number' && inv.data.unit_price > 0) {
-          this.setData({ unitPrice: inv.data.unit_price })
+          this.setData({ unitPrice: inv.data.unit_price, unitCoins: getApp().toCoins(inv.data.unit_price) })
         }
       } else {
         wx.showToast({ title: (inv.msg || '呼叫失败'), icon: 'none' })
@@ -80,15 +80,15 @@ Page({
     if (getApp().globalData.config.useMock) {
       const minutes = Math.max(1, Math.ceil(this.data.seconds / 60))
       const fee = (minutes * this.data.unitPrice).toFixed(2)
-      wx.showToast({ title: `通话结束 · 扣费¥${fee}`, icon: 'none', duration: 1800 })
+      wx.showToast({ title: `通话结束 · 扣费${getApp().toCoins(fee)} H币`, icon: 'none', duration: 1800 })
       setTimeout(() => wx.navigateBack(), 900)
       return
     }
-    // 真实环境：调用 /api/v1/call/end，后端按分钟向上取整、扣费、结算
+    // 真实环境：调用 /api/v1/call/end，后端按分钟向上取整、扣费、结算（内部按元，展示按H币）
     const r = await api.endCall(this.data.roomId)
     if (r.code === 0 && r.data) {
       const amount = (r.data.amount || 0).toFixed(2)
-      wx.showToast({ title: `通话结束 · 扣费¥${amount}`, icon: 'none', duration: 1800 })
+      wx.showToast({ title: `通话结束 · 扣费${getApp().toCoins(amount)} H币`, icon: 'none', duration: 1800 })
       if (typeof r.data.balance === 'number') store.setBalance(r.data.balance)
     } else {
       wx.showToast({ title: '通话已结束', icon: 'none' })

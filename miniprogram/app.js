@@ -6,7 +6,7 @@ const store = require('./utils/store.js')
 App({
   globalData: {
     userInfo: {
-      openid: 'user_123', nickName: '小耳朵', avatar: '', phone: '138****8888', balance: 28.00
+      openid: 'user_123', nickName: '小耳朵', avatar: '', phone: '138****8888', h_no: '10000001', balance: 28.00
     },
     providers: providers,
     tags: tags,
@@ -20,9 +20,18 @@ App({
       listenerPrice: 1.0,
       counselorPrice: 2.0,
       videoRate: 1.5,
+      coinRate: 10,      // 虚拟币比例：1元 = 10 H币
+      coinName: 'H币',
       minBalance: 3.0,
       platformRate: 0.2
     }
+  },
+
+  // 元 → H币（全局换算，返回去掉多余小数的字符串）
+  toCoins(yuan) {
+    const rate = this.globalData.config.coinRate || 10
+    const v = Math.round(Number(yuan || 0) * rate * 100) / 100
+    return String(Math.round(v) === v ? Math.round(v) : v)
   },
 
   onLaunch() {

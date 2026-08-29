@@ -7,13 +7,15 @@
   width: calc((100% - 40rpx) / 3);
   background: #fff; border-radius: var(--radius-sm);
   box-shadow: var(--shadow-sm);
-  display: flex; align-items: baseline; justify-content: center; gap: 4rpx;
-  padding: 36rpx 0; border: 3rpx solid transparent;
+  display: flex; flex-wrap: wrap; align-items: baseline; justify-content: center; gap: 4rpx;
+  padding: 36rpx 0 20rpx; border: 3rpx solid transparent;
 }
 .tier-num { font-size: 44rpx; font-weight: 800; color: var(--text); }
 .tier-unit { font-size: 24rpx; color: var(--text-sub); }
+.tier-coins { width: 100%; text-align: center; font-size: 22rpx; color: var(--text-sub); margin-top: 6rpx; }
 .tier-on { border-color: var(--primary); background: var(--primary-soft); }
 .tier-on .tier-num { color: var(--primary-deep); }
+.tier-on .tier-coins { color: var(--primary-deep); font-weight: 600; }
 
 .custom { margin: 24rpx 32rpx; }
 .custom-input-row { display: flex; align-items: center; gap: 12rpx; border-bottom: 2rpx solid var(--line); padding-bottom: 12rpx; }

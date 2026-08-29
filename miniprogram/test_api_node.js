@@ -49,7 +49,7 @@ const api = require('./utils/api.js')
 
   const prov = await api.getOnlineProviders(0)
   step('getOnlineProviders 返回映射后的列表', prov.code === 0 && Array.isArray(prov.data.list) && prov.data.list.length >= 1)
-  console.log('   服务者:', prov.data.list.map(p => `${p.nickName}(${p.role===2?'咨询师':'倾听师'})¥${p.price_per_minute}`).join(' | '))
+  console.log('   服务者:', prov.data.list.map(p => `${p.nickName}(${'倾听者'})¥${p.price_per_minute}`).join(' | '))
 
   const p0 = prov.data.list[0]
   const inv = await api.invite(p0.id, 1)
@@ -66,7 +66,7 @@ const api = require('./utils/api.js')
     intro: '这是一段足够长的个人简介，用于验证小程序端入驻提交。',
     expertise: ['情感', '焦虑'], certImages: ['cert1.jpg']
   })
-  step('applyProvider（倾听师）', app.code === 0)
+  step('applyProvider（倾听者）', app.code === 0)
 
   console.log('\n小程序 api 层对接后端：' + (okAll ? '全部通过 ✅' : '存在失败 ❌'))
 })()

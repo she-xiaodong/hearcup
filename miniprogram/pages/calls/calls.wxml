@@ -10,8 +10,8 @@
       <view class="muted">总通话</view>
     </view>
     <view class="sum-item">
-      <view class="sum-num">¥{{totalAmount}}</view>
-      <view class="muted">总花费</view>
+      <view class="sum-num">{{totalAmount}}</view>
+      <view class="muted">总花费（H币）</view>
     </view>
     <view class="sum-item">
       <view class="sum-num">{{ratedCount}}</view>
@@ -29,12 +29,12 @@
         <view class="muted call-sub">{{item.time}} · {{item.durationText}}</view>
       </view>
       <view class="call-right">
-        <view class="call-amt">-¥{{item.amount}}</view>
+        <view class="call-amt">-{{item.coins}}</view>
         <view class="stars" wx:if="{{item.rating}}">★ {{item.rating}}</view>
         <view class="muted todo" wx:else>待评价</view>
       </view>
     </view>
-    <view wx:if="{{records.length===0}}" class="empty">还没有通话记录，去首页找个服务者聊聊吧</view>
+    <view wx:if="{{records.length===0}}" class="empty">还没有通话记录，去首页找个倾听者聊聊吧</view>
   </view>
 
   <view class="tab-foot"></view>
