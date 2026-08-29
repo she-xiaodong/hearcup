@@ -1,4 +1,4 @@
-.profile-head { display: flex; align-items: center; gap: 24rpx; margin: 24rpx 32rpx; }
+.profile-head { display: flex; align-items: center; justify-content: flex-start; gap: 20rpx; margin: 24rpx 32rpx; }
 .avatar-btn { padding: 0; margin: 0; background: transparent; line-height: normal; border: none; width: 110rpx; height: 110rpx; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
 .avatar-btn::after { border: none; }
 .head-avatar { width: 110rpx; height: 110rpx; font-size: 52rpx; border-radius: 50%; overflow: hidden; }
@@ -45,4 +45,4 @@
 .menu-item:first-child { border-top: none; }
 .menu-badge { color: var(--text-sub); font-size: 26rpx; }
 
-.tab-foot { height: calc(160rpx + env(safe-area-inset-bottom)); }
+.tab-foot { height: calc(180rpx + env(safe-area-inset-bottom)); }

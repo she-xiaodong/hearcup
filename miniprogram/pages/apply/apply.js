@@ -12,6 +12,28 @@ Page({
     }
   },
 
+  onLoad() {
+    // 进入页面先查入驻状态：未申请=填表(0)、待审核=审核中(1)、通过=审核通过(2)、拒绝=未通过(3)
+    this.checkStatus()
+  },
+
+  async checkStatus() {
+    if (getApp().globalData.config.useMock) {
+      const apply = store.getApply()
+      if (apply && apply.status === 1) this.setData({ step: 2 })
+      else if (apply && apply.status === 2) this.setData({ step: 3 })
+      else if (apply) this.setData({ step: 1 })
+      return
+    }
+    const r = await api.getProviderStatus()
+    if (r.code === 0 && r.data && typeof r.data.status === 'number' && r.data.status >= 0) {
+      const st = r.data.status
+      if (st === 1) this.setData({ step: 2 })
+      else if (st === 2) this.setData({ step: 3 })
+      else this.setData({ step: 1 }) // 0 待审核
+    }
+  },
+
   onInput(e) {
     const k = e.currentTarget.dataset.k
     this.setData({ [`form.${k}`]: e.detail.value })

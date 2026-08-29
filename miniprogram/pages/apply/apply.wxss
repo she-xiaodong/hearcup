@@ -40,4 +40,4 @@
 .done-title { font-size: 40rpx; font-weight: 800; margin-top: 24rpx; }
 .done-sub { margin: 16rpx 0 48rpx; line-height: 1.7; }
 
-.tab-foot { height: calc(160rpx + env(safe-area-inset-bottom)); }
+.tab-foot { height: calc(180rpx + env(safe-area-inset-bottom)); }

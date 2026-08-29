@@ -13,4 +13,4 @@
 .call-right { text-align: right; }
 .call-amt { font-size: 28rpx; font-weight: 700; }
 .todo { font-size: 22rpx; }
-.tab-foot { height: calc(160rpx + env(safe-area-inset-bottom)); }
+.tab-foot { height: calc(180rpx + env(safe-area-inset-bottom)); }

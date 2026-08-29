@@ -144,4 +144,4 @@ view, text, button, input { box-sizing: border-box; }
 }
 
 /* 底部安全区（含自定义 tabBar 高度） */
-.safe-bottom { height: calc(160rpx + env(safe-area-inset-bottom)); }
+.safe-bottom { height: calc(180rpx + env(safe-area-inset-bottom)); }
