@@ -1,3 +1,6 @@
+.hi { font-size: 36rpx; font-weight: 800; }
+.sub { font-size: 24rpx; margin-top: 4rpx; }
+
 .hero {
   margin: 8rpx 32rpx 24rpx;
   display: flex;

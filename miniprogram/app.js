@@ -1,4 +1,4 @@
-// app.js —— Hearcup（一杯心晴）小程序入口
+// app.js —— HearCup 小程序入口
 const { providers, tags } = require('./utils/mock.js')
 const api = require('./utils/api.js')
 const store = require('./utils/store.js')

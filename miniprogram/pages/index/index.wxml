@@ -1,11 +1,14 @@
 <view class="page-bg">
   <view class="topbar" style="padding-top: {{statusBarHeight}}px;">
-    <image class="top-logo" src="/images/logo1.png" mode="aspectFit" />
+    <view>
+      <view class="hi">你好，{{userInfo.nickName}}</view>
+      <view class="muted sub">今天，也允许自己慢慢来</view>
+    </view>
   </view>
 
   <view class="hero card">
     <view class="hero-text">
-      <view class="hero-title">一杯心晴</view>
+      <view class="hero-title">HearCup</view>
       <view class="hero-sub">有人愿意，安静听你说</view>
       <view class="hero-chip"><view class="dot-online"></view>当前 {{onlineCount}} 位倾听者在线</view>
     </view>
