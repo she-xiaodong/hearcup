@@ -1,11 +1,12 @@
 .profile-head { display: flex; align-items: center; gap: 24rpx; margin: 24rpx 32rpx; }
-.avatar-btn { padding: 0; margin: 0; background: transparent; line-height: normal; border: none; width: 110rpx; height: 110rpx; }
+.avatar-btn { padding: 0; margin: 0; background: transparent; line-height: normal; border: none; width: 110rpx; height: 110rpx; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
 .avatar-btn::after { border: none; }
 .head-avatar { width: 110rpx; height: 110rpx; font-size: 52rpx; border-radius: 50%; overflow: hidden; }
-.head-avatar-img { width: 110rpx; height: 110rpx; border-radius: 50%; }
+.head-avatar-img { width: 110rpx; height: 110rpx; border-radius: 50%; display: block; }
+.head-info { flex: 1; min-width: 0; display: flex; flex-direction: column; align-items: flex-start; justify-content: center; }
 .head-name { font-size: 36rpx; font-weight: 800; }
-.head-name-input { font-size: 36rpx; font-weight: 800; height: 52rpx; line-height: 52rpx; }
-.h-no { margin-top: 4rpx; font-size: 24rpx; font-weight: 700; color: var(--primary-deep, #007A7A); letter-spacing: 1rpx; }
+.head-name-input { font-size: 36rpx; font-weight: 800; height: 52rpx; line-height: 52rpx; width: 100%; text-align: left; }
+.h-no { margin-top: 4rpx; font-size: 24rpx; font-weight: 700; color: var(--primary-deep, #007A7A); letter-spacing: 1rpx; text-align: left; }
 
 .balance-row { display: flex; align-items: center; justify-content: space-between; margin: 0 32rpx 24rpx; }
 .balance-num { font-size: 48rpx; font-weight: 800; color: var(--peach); margin-top: 6rpx; }

@@ -69,6 +69,22 @@ func requireAdmin(r *http.Request) (int64, bool) {
 	return c.UID, true
 }
 
+// 返回管理员角色（super/operator/finance）；非管理员或旧 token 无角色时返回空/默认 super
+func adminRoleOf(r *http.Request) string {
+	c, ok := getClaims(r)
+	if !ok || c.Role != "admin" {
+		return ""
+	}
+	if c.ARole == "" {
+		return "super" // 兼容旧 token，默认视为超级管理员
+	}
+	return c.ARole
+}
+
+func requireSuper(r *http.Request) bool {
+	return adminRoleOf(r) == "super"
+}
+
 func decorateProvider(p *Provider) *Provider {
 	cp := *p
 	if u, ok := store.db.Users[p.UserID]; ok {
@@ -804,9 +820,13 @@ func hAdminLogin(w http.ResponseWriter, r *http.Request) {
 	defer store.mu.Unlock()
 	for _, a := range store.db.Admins {
 		if a.Username == body.Username && a.Password == sha256hex(body.Password) {
+			if a.Status != 1 {
+				fail(w, "账号已禁用")
+				return
+			}
 			a.LastLogin = now()
 			a.UpdatedAt = now()
-			tok, _ := genToken(a.ID, "admin")
+			tok, _ := genAdminToken(a.ID, a.Role)
 			store.save()
 			sendOK(w, map[string]interface{}{"token": tok, "admin": a})
 			return
@@ -1309,4 +1329,107 @@ func hAdminUserDetail(w http.ResponseWriter, r *http.Request, params map[string]
 		"calls":     calls,
 		"recharges": recharges,
 	})
+}
+
+// ---------- 管理员管理（仅超级管理员 super 可操作）----------
+
+// GET /api/v1/admin/admins —— 管理员列表
+func hAdminAdmins(w http.ResponseWriter, r *http.Request) {
+	if !requireSuper(r) {
+		fail(w, "仅超级管理员可访问")
+		return
+	}
+	store.mu.Lock()
+	defer store.mu.Unlock()
+	list := make([]map[string]interface{}, 0, len(store.db.Admins))
+	for _, a := range store.db.Admins {
+		list = append(list, map[string]interface{}{
+			"id": a.ID, "username": a.Username, "real_name": a.RealName,
+			"role": a.Role, "status": a.Status, "last_login_at": a.LastLogin,
+			"created_at": a.CreatedAt,
+		})
+	}
+	sort.Slice(list, func(i, j int) bool { return list[i]["id"].(int64) < list[j]["id"].(int64) })
+	sendOK(w, map[string]interface{}{"total": len(list), "list": list})
+}
+
+// POST /api/v1/admin/admins —— 新增管理员
+func hAdminAdminCreate(w http.ResponseWriter, r *http.Request) {
+	if !requireSuper(r) {
+		fail(w, "仅超级管理员可操作")
+		return
+	}
+	var body struct {
+		Username string `json:"username"`
+		Password string `json:"password"`
+		RealName string `json:"real_name"`
+		Role     string `json:"role"` // super/operator/finance
+	}
+	readJSON(r, &body)
+	if body.Username == "" || body.Password == "" {
+		fail(w, "账号和密码必填")
+		return
+	}
+	if body.Role != "super" && body.Role != "operator" && body.Role != "finance" {
+		fail(w, "角色必须是 super/operator/finance")
+		return
+	}
+	store.mu.Lock()
+	defer store.mu.Unlock()
+	for _, a := range store.db.Admins {
+		if a.Username == body.Username {
+			fail(w, "账号已存在")
+			return
+		}
+	}
+	store.db.SeqAdmin++
+	ad := &Admin{
+		ID: store.db.SeqAdmin, Username: body.Username, Password: sha256hex(body.Password),
+		RealName: body.RealName, Role: body.Role, Status: 1, CreatedAt: now(), UpdatedAt: now(),
+	}
+	store.db.Admins[ad.ID] = ad
+	store.save()
+	sendOK(w, map[string]interface{}{"id": ad.ID})
+}
+
+// PUT /api/v1/admin/admins/:id —— 更新角色/状态/密码
+func hAdminAdminUpdate(w http.ResponseWriter, r *http.Request, params map[string]string) {
+	if !requireSuper(r) {
+		fail(w, "仅超级管理员可操作")
+		return
+	}
+	id, _ := strconv.ParseInt(params["id"], 10, 64)
+	var body struct {
+		RealName string `json:"real_name"`
+		Role     string `json:"role"`
+		Status   int    `json:"status"`   // 1启用 3禁用
+		Password string `json:"password"` // 非空则重置密码
+	}
+	readJSON(r, &body)
+	store.mu.Lock()
+	defer store.mu.Unlock()
+	a, ok := store.db.Admins[id]
+	if !ok {
+		fail(w, "管理员不存在")
+		return
+	}
+	if body.Role != "" && body.Role != "super" && body.Role != "operator" && body.Role != "finance" {
+		fail(w, "角色必须是 super/operator/finance")
+		return
+	}
+	if body.Role != "" {
+		a.Role = body.Role
+	}
+	if body.RealName != "" {
+		a.RealName = body.RealName
+	}
+	if body.Status == 1 || body.Status == 3 {
+		a.Status = body.Status
+	}
+	if body.Password != "" {
+		a.Password = sha256hex(body.Password)
+	}
+	a.UpdatedAt = now()
+	store.save()
+	sendOK(w, map[string]interface{}{"id": a.ID, "role": a.Role, "status": a.Status})
 }

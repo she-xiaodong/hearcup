@@ -9,6 +9,7 @@
     "pages/apply/apply",
     "pages/about/about",
     "pages/feedback/feedback",
+    "pages/settings/settings",
     "pages/devcheck/devcheck"
   ],
   "window": {

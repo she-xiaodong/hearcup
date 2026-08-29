@@ -74,7 +74,7 @@
 <script>
 const API = '';
 let TOKEN = localStorage.getItem('hc_token') || '';
-let STATE = { view:'dashboard', apps:[], providers:[], calls:[], recharges:[], withdraws:[] };
+let STATE = { view:'dashboard', role:'super', apps:[], providers:[], calls:[], recharges:[], withdraws:[] };
 
 function authHeader(){ return { 'Content-Type':'application/json', 'Authorization':'Bearer '+TOKEN }; }
 async function api(method, path, body){
@@ -96,6 +96,7 @@ function ico(name){
     dashboard:'<path d="M4 20V4M4 20h16"/><rect x="7.5" y="12" width="3" height="6"/><rect x="12.5" y="8" width="3" height="10"/><rect x="17.5" y="14" width="3" height="4"/>',
     providers:'<circle cx="9" cy="8" r="3.2"/><path d="M3.5 20c0-3.3 2.7-5.5 5.5-5.5s5.5 2.2 5.5 5.5"/><circle cx="17" cy="9" r="2.4"/><path d="M16 14.5c2.2.4 3.5 2.2 3.5 5"/>',
     users:'<circle cx="9" cy="8" r="3"/><path d="M3 20c0-3 2.7-5 6-5s6 2 6 5"/><circle cx="17" cy="9" r="2.5"/><path d="M15.5 15c2.4.3 3.5 2.4 3.5 5"/>',
+    admins:'<path d="M12 3l7 3v5c0 4.5-3 8-7 9-4-1-7-4.5-7-9V6l7-3z"/><path d="M9 12l2 2 4-4"/>',
     apps:'<rect x="5" y="3.5" width="14" height="17" rx="2.5"/><path d="M9 3.5V7h6V3.5"/><path d="M8.5 12l1.6 1.6L8.5 15M15.5 12l-1.6 1.6L15.5 15"/>',
     orders:'<rect x="3" y="6" width="18" height="12" rx="2.5"/><path d="M3 10h18"/><circle cx="17" cy="14.5" r="1.3"/>',
     withdraws:'<rect x="3" y="6" width="18" height="13" rx="2.5"/><path d="M3 10h18"/><path d="M16.5 14.5h2"/>',
@@ -119,7 +120,7 @@ async function doLogin(){
   const username=document.getElementById('u').value;
   const password=document.getElementById('p').value;
   const d = await api('POST','/api/v1/admin/login',{username,password});
-  if(d.code===0){ TOKEN=d.data.token; localStorage.setItem('hc_token',TOKEN); render(); }
+  if(d.code===0){ TOKEN=d.data.token; STATE.role=(d.data.admin&&d.data.admin.role)||'super'; localStorage.setItem('hc_token',TOKEN); render(); }
   else alert('登录失败：'+d.msg);
 }
 function render(){
@@ -135,6 +136,7 @@ function render(){
       <div class="nav-item" data-v="orders">${ico('orders')}订单财务</div>
       <div class="nav-item" data-v="withdraws">${ico('withdraws')}提现管理</div>
       <div class="nav-item" data-v="config">${ico('config')}费率配置</div>
+      ${STATE.role==='super' ? `<div class="nav-item" data-v="admins">${ico('admins')}管理员管理</div>` : ''}
       <div class="nav-item" onclick="logout()" style="margin-top:30px;color:var(--muted)">${ico('logout')}退出登录</div>
     </div>
     <div class="main" id="main"></div>
@@ -157,6 +159,7 @@ async function renderMain(){
   else if(STATE.view==='orders') m.innerHTML = await viewOrders();
   else if(STATE.view==='withdraws') m.innerHTML = await viewWithdraws();
   else if(STATE.view==='config') m.innerHTML = await viewConfig();
+  else if(STATE.view==='admins') m.innerHTML = await viewAdmins();
 }
 
 async function viewDashboard(){
@@ -337,6 +340,78 @@ async function saveConfig(){
   await api('PUT','/api/v1/admin/config',body);
   alert('已保存');
 }
+
+// ===== 管理员管理（仅 super） =====
+const ROLE_TEXT = { super:'超级管理员', operator:'运营', finance:'财务' };
+function roleTag(r){ const c={super:'pass',operator:'on',finance:'wait'}[r]||'off'; return `<span class="tag ${c}">${ROLE_TEXT[r]||r}</span>`; }
+async function viewAdmins(){
+  const d=await api('GET','/api/v1/admin/admins');
+  const list=(d.data&&d.data.list)||[];
+  const rows=list.map(a=>`<tr>
+    <td>${a.username}</td><td>${a.real_name||'-'}</td><td>${roleTag(a.role)}</td>
+    <td>${a.status===1?'<span class="tag on">启用</span>':'<span class="tag ban">禁用</span>'}</td>
+    <td class="muted">${fmtTime(a.last_login_at)}</td>
+    <td>${a.username==='admin'?'<span class="muted">初始超管</span>':`<button class="sm ghost" onclick="editAdmin(${a.id},'${a.username}','${a.real_name||''}','${a.role}',${a.status})">编辑</button>`}</td>
+  </tr>`).join('');
+  return `<div class="topbar"><h2>管理员管理</h2><button onclick="addAdmin()">+ 新增管理员</button></div>
+  <div class="panel"><table>
+    <thead><tr><th>账号</th><th>姓名</th><th>角色</th><th>状态</th><th>最后登录</th><th>操作</th></tr></thead>
+    <tbody>${rows}</tbody>
+  </table></div>
+  <div class="muted">角色权限：超级管理员（全部+管管理员）｜运营（服务者/入驻/用户/看板）｜财务（订单/提现/费率）</div>`;
+}
+function addAdmin(){
+  document.getElementById('modal').style.display='block';
+  document.getElementById('modal').innerHTML = `
+  <div class="modal-mask" onclick="closeModal()">
+    <div class="modal-box" onclick="event.stopPropagation()" style="width:440px">
+      <div class="modal-head"><strong>新增管理员</strong><button class="ghost sm" onclick="closeModal()">关闭</button></div>
+      <input id="a_username" placeholder="登录账号"/>
+      <input id="a_password" type="password" placeholder="密码"/>
+      <input id="a_realname" placeholder="姓名"/>
+      <select id="a_role"><option value="operator">运营 operator</option><option value="finance">财务 finance</option><option value="super">超级管理员 super</option></select>
+      <button style="width:100%" onclick="submitAdmin()">创建</button>
+    </div>
+  </div>`;
+}
+async function submitAdmin(){
+  const body={
+    username:document.getElementById('a_username').value,
+    password:document.getElementById('a_password').value,
+    real_name:document.getElementById('a_realname').value,
+    role:document.getElementById('a_role').value
+  };
+  const d=await api('POST','/api/v1/admin/admins',body);
+  if(d.code===0){ closeModal(); renderMain(); } else alert(d.msg||'创建失败');
+}
+function editAdmin(id,username,realname,role,status){
+  document.getElementById('modal').style.display='block';
+  document.getElementById('modal').innerHTML = `
+  <div class="modal-mask" onclick="closeModal()">
+    <div class="modal-box" onclick="event.stopPropagation()" style="width:440px">
+      <div class="modal-head"><strong>编辑 ${username}</strong><button class="ghost sm" onclick="closeModal()">关闭</button></div>
+      <input id="e_realname" placeholder="姓名" value="${realname}"/>
+      <select id="e_role">
+        <option value="operator" ${role==='operator'?'selected':''}>运营 operator</option>
+        <option value="finance" ${role==='finance'?'selected':''}>财务 finance</option>
+        <option value="super" ${role==='super'?'selected':''}>超级管理员 super</option>
+      </select>
+      <input id="e_password" type="password" placeholder="重置密码（留空不改）"/>
+      <div style="display:flex;gap:8px">
+        <button style="flex:1" onclick="submitAdminEdit(${id})">保存</button>
+        <button class="warn" onclick="toggleAdmin(${id},${status===1?3:1})">${status===1?'禁用':'启用'}</button>
+      </div>
+    </div>
+  </div>`;
+}
+async function submitAdminEdit(id){
+  const body={ real_name:document.getElementById('e_realname').value, role:document.getElementById('e_role').value };
+  const pw=document.getElementById('e_password').value;
+  if(pw) body.password=pw;
+  const d=await api('PUT','/api/v1/admin/admins/'+id,body);
+  if(d.code===0){ closeModal(); renderMain(); } else alert(d.msg||'保存失败');
+}
+async function toggleAdmin(id,st){ await api('PUT','/api/v1/admin/admins/'+id,{status:st}); renderMain(); }
 
 render();
 </script>

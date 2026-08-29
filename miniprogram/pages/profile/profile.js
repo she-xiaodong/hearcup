@@ -13,6 +13,12 @@ Page({
     if (typeof this.getTabBar === 'function' && this.getTabBar()) {
       this.getTabBar().setData({ selected: 2 })
     }
+    // H号尚未生成（登录流程未完成）时，等待登录完成后再刷新一次
+    const app = getApp()
+    if (!store.getUser().h_no && !app._loginDone) {
+      app.waitLogin(() => this.onShow())
+      return
+    }
     const user = store.getUser()
     if (getApp().globalData.config.useMock) {
       const apply = store.getApply()
@@ -105,6 +111,7 @@ Page({
   goApply() { wx.navigateTo({ url: '/pages/apply/apply' }) },
   goCalls() { wx.switchTab({ url: '/pages/calls/calls' }) },
   goRecharge() { wx.navigateTo({ url: '/pages/recharge/recharge' }) },
+  goSettings() { wx.navigateTo({ url: '/pages/settings/settings' }) },
   goDevcheck() { wx.navigateTo({ url: '/pages/devcheck/devcheck' }) },
   goAbout() { wx.navigateTo({ url: '/pages/about/about' }) },
   goFeedback() { wx.navigateTo({ url: '/pages/feedback/feedback' }) },
@@ -143,14 +150,6 @@ Page({
           wx.showToast({ title: r.msg || '提现失败', icon: 'none' })
         }
       }
-    })
-  },
-
-  logout() {
-    wx.showModal({
-      title: '退出登录',
-      content: '确定要退出当前账号吗？',
-      success: (r) => { if (r.confirm) wx.showToast({ title: '已退出', icon: 'none' }) }
     })
   }
 })

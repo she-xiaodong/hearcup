@@ -6,7 +6,7 @@ const store = require('./utils/store.js')
 App({
   globalData: {
     userInfo: {
-      openid: 'user_123', nickName: '小耳朵', avatar: '', phone: '138****8888', h_no: '10000001', balance: 28.00
+      openid: 'user_123', nickName: '小耳朵', avatar: '', phone: '', h_no: '', balance: 0
     },
     providers: providers,
     tags: tags,
@@ -36,11 +36,13 @@ App({
 
   onLaunch() {
     this.restoreConfig()
-    // 真实环境：wx.login → 后端换取 openid/unionid，拉取用户资料与余额
-    if (typeof wx === 'undefined' || !wx.login) return
+    this._loginDone = false
+    this._loginCbs = []
+    // 真实环境：每次打开小程序都走 wx.login → 后端换取 openid，新用户自动生成唯一 H号
+    if (typeof wx === 'undefined' || !wx.login) { this._loginDone = true; return }
     wx.login({
       success: (res) => {
-        if (!res.code) return
+        if (!res.code) { this._notifyLogin(); return }
         api.login(res.code).then((r) => {
           if (r.code === 0 && r.data && r.data.user) {
             const u = r.data.user
@@ -48,9 +50,25 @@ App({
             this.globalData.token = r.data.token || ''
             if (typeof u.balance === 'number') store.setBalance(u.balance)
           }
-        }).catch(() => {})
-      }
+          this._notifyLogin()
+        }).catch(() => this._notifyLogin())
+      },
+      fail: () => this._notifyLogin()
     })
+  },
+
+  // 登录流程结束（成功或失败）后通知等待中的页面刷新
+  _notifyLogin() {
+    this._loginDone = true
+    const cbs = this._loginCbs
+    this._loginCbs = []
+    cbs.forEach(cb => { try { cb() } catch (e) {} })
+  },
+
+  // 页面在登录完成前可注册回调，登录完成后触发
+  waitLogin(cb) {
+    if (this._loginDone) { cb(); return }
+    this._loginCbs.push(cb)
   },
 
   // 从 storage 恢复配置（自检页可改）
