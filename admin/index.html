@@ -182,7 +182,8 @@ function uAvatar(u){
   return `<span class="u-avatar-ph">${(u.nickname||'?').slice(0,1)}</span>`;
 }
 async function viewUsers(){
-  const d=await api('GET','/api/v1/admin/users');
+  const kw=(STATE.keyword||'').trim();
+  const d=await api('GET','/api/v1/admin/users'+(kw?'?keyword='+encodeURIComponent(kw):''));
   const list=(d.data&&d.data.list)||[];
   const rows=list.map(u=>`<tr class="clickable" onclick="viewUserDetail(${u.id})">
     <td style="font-weight:600">${u.h_no||'-'}</td>
@@ -195,19 +196,27 @@ async function viewUsers(){
     <td>¥${(u.total_recharged||0).toFixed(2)}</td>
     <td class="muted">${fmtTime(u.created_at)}</td>
   </tr>`).join('');
-  return `<div class="topbar"><h2>用户管理（${d.data?.total??list.length}）</h2></div>
+  return `<div class="topbar"><h2>用户管理（${d.data?.total??list.length}）</h2>
+    <input id="kw" placeholder="搜索 H号 / 昵称 / 手机号 / openid" value="${kw}" style="width:300px;margin-bottom:0" oninput="onUserSearch(this.value)"/>
+  </div>
   <div class="panel"><table>
     <thead><tr><th>H号</th><th>头像</th><th>昵称</th><th>余额</th><th>通话次数</th><th>消费总额</th><th>充值次数</th><th>充值总额</th><th>注册时间</th></tr></thead>
-    <tbody>${rows||'<tr><td colspan=9 class="muted">暂无用户</td></tr>'}</tbody>
+    <tbody>${rows||'<tr><td colspan=9 class="muted">暂无匹配用户</td></tr>'}</tbody>
   </table></div>
   <div class="muted" style="padding:0 4px">点击任意行查看该用户的通话 / 充值明细</div>`;
+}
+let searchTimer=null;
+function onUserSearch(v){
+  STATE.keyword=v;
+  clearTimeout(searchTimer);
+  searchTimer=setTimeout(()=>renderMain(), 400);
 }
 async function viewUserDetail(id){
   const d=await api('GET','/api/v1/admin/users/'+id);
   if(d.code!==0){ alert(d.msg||'加载失败'); return; }
   const u=d.data.user, calls=d.data.calls||[], recs=d.data.recharges||[];
-  const callRows=calls.map(c=>`<tr><td>${c.provider_name||'-'}</td><td>${c.call_type==1?'语音':'视频'}</td><td>${Math.round((c.duration||0)/60)}分</td><td>¥${(c.amount||0).toFixed(2)}</td><td class="muted">${fmtTime(c.created_at)}</td></tr>`).join('');
-  const recRows=recs.map(r=>`<tr><td>${r.order_no||'-'}</td><td>¥${(r.amount||0).toFixed(2)}</td><td>${r.pay_status==1?'<span class="tag pass">已支付</span>':'<span class="tag wait">待支付</span>'}</td><td class="muted">${fmtTime(r.created_at)}</td></tr>`).join('');
+  const callRows=calls.map((c,i)=>`<tr><td>${i+1}</td><td>${c.provider_name||'-'}</td><td>${c.call_type==1?'语音':'视频'}</td><td>${Math.round((c.duration||0)/60)}分</td><td>${(c.amount_coins!=null?c.amount_coins:Math.round((c.amount||0)*10))} H币</td><td class="muted">${fmtTime(c.created_at)}</td></tr>`).join('');
+  const recRows=recs.map((r,i)=>`<tr><td>${i+1}</td><td>${r.order_no||'-'}</td><td>¥${(r.amount||0).toFixed(2)}</td><td>${r.pay_status==1?'<span class="tag pass">已支付</span>':'<span class="tag wait">待支付</span>'}</td><td class="muted">${fmtTime(r.created_at)}</td></tr>`).join('');
   document.getElementById('modal').style.display='block';
   document.getElementById('modal').innerHTML = `
   <div class="modal-mask" onclick="closeModal()">
@@ -219,9 +228,9 @@ async function viewUserDetail(id){
       <div class="modal-meta">余额 ¥${(u.balance||0).toFixed(2)} · 冻结 ¥${(u.frozen||0).toFixed(2)} · 手机 ${u.phone||'-'} · 注册 ${fmtTime(u.created_at)}</div>
       <div class="modal-meta" style="word-break:break-all">openid：${u.openid||'-'}</div>
       <h4>通话记录（${calls.length}）</h4>
-      <table><thead><tr><th>服务者</th><th>类型</th><th>时长</th><th>扣费</th><th>时间</th></tr></thead><tbody>${callRows||'<tr><td colspan=5 class="muted">暂无通话</td></tr>'}</tbody></table>
+      <table><thead><tr><th>#</th><th>服务者</th><th>类型</th><th>时长</th><th>消耗H币</th><th>时间</th></tr></thead><tbody>${callRows||'<tr><td colspan=6 class="muted">暂无通话</td></tr>'}</tbody></table>
       <h4>充值记录（${recs.length}）</h4>
-      <table><thead><tr><th>订单号</th><th>金额</th><th>状态</th><th>时间</th></tr></thead><tbody>${recRows||'<tr><td colspan=4 class="muted">暂无充值</td></tr>'}</tbody></table>
+      <table><thead><tr><th>#</th><th>订单号</th><th>充值金额</th><th>状态</th><th>充值时间</th></tr></thead><tbody>${recRows||'<tr><td colspan=5 class="muted">暂无充值</td></tr>'}</tbody></table>
     </div>
   </div>`;
 }
@@ -233,14 +242,27 @@ async function viewProviders(){
   const rows=list.map(p=>`<tr>
     <td>${p.real_name}</td><td>${roleText(p.role)}</td><td>${'★'.repeat(Math.round(p.rating||0))||'-'}</td>
     <td>${p.total_sessions}</td><td>¥${p.total_earnings?.toFixed(2)}</td>
+    <td>${Math.round((p.price_per_minute||1)*10)} H币/分</td>
     <td>${p.is_online? '<span class="tag on">在线</span>':'<span class="tag off">离线</span>'}</td>
     <td>${statusTag(p.status)}</td>
     <td>
+      <button class="sm ghost" onclick="editPrice(${p.id},'${p.real_name}',${Math.round((p.price_per_minute||1)*10)})">改价</button>
       ${p.status===1? `<button class="sm ghost" onclick="setOnline(${p.id},${p.is_online?0:1})">${p.is_online?'下线':'上线'}</button>`:''}
       ${p.status===1? `<button class="sm warn" onclick="disable(${p.id})">禁用</button>`:''}
     </td></tr>`).join('');
   return `<div class="topbar"><h2>服务者管理</h2></div>
-  <div class="panel"><table><thead><tr><th>姓名</th><th>角色</th><th>评分</th><th>服务次数</th><th>累计收益</th><th>状态</th><th>审核</th><th>操作</th></tr></thead><tbody>${rows}</tbody></table></div>`;
+  <div class="panel"><table><thead><tr><th>姓名</th><th>角色</th><th>评分</th><th>服务次数</th><th>累计收益</th><th>单价</th><th>状态</th><th>审核</th><th>操作</th></tr></thead><tbody>${rows}</tbody></table></div>`;
+}
+function editPrice(id,name,currentCoins){
+  const v=prompt(`设置「${name}」的单价（H币/分钟），当前 ${currentCoins} H币：`, currentCoins);
+  if(v===null) return;
+  const coins=parseFloat(v);
+  if(!(coins>0)){ alert('请输入有效单价'); return; }
+  setPrice(id, coins/10);
+}
+async function setPrice(id, yuanPerMin){
+  await api('PUT',`/api/v1/admin/providers/${id}/status`,{price_per_minute:yuanPerMin});
+  renderMain();
 }
 async function setOnline(id,v){ await api('PUT',`/api/v1/admin/providers/${id}/status`,{is_online:v}); renderMain(); }
 async function disable(id){ await api('PUT',`/api/v1/admin/providers/${id}/status`,{status:3}); renderMain(); }
@@ -294,22 +316,23 @@ async function wd(id,st){ await api('PUT',`/api/v1/admin/withdraws/${id}`,{statu
 async function viewConfig(){
   const d=await api('GET','/api/v1/admin/config');
   const c=d.data||{};
+  const rate=c.coin_rate||10;
   return `<div class="topbar"><h2>费率配置</h2></div>
   <div class="panel"><div class="row">
-    <div class="field"><label>倾听师单价(元/分)</label><input id="c1" type="number" step="0.1" value="${c.price_listener??1}"></div>
-    <div class="field"><label>咨询师单价(元/分)</label><input id="c2" type="number" step="0.1" value="${c.price_counselor??2}"></div>
     <div class="field"><label>平台抽成(%)</label><input id="c3" type="number" step="0.01" value="${c.platform_rate??0.2}"></div>
-    <div class="field"><label>起呼最低余额(元)</label><input id="c4" type="number" step="0.1" value="${c.min_balance??3}"></div>
-    <div class="field"><label>透支额度(元)</label><input id="c5" type="number" step="0.1" value="${c.overdraft??2}"></div>
+    <div class="field"><label>起呼最低余额(H币)</label><input id="c4" type="number" step="1" value="${Math.round((c.min_balance??3)*rate)}"></div>
+    <div class="field"><label>透支额度(H币)</label><input id="c5" type="number" step="1" value="${Math.round((c.overdraft??2)*rate)}"></div>
     <div class="field"><label>最低提现(元)</label><input id="c6" type="number" step="1" value="${c.min_withdraw??100}"></div>
   </div>
-  <button style="margin-top:16px" onclick="saveConfig()">保存配置</button></div>`;
+  <div class="muted" style="margin-bottom:12px">单价由每个服务者自己配置（默认 10 H币/分），请在「服务者管理」中修改。</div>
+  <button onclick="saveConfig()">保存配置</button></div>`;
 }
 async function saveConfig(){
+  const d=await api('GET','/api/v1/admin/config');
+  const rate=(d.data&&d.data.coin_rate)||10;
   const body={
-    price_listener:parseFloat(c1.value), price_counselor:parseFloat(c2.value),
-    platform_rate:parseFloat(c3.value), min_balance:parseFloat(c4.value),
-    overdraft:parseFloat(c5.value), min_withdraw:parseFloat(c6.value)
+    platform_rate:parseFloat(c3.value), min_balance:parseFloat(c4.value)/rate,
+    overdraft:parseFloat(c5.value)/rate, min_withdraw:parseFloat(c6.value)
   };
   await api('PUT','/api/v1/admin/config',body);
   alert('已保存');

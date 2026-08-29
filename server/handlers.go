@@ -623,7 +623,8 @@ func hProviderApply(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 	store.db.SeqProvider++
-	price := store.db.Config.PriceListener
+	// 单价下放到服务者，默认 10 H币/分 = 1 元/分（可在后台服务者管理中调整）
+	price := 1.0
 	p := &Provider{
 		ID: store.db.SeqProvider, UserID: uid, Role: 1, RealName: body.RealName,
 		IDCard: body.IDCard, Phone: body.Phone, Intro: body.Intro, Expertise: body.Expertise,
@@ -936,8 +937,9 @@ func hAdminProviderStatus(w http.ResponseWriter, r *http.Request, params map[str
 	}
 	id, _ := strconv.ParseInt(params["id"], 10, 64)
 	var body struct {
-		Status   int `json:"status"` // 1启用 3禁用
-		IsOnline int `json:"is_online"`
+		Status         int     `json:"status"` // 1启用 3禁用
+		IsOnline       int     `json:"is_online"`
+		PricePerMinute float64 `json:"price_per_minute"` // 单价（元/分，后台可调，默认 1.0=10 H币）
 	}
 	readJSON(r, &body)
 	store.mu.Lock()
@@ -955,6 +957,9 @@ func hAdminProviderStatus(w http.ResponseWriter, r *http.Request, params map[str
 		if body.IsOnline == 0 {
 			p.IsBusy = 0
 		}
+	}
+	if body.PricePerMinute > 0 {
+		p.PricePerMinute = body.PricePerMinute
 	}
 	p.UpdatedAt = now()
 	store.save()
@@ -1065,12 +1070,7 @@ func hAdminConfig(w http.ResponseWriter, r *http.Request) {
 		var c Config
 		readJSON(r, &c)
 		store.mu.Lock()
-		if c.PriceListener > 0 {
-			store.db.Config.PriceListener = c.PriceListener
-		}
-		if c.PriceCounselor > 0 {
-			store.db.Config.PriceCounselor = c.PriceCounselor
-		}
+		// 单价已下放到每个服务者（默认 10 H币/分），全局不再配置倾听师/咨询师单价
 		if c.PlatformRate > 0 {
 			store.db.Config.PlatformRate = c.PlatformRate
 		}
@@ -1217,8 +1217,17 @@ func hAdminUsers(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
+	// 搜索：按 H号 / 昵称 / 手机号 / openid 模糊匹配
+	keyword := strings.ToLower(strings.TrimSpace(r.URL.Query().Get("keyword")))
+
 	list := make([]map[string]interface{}, 0, len(store.db.Users))
 	for _, u := range store.db.Users {
+		if keyword != "" {
+			hay := strings.ToLower(u.HNo + " " + u.Nickname + " " + u.Phone + " " + u.Openid)
+			if !strings.Contains(hay, keyword) {
+				continue
+			}
+		}
 		list = append(list, map[string]interface{}{
 			"id":         u.ID,
 			"h_no":       u.HNo,
@@ -1227,6 +1236,7 @@ func hAdminUsers(w http.ResponseWriter, r *http.Request) {
 			"is_real_wx": !strings.HasPrefix(u.Openid, "openid_"),
 			"nickname":   u.Nickname,
 			"avatar":     u.Avatar,
+			"phone":      u.Phone,
 			"balance":    u.Balance,
 			"frozen":     u.Frozen,
 			"status":     u.Status,
@@ -1269,7 +1279,8 @@ func hAdminUserDetail(w http.ResponseWriter, r *http.Request, params map[string]
 		}
 		calls = append(calls, map[string]interface{}{
 			"id": c.ID, "call_type": c.CallType, "duration": c.Duration,
-			"amount": c.Amount, "status": c.Status,
+			"amount": c.Amount, "amount_coins": round2(c.Amount * coinRate()),
+			"status": c.Status,
 			"provider_name": store.db.Providers[c.ProviderID].RealName,
 			"created_at":    c.CreatedAt,
 		})
