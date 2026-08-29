@@ -99,6 +99,12 @@ const api = {
     if (r.code === 0) return { code: 0, data: { list: (r.data.list || []).map(mapProvider) } }
     return r
   },
+  async getAllProviders() {
+    const r = await request('GET', '/api/v1/providers/all')
+    if (r._mock) return { code: 0, data: { list: mock.providers.map(mapMock) } }
+    if (r.code === 0) return { code: 0, data: { list: (r.data.list || []).map(mapProvider) } }
+    return r
+  },
   async getProvider(id) {
     const r = await request('GET', '/api/v1/providers/' + id)
     if (r._mock) {

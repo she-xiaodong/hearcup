@@ -37,17 +37,18 @@ Page({
       })
       return
     }
-    // 真实后端
+    // 真实后端：拉取全部倾听者（含离线），标注在线/离线状态
     const [prov, bal] = await Promise.all([
-      api.getOnlineProviders(this.data.activeRole || 0),
+      api.getAllProviders(),
       api.getBalance()
     ])
     const list = (prov.data && prov.data.list) || []
+    const onlineCount = list.filter(p => p.is_online).length
     if (bal.code === 0 && bal.data) store.setBalance(bal.data.balance)
     this.setData({
       userInfo: user,
       balance: getApp().toCoins(bal.data ? bal.data.balance : user.balance),
-      onlineCount: list.length, list
+      onlineCount, list
     })
   },
 
@@ -69,6 +70,10 @@ Page({
 
   onCall(e) {
     const { provider, callType } = e.detail
+    if (provider.is_online === false) {
+      wx.showToast({ title: '该倾听者当前不在线', icon: 'none' })
+      return
+    }
     const cfg = store.getConfig()
     const balance = store.getBalance()
     if (balance < cfg.minBalance) {

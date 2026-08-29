@@ -39,6 +39,7 @@ var routes = []route{
 	{http.MethodPost, "/api/v1/feedback", hFeedback},
 
 	{http.MethodGet, "/api/v1/providers/online", hProvidersOnline},
+	{http.MethodGet, "/api/v1/providers/all", hProvidersAll},
 	{http.MethodGet, "/api/v1/providers/:id", ph(hProviderDetail)},
 
 	{http.MethodPost, "/api/v1/call/invite", hCallInvite},

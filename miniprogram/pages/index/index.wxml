@@ -21,7 +21,7 @@
 
   <view class="list">
     <provider-card wx:for="{{list}}" wx:key="id" provider="{{item}}" bind:call="onCall" />
-    <view wx:if="{{list.length===0}}" class="empty">暂无倾听者在线，请稍后再来</view>
+    <view wx:if="{{list.length===0}}" class="empty">暂无倾听者，请稍后再来</view>
   </view>
 
   <view class="safe-bottom"></view>

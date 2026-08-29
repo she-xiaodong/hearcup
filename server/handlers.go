@@ -279,6 +279,32 @@ func hProvidersOnline(w http.ResponseWriter, r *http.Request) {
 	sendOK(w, map[string]interface{}{"total": len(list), "list": list})
 }
 
+// GET /api/v1/providers/all —— 返回所有已通过审核的倾听者（含离线），在线优先排序，供首页展示状态
+func hProvidersAll(w http.ResponseWriter, r *http.Request) {
+	store.mu.Lock()
+	defer store.mu.Unlock()
+	list := []*Provider{}
+	for _, p := range store.db.Providers {
+		if p.Status != 1 {
+			continue
+		}
+		list = append(list, decorateProvider(p))
+	}
+	sort.Slice(list, func(i, j int) bool {
+		if list[i].IsOnline != list[j].IsOnline {
+			return list[i].IsOnline > list[j].IsOnline
+		}
+		if list[i].Rating != list[j].Rating {
+			return list[i].Rating > list[j].Rating
+		}
+		if list[i].TotalSessions != list[j].TotalSessions {
+			return list[i].TotalSessions > list[j].TotalSessions
+		}
+		return list[i].Level > list[j].Level
+	})
+	sendOK(w, map[string]interface{}{"total": len(list), "list": list})
+}
+
 func hProviderDetail(w http.ResponseWriter, r *http.Request, params map[string]string) {
 	id, _ := strconv.ParseInt(params["id"], 10, 64)
 	store.mu.Lock()

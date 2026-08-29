@@ -4,7 +4,7 @@
     <view class="pc-info">
       <view class="pc-name-row">
         <text class="pc-name">{{provider.nickName}}</text>
-        <text class="role-badge role-listener">倾听者</text>
+        <text class="st-tag {{provider.is_online?'st-on':'st-off'}}">{{provider.is_online?'在线':'离线'}}</text>
       </view>
       <view class="pc-meta">
         <text class="level">{{provider.levelText}}</text>

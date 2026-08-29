@@ -10,6 +10,9 @@
 .pc-info { flex: 1; min-width: 0; }
 .pc-name-row { display: flex; align-items: center; gap: 12rpx; }
 .pc-name { font-size: 32rpx; font-weight: 700; }
+.st-tag { font-size: 22rpx; font-weight: 600; padding: 2rpx 14rpx; border-radius: 999rpx; flex-shrink: 0; }
+.st-on { background: #E6F7EE; color: #16A34A; }
+.st-off { background: #F1F3F5; color: #9AA0A6; }
 .pc-meta { display: flex; align-items: center; gap: 10rpx; margin-top: 6rpx; font-size: 24rpx; }
 .pc-sessions { margin-left: 4rpx; }
 .pc-tags { margin: 20rpx 0 8rpx; min-height: 40rpx; }
