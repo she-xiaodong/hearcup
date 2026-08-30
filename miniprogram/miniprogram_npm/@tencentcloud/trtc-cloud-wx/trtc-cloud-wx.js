@@ -2,8 +2,8 @@
 
 Object.defineProperty(exports, '__esModule', { value: true });
 
-var EventEmitter = require('eventemitter3');
-var TRTC = require('trtc-wx-sdk');
+var EventEmitter = require('../../eventemitter3/index');
+var TRTC = require('../../trtc-wx-sdk/trtc-wx');
 
 function _iterableToArrayLimit(arr, i) {
   var _i = null == arr ? null : "undefined" != typeof Symbol && arr[Symbol.iterator] || arr["@@iterator"];

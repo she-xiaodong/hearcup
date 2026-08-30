@@ -89,7 +89,7 @@ module.exports =
 /* 0 */
 /***/ (function(module, exports) {
 
-module.exports = require("@tencentcloud/trtc-cloud-wx");
+module.exports = require("../trtc-cloud-wx/trtc-cloud-wx");
 
 /***/ }),
 /* 1 */,
