@@ -21,6 +21,7 @@ type AppConfig struct {
 	WXPayPrivateKey string // 商户 API 私钥 PEM（内容或文件路径）
 	WXPayNotifyURL  string // 支付结果回调地址（需公网 HTTPS）
 	SubscribeTplID  string // 微信订阅消息模板 ID（通话邀请通知，未接来电兜底）
+	FreeCall        bool   // 免费通话模式：跳过余额校验/冻结/扣费（支付被限制时用于先跑通通话）
 	JWTSecret       string
 }
 
@@ -40,6 +41,7 @@ func loadConfig() {
 		WXPayPrivateKey: os.Getenv("HEARCUP_WXPAY_PRIVATE_KEY"),
 		WXPayNotifyURL:  os.Getenv("HEARCUP_WXPAY_NOTIFY_URL"),
 		SubscribeTplID:  os.Getenv("HEARCUP_SUBSCRIBE_TPL_ID"),
+		FreeCall:        envBool(os.Getenv("HEARCUP_FREE_CALL")),
 		JWTSecret:       os.Getenv("HEARCUP_JWT_SECRET"),
 	}
 	if appCfg.JWTSecret == "" {
@@ -64,6 +66,15 @@ func atoi64(s string) int64 {
 		return 0
 	}
 	return v
+}
+
+// envBool 把环境变量解析为布尔：1/true/yes/on 视为 true，其余为 false
+func envBool(s string) bool {
+	switch strings.ToLower(strings.TrimSpace(s)) {
+	case "1", "true", "yes", "on":
+		return true
+	}
+	return false
 }
 
 func fileExists(p string) bool {

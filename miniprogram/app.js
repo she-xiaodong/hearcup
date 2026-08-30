@@ -26,6 +26,7 @@ App({
       coinRate: 10,      // 虚拟币比例：1元 = 10 H币
       coinName: 'H币',
       minBalance: 3.0,
+      freeCall: false,   // 免费通话模式：true 时跳过余额校验（支付被限制时由后端下发）
       platformRate: 0.2
     }
   },
@@ -54,6 +55,10 @@ App({
             this.globalData.userInfo = Object.assign({}, this.globalData.userInfo, u)
             this.globalData.token = r.data.token || ''
             if (typeof u.balance === 'number') store.setBalance(u.balance)
+            // 免费通话模式标记：后端下发（支付被限制时先跑通通话），前端据此跳过余额校验
+            if (typeof r.data.free_call === 'boolean') {
+              this.globalData.config.freeCall = r.data.free_call
+            }
             // 拿到 IM 凭据后初始化通话组件：倾听者此后才能收到来电
             if (r.data.im) {
               this.globalData.im = r.data.im

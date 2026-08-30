@@ -118,6 +118,7 @@ cd miniprogram && node test_api_node.js
 | `HEARCUP_WXPAY_PRIVATE_KEY` | 商户 API 私钥 PEM（内容或文件路径） | 无法下单 |
 | `HEARCUP_WXPAY_NOTIFY_URL` | 支付结果回调公网地址 | 默认 `http://localhost:8099/api/v1/pay/callback` |
 | `HEARCUP_SUBSCRIBE_TPL_ID` | 微信订阅消息模板 ID（未接来电离线兜底） | 空 → 跳过订阅消息发送 |
+| `HEARCUP_FREE_CALL` | 免费通话模式（`1` 开启）：跳过余额校验/冻结/扣费 | 空 → 正常计费 |
 | `HEARCUP_JWT_SECRET` | JWT 签名密钥 | 内置默认值 |
 
 **本机已验证可用的配置（MySQL）：**

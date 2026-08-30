@@ -152,6 +152,7 @@ func hAuthLogin(w http.ResponseWriter, r *http.Request) {
 
 	sendOK(w, map[string]interface{}{
 		"token": tok, "user": userCopy,
+		"free_call": appCfg.FreeCall, // 免费通话模式标记：true 时前端跳过余额校验
 		// TUICallKit 初始化所需凭据：前端据此 init 后即可收发通话邀请
 		"im": map[string]interface{}{
 			"sdk_app_id": appCfg.TRTCAppID,
@@ -376,13 +377,15 @@ func hCallInvite(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	u := store.db.Users[uid]
-	if u.Balance < store.db.Config.MinBalance {
+	if !appCfg.FreeCall && u.Balance < store.db.Config.MinBalance {
 		fail(w, fmt.Sprintf("余额不足，至少需 %.2f 元", store.db.Config.MinBalance))
 		return
 	}
-	// 冻结 3 分钟费用
-	u.Balance -= store.db.Config.MinBalance
-	u.Frozen += store.db.Config.MinBalance
+	// 冻结 3 分钟费用（免费通话模式跳过：支付被限制时先跑通通话，不动余额）
+	if !appCfg.FreeCall {
+		u.Balance -= store.db.Config.MinBalance
+		u.Frozen += store.db.Config.MinBalance
+	}
 	p.IsBusy = 1
 
 	// 计费单价：语音=基础价；视频=基础价×加价倍率（四舍五入到分）
@@ -481,11 +484,11 @@ func hCallResult(w http.ResponseWriter, r *http.Request, kind string) {
 		return
 	}
 
-	// 未被接听的终态：解冻主叫余额 + 释放被叫忙碌
+	// 未被接听的终态：解冻主叫余额 + 释放被叫忙碌（免费模式无冻结，跳过解冻）
 	if kind == "reject" || kind == "cancel" || kind == "miss" {
 		if rec.Status == 0 {
 			u := store.db.Users[rec.UserID]
-			if u != nil && u.Frozen >= store.db.Config.MinBalance {
+			if u != nil && !appCfg.FreeCall && u.Frozen >= store.db.Config.MinBalance {
 				u.Frozen -= store.db.Config.MinBalance
 				u.Balance += store.db.Config.MinBalance
 			}
@@ -592,18 +595,25 @@ func hCallEnd(w http.ResponseWriter, r *http.Request) {
 	platformFee := amount * store.db.Config.PlatformRate
 	providerIncome := amount - platformFee
 
-	// 结算冻结余额
-	frozenUsed := store.db.Config.MinBalance
-	if amount <= frozenUsed {
-		// 退回冻结差额
-		u.Frozen -= frozenUsed
-		u.Balance += (frozenUsed - amount)
+	if appCfg.FreeCall {
+		// 免费通话模式：不扣费、不动余额，金额记 0（支付被限制时先跑通通话）
+		amount = 0
+		platformFee = 0
+		providerIncome = 0
 	} else {
-		u.Frozen -= frozenUsed
-		diff := amount - frozenUsed
-		u.Balance -= diff
-		if u.Balance < -store.db.Config.Overdraft {
-			u.Balance = -store.db.Config.Overdraft // 透支保护
+		// 结算冻结余额
+		frozenUsed := store.db.Config.MinBalance
+		if amount <= frozenUsed {
+			// 退回冻结差额
+			u.Frozen -= frozenUsed
+			u.Balance += (frozenUsed - amount)
+		} else {
+			u.Frozen -= frozenUsed
+			diff := amount - frozenUsed
+			u.Balance -= diff
+			if u.Balance < -store.db.Config.Overdraft {
+				u.Balance = -store.db.Config.Overdraft // 透支保护
+			}
 		}
 	}
 	// 服务者收益
@@ -1382,6 +1392,7 @@ func hDebugEnv(w http.ResponseWriter, r *http.Request) {
 		"jwt": map[string]interface{}{
 			"custom_secret": appCfg.JWTSecret != "",
 		},
+		"free_call": appCfg.FreeCall,
 	})
 }
 

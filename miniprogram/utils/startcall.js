@@ -20,8 +20,8 @@ async function startCall(providerId, callType) {
   const app = getApp()
   const cfg = store.getConfig()
 
-  // ① 余额前置校验（与后端冻结金额保持一致，避免无谓请求）
-  if (store.getBalance() < cfg.minBalance) {
+  // ① 余额前置校验（免费通话模式跳过；与后端冻结金额保持一致，避免无谓请求）
+  if (!cfg.freeCall && store.getBalance() < cfg.minBalance) {
     wx.showModal({
       title: '余额不足',
       content: `发起呼叫需至少 ${app.toCoins(cfg.minBalance)} H币，是否去充值？`,
