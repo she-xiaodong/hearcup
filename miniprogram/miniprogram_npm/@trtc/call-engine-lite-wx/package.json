@@ -1,1 +1,1 @@
-{"name":"@trtc/call-engine-lite-wx","version":"5.0.6","main":"index.js"}
+{"name": "@trtc/call-engine-lite-wx", "version": "5.0.6", "main": "index.js", "dependencies": {"@tencentcloud/lite-chat": ">1.6.0", "@tencentcloud/trtc-component-wx": ">1.0.6"}}

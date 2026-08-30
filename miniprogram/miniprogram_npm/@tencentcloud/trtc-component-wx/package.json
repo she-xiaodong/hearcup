@@ -1,1 +1,1 @@
-{"name":"@tencentcloud/trtc-component-wx","version":"1.0.7","main":"index.js"}
+{"name": "@tencentcloud/trtc-component-wx", "version": "1.0.7", "main": "index.js", "dependencies": {"@tencentcloud/trtc-cloud-wx": "^1.0.7"}}

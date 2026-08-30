@@ -24,14 +24,14 @@ let _statusHooks = []    // 业务侧状态回调
 
 // 懒加载 SDK：避免在未配置 IM 时因模块加载失败导致整个小程序崩溃
 function pkg() {
-  return require('/TUICallKit/index')
+  return require('../TUICallKit/index')
 }
 
 function getMgr() {
   if (!_mgr) {
     // CallManager 未被 SDK 自动引用，需业务显式实例化；
     // 它监听通话状态并在来电时自动跳转到全局通话页。
-    const { CallManager } = require('/TUICallKit/TUICallService/serve/callManager')
+    const { CallManager } = require('../TUICallKit/TUICallService/serve/callManager')
     _mgr = new CallManager()
   }
   return _mgr
