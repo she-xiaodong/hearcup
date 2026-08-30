@@ -117,6 +117,7 @@ cd miniprogram && node test_api_node.js
 | `HEARCUP_WXPAY_APIV3_KEY` | 微信支付 APIv3 密钥（回调 AES 解密） | 回调返回失败 |
 | `HEARCUP_WXPAY_PRIVATE_KEY` | 商户 API 私钥 PEM（内容或文件路径） | 无法下单 |
 | `HEARCUP_WXPAY_NOTIFY_URL` | 支付结果回调公网地址 | 默认 `http://localhost:8099/api/v1/pay/callback` |
+| `HEARCUP_SUBSCRIBE_TPL_ID` | 微信订阅消息模板 ID（未接来电离线兜底） | 空 → 跳过订阅消息发送 |
 | `HEARCUP_JWT_SECRET` | JWT 签名密钥 | 内置默认值 |
 
 **本机已验证可用的配置（MySQL）：**
@@ -174,3 +175,37 @@ export HEARCUP_MYSQL_DSN='root:root@tcp(127.0.0.1:3306)/hearcup?charset=utf8mb4&
 2. **支付回调公网 HTTPS**：`HEARCUP_WXPAY_NOTIFY_URL` 必须是公网可访问的 HTTPS 地址（内网/localhost 收不到微信回调），上线部署到云服务器或内网穿透后替换即可。微信支付回调的「平台证书验签」代码已留 TODO，拿到平台证书后即可补齐。
 
 > 真机联调只需在 `server` 目录启动后端（自动读 `.env`），并在小程序侧填入对应 AppID / 密钥 / 证书。
+
+---
+
+## 音视频通话接入（TUICallKit v5.0.0，V1.1）
+
+通话能力基于腾讯云 **TUICallKit**（`@trtc/calls-uikit-wx`，IM + TRTC 双引擎），采用官方 demo 同款 **vendor 拷贝方式**集成：`miniprogram/TUICallKit/` 即 `node_modules/@trtc/calls-uikit-wx` 的拷贝（已删除 `debug/`）。
+
+### 涉及的文件
+- `miniprogram/utils/callkit.js` —— TUICallKit 封装层（`init` / `calls` / `hangup` / 来电状态监听）
+- `miniprogram/utils/startcall.js` —— 首页/详情页共用的发起呼叫流程（余额校验 → 建单冻结 → 发起）
+- `miniprogram/utils/api.js` —— 新增 `invite` / `reportCallResult` / `setProviderOnline(Offline)` / `getProviderEarnings`
+- `miniprogram/pages/listener/*` —— 倾听者工作台（入驻状态 / 上下线 / 收益 / 保活引导 / 静音后台音频）
+- `miniprogram/static/silence.wav` —— 1 秒静音音频，用于降低后台被回收概率
+- `miniprogram/app.json` —— 注册全局来电页 `TUICallKit/pages/globalCall/globalCall`
+- `server/im.go` —— IM 服务端客户端（账号开通 / 在线查询 / 未接通知），关键职责边界见文件头注释
+
+### 构建 npm（必须，且要做一步瘦身）
+`miniprogram/package.json` 已声明 TUICallKit 及其全部传递依赖（`@trtc/call-engine-lite-wx` / `@tencentcloud/tui-core-lite` / `@tencentcloud/lite-chat` / `@tencentcloud/trtc-component-wx`），`node_modules` 已装全。
+
+在微信开发者工具：**工具 → 构建 npm**，生成 `miniprogram_npm/`。
+
+> ⚠️ **关键瘦身步骤（省 ~5M，不做主包会超 2M 限制）**：`@tencentcloud/lite-chat` 的 `miniprogram` 字段指向整个目录，构建后会连 `node.js / professional.js / standard.js / plugins / *.d.ts` 等冗余变体一起带进主包。构建完成后手动执行：
+> 1. 把 `node_modules/@tencentcloud/lite-chat/basic.js` 拷贝到 `miniprogram_npm/@tencentcloud/lite-chat/basic.js`；
+> 2. 删除 `miniprogram_npm/@tencentcloud/lite-chat/index.js`。
+>
+> `basic.js` 自包含（无任何 `require`），TUICallKit 只用到它，删掉其它变体不影响运行。
+
+### 体积核算（压缩后估算）
+业务代码 ~0.6M + TUICallKit UI ~0.7M + 引擎 ~0.5M + lite-chat/basic ~0.25M + trtc-component-wx ~0.13M ≈ 原始 2.2M、压缩后约 1.3~1.5M，**在 2M 主包限制内**。前提是完成上一步 lite-chat 瘦身；若仍超限，再上分包方案（全局通话页迁入 `subPackages`）。
+
+### 上线前环境要求（微信后台手动配置）
+音视频组件权限、域名白名单、订阅消息模板、隐私声明，详见 **`docs/微信后台配置清单.md`**（含老板强调的全部避坑要点）。
+
+> 注意：微信开发者工具不支持 `live-pusher/live-player` 原生组件，音视频必须**真机**测试；且需企业主体小程序（个人小程序无此权限）。

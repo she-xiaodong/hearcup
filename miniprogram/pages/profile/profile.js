@@ -109,6 +109,7 @@ Page({
   },
 
   goApply() { wx.navigateTo({ url: '/pages/apply/apply' }) },
+  goListener() { wx.navigateTo({ url: '/pages/listener/listener' }) },
   goCalls() { wx.switchTab({ url: '/pages/calls/calls' }) },
   goRecharge() { wx.navigateTo({ url: '/pages/recharge/recharge' }) },
   goSettings() { wx.navigateTo({ url: '/pages/settings/settings' }) },

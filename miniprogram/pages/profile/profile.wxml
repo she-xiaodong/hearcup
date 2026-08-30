@@ -49,6 +49,7 @@
   </view>
 
   <view class="card menu">
+    <view class="menu-item" bindtap="goListener"><view class="mi-left"><view class="ico ico-mic ico-sm"></view><text>倾听者工作台</text></view><text class="muted">›</text></view>
     <view class="menu-item" bindtap="goCalls"><view class="mi-left"><view class="ico ico-phone ico-sm"></view><text>通话记录</text></view><text class="menu-badge">{{callCount}} 条 ›</text></view>
     <view class="menu-item" bindtap="goRecharge"><view class="mi-left"><view class="ico ico-wallet ico-sm"></view><text>余额与充值</text></view><text class="muted">›</text></view>
     <view class="menu-item" bindtap="goAbout"><view class="mi-left"><view class="ico ico-leaf ico-sm"></view><text>关于我们</text></view><text class="muted">›</text></view>

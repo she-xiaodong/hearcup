@@ -20,6 +20,7 @@ type AppConfig struct {
 	WXPayAPIv3Key   string // 微信支付 APIv3 密钥（回调 AES 解密用）
 	WXPayPrivateKey string // 商户 API 私钥 PEM（内容或文件路径）
 	WXPayNotifyURL  string // 支付结果回调地址（需公网 HTTPS）
+	SubscribeTplID  string // 微信订阅消息模板 ID（通话邀请通知，未接来电兜底）
 	JWTSecret       string
 }
 
@@ -38,6 +39,7 @@ func loadConfig() {
 		WXPayAPIv3Key:   os.Getenv("HEARCUP_WXPAY_APIV3_KEY"),
 		WXPayPrivateKey: os.Getenv("HEARCUP_WXPAY_PRIVATE_KEY"),
 		WXPayNotifyURL:  os.Getenv("HEARCUP_WXPAY_NOTIFY_URL"),
+		SubscribeTplID:  os.Getenv("HEARCUP_SUBSCRIBE_TPL_ID"),
 		JWTSecret:       os.Getenv("HEARCUP_JWT_SECRET"),
 	}
 	if appCfg.JWTSecret == "" {

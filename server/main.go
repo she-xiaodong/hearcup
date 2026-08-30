@@ -45,6 +45,11 @@ var routes = []route{
 	{http.MethodPost, "/api/v1/call/invite", hCallInvite},
 	{http.MethodGet, "/api/v1/call/status/:roomId", ph(hCallStatus)},
 	{http.MethodPost, "/api/v1/call/end", hCallEnd},
+	// 呼叫终态上报（由 TUICallKit 回调驱动：接听/拒接/主叫取消/超时未接）
+	{http.MethodPost, "/api/v1/call/accept", hCallAccept},
+	{http.MethodPost, "/api/v1/call/reject", hCallReject},
+	{http.MethodPost, "/api/v1/call/cancel", hCallCancel},
+	{http.MethodPost, "/api/v1/call/miss", hCallMiss},
 	{http.MethodPost, "/api/v1/call/rating", hCallRating},
 	{http.MethodGet, "/api/v1/call/records", hCallRecords},
 

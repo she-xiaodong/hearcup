@@ -127,6 +127,12 @@ const api = {
     if (r._mock) return { code: 0, data: { amount: 0 } }
     return r
   },
+  // —— 呼叫终态上报：由 TUICallKit 状态回调驱动，后端据此结算或解冻 ——
+  // kind: accept(接听) / reject(拒接) / cancel(主叫取消) / miss(超时未接)
+  async reportCallResult(kind, roomId, callId) {
+    if (useMock()) return { code: 0, data: { result: kind } }
+    return request('POST', '/api/v1/call/' + kind, { room_id: roomId, call_id: callId || 0 })
+  },
   async rate(roomId, rating, comment) {
     const r = await request('POST', '/api/v1/call/rating', { room_id: roomId, rating, comment })
     if (r._mock) return { code: 0, data: { ok: true } }
@@ -159,6 +165,22 @@ const api = {
       if (!a) return { code: 0, data: { status: -1 } }
       return { code: 0, data: Object.assign({ role: a.role }, a) }
     }
+    return r
+  },
+  // 倾听者上/下线：决定是否接收来电（后端据此置 is_online）
+  async setProviderOnline() {
+    const r = await request('PUT', '/api/v1/provider/online', {})
+    if (r._mock) return { code: 0, data: { is_online: 1 } }
+    return r
+  },
+  async setProviderOffline() {
+    const r = await request('PUT', '/api/v1/provider/offline', {})
+    if (r._mock) return { code: 0, data: { is_online: 0 } }
+    return r
+  },
+  async getProviderEarnings() {
+    const r = await request('GET', '/api/v1/provider/earnings')
+    if (r._mock) return { code: 0, data: { today_income: 0, withdrawable: 0, total_earnings: 0, today_calls: 0 } }
     return r
   },
   async applyProvider(form) {

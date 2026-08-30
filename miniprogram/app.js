@@ -2,6 +2,7 @@
 const { providers, tags } = require('./utils/mock.js')
 const api = require('./utils/api.js')
 const store = require('./utils/store.js')
+const callkit = require('./utils/callkit.js')
 
 App({
   globalData: {
@@ -11,6 +12,8 @@ App({
     providers: providers,
     tags: tags,
     token: '',
+    // 腾讯云 IM 凭据：登录时由后端下发，供 TUICallKit 初始化通话能力
+    im: null,
     config: {
       // ⚠️ 测试开关：true=本地演示数据（离线可用）；false=连接真实后端（见 baseUrl）
       // 可在「我的 → 开发者自检」页切换，并持久化到 storage
@@ -38,6 +41,8 @@ App({
     this.restoreConfig()
     this._loginDone = false
     this._loginCbs = []
+    // 通话计费回调只需注册一次（把 TUICallKit 状态变化翻译成后端计费事件）
+    this.bindCallStatus()
     // 真实环境：每次打开小程序都走 wx.login → 后端换取 openid，新用户自动生成唯一 H号
     if (typeof wx === 'undefined' || !wx.login) { this._loginDone = true; return }
     wx.login({
@@ -49,11 +54,47 @@ App({
             this.globalData.userInfo = Object.assign({}, this.globalData.userInfo, u)
             this.globalData.token = r.data.token || ''
             if (typeof u.balance === 'number') store.setBalance(u.balance)
+            // 拿到 IM 凭据后初始化通话组件：倾听者此后才能收到来电
+            if (r.data.im) {
+              this.globalData.im = r.data.im
+              this.initCallKit(r.data.im, u)
+            }
           }
           this._notifyLogin()
         }).catch(() => this._notifyLogin())
       },
       fail: () => this._notifyLogin()
+    })
+  },
+
+  // 初始化 TUICallKit（失败不阻断主流程，仅丧失通话能力）
+  initCallKit(im, user) {
+    callkit.init(im, { nickname: (user && user.nickname) || '', avatar: (user && user.avatar) || '' })
+      .catch(e => console.error('[app] callkit init fail', e))
+  },
+
+  // 通话状态 → 业务计费上报。
+  // 只在主叫侧生效：主叫持有 room_id 且是付费方，被叫侧不参与计费（见 callkit 封装内说明）。
+  bindCallStatus() {
+    callkit.onStatus((s) => {
+      if (!s || !s.roomIDBiz) return
+      if (s.status === 'connected') {
+        api.reportCallResult('accept', s.roomIDBiz, s.callID)
+      } else if (s.status === 'ended') {
+        // 正常结束：后端按分钟结算并解冻余额
+        api.endCall(s.roomIDBiz).then((r) => {
+          if (r && r.code === 0 && r.data && typeof r.data.balance === 'number') {
+            store.setBalance(r.data.balance)
+          }
+        }).catch(() => {})
+        callkit.clearSession()
+      } else if (s.status === 'unconnected') {
+        // 未接通：主叫主动取消走 cancel（静默解冻）；
+        // 被叫拒接或超时未接走 miss（解冻并给倾听者补发未接通知）
+        const kind = (s.role === 'caller' && s.userHangup) ? 'cancel' : 'miss'
+        api.reportCallResult(kind, s.roomIDBiz, s.callID).catch(() => {})
+        callkit.clearSession()
+      }
     })
   },
 

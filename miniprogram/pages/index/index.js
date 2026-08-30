@@ -1,5 +1,6 @@
 const store = require('../../utils/store.js')
 const api = require('../../utils/api.js')
+const { startCall } = require('../../utils/startcall.js')
 
 function useMock() { return getApp().globalData.config.useMock }
 
@@ -68,11 +69,12 @@ Page({
 
   goRecharge() { wx.navigateTo({ url: '/pages/recharge/recharge' }) },
 
-  onCall(e) {
+  async onCall(e) {
     const { provider, callType } = e.detail
+    // 离线不再拦截：呼叫会经腾讯云 IM 通道以通知形式触达对方，
+    // 只是不能保证立刻接通，所以给用户一个预期提示。
     if (provider.is_online === false) {
-      wx.showToast({ title: '该倾听者当前不在线', icon: 'none' })
-      return
+      wx.showToast({ title: '对方可能不在线，将发送来电通知', icon: 'none', duration: 2000 })
     }
     const cfg = store.getConfig()
     const balance = store.getBalance()
@@ -85,6 +87,6 @@ Page({
       })
       return
     }
-    wx.navigateTo({ url: `/pages/calling/calling?pid=${provider.id}&type=${callType}` })
+    await startCall(provider.id, callType)
   }
 })

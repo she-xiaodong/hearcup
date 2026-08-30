@@ -1,6 +1,9 @@
 package main
 
 import (
+	"bytes"
+	"compress/zlib"
+	"encoding/base64"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -122,7 +125,6 @@ func hAuthLogin(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 	store.mu.Lock()
-	defer store.mu.Unlock()
 	var uid int64
 	for _, u := range store.db.Users {
 		if u.Openid == openid {
@@ -140,8 +142,23 @@ func hAuthLogin(w http.ResponseWriter, r *http.Request) {
 		store.db.Users[uid].Unionid = unionid
 	}
 	tok, _ := genToken(uid, "user")
+	userCopy := *store.db.Users[uid]
 	store.save()
-	sendOK(w, map[string]interface{}{"token": tok, "user": store.db.Users[uid]})
+	// 提前解锁：IM 账号开通涉及网络 IO，绝不能放在锁内（会阻塞所有请求）
+	store.mu.Unlock()
+
+	// 锁外：确保该用户在腾讯云 IM 中有可用账号，并同步昵称/头像（失败不阻断登录）
+	imEnsureAccount(uid, userCopy.Nickname, userCopy.Avatar)
+
+	sendOK(w, map[string]interface{}{
+		"token": tok, "user": userCopy,
+		// TUICallKit 初始化所需凭据：前端据此 init 后即可收发通话邀请
+		"im": map[string]interface{}{
+			"sdk_app_id": appCfg.TRTCAppID,
+			"user_id":    imUserID(uid),
+			"user_sig":   generateUserSig(imUserID(uid)),
+		},
+	})
 }
 
 func hUserProfile(w http.ResponseWriter, r *http.Request) {
@@ -350,8 +367,8 @@ func hCallInvite(w http.ResponseWriter, r *http.Request) {
 		fail(w, "服务者不存在或未通过审核")
 		return
 	}
-	if p.IsOnline != 1 {
-		fail(w, "对方当前离线")
+	if p.UserID == uid {
+		fail(w, "不能呼叫自己")
 		return
 	}
 	if p.IsBusy == 1 {
@@ -379,23 +396,141 @@ func hCallInvite(w http.ResponseWriter, r *http.Request) {
 	}
 
 	store.db.SeqCall++
+	seq := store.db.SeqCall
 	roomID := fmt.Sprintf("call_%d_%d", now(), body.ProviderID)
 	rec := &CallRecord{
-		ID: store.db.SeqCall, UserID: uid, ProviderID: body.ProviderID, RoomID: roomID,
+		ID: seq, UserID: uid, ProviderID: body.ProviderID, RoomID: roomID,
 		CallType: body.CallType, StartTime: now(), UnitPrice: unitPrice,
 		Status: 0, CreatedAt: now(), UpdatedAt: now(),
 	}
 	store.db.Calls[rec.ID] = rec
-	userSig := generateUserSig(fmt.Sprintf("user_%d", uid))
-	provSig := generateUserSig(fmt.Sprintf("provider_%d", p.UserID))
+
+	// IM 身份：统一使用 hearcup_{uid} 单一身份（不再区分 user_/provider_ 前缀）。
+	// TUICallKit 依据此 userID 完成「在线→信令直发 / 离线→推送触达」的自动路由。
+	callerID := imUserID(uid)
+	calleeID := imUserID(p.UserID)
+
+	// TUICallKit 的 roomID 必须是 1~2147483647 的数字，与业务字符串 room_id 并存：
+	// 前者给 SDK 用（音视频房间），后者给本服务用（计费关联主键）。
+	trtcRoomID := 1000000 + int(seq)
 	store.save()
 	sendOK(w, map[string]interface{}{
-		"room_id": roomID, "user_sig": userSig, "provider_sig": provSig,
-		"sdk_app_id": appCfg.TRTCAppID, "user_id": fmt.Sprintf("user_%d", uid),
-		"provider_user_id": fmt.Sprintf("provider_%d", p.UserID),
-		"call_type": body.CallType, "unit_price": unitPrice,
-		"unit_price_coins": round2(unitPrice * coinRate()), "coin_name": coinName(),
+		// —— 业务侧（计费关联）——
+		"room_id": roomID,
+		"call_id": seq,
+		// —— TUICallKit 侧 ——
+		"sdk_app_id":        appCfg.TRTCAppID,
+		"trtc_room_id":      trtcRoomID,
+		"caller_im_user_id": callerID,
+		"caller_im_sig":     generateUserSig(callerID),
+		"callee_im_user_id": calleeID,
+		// 通话参数
+		"call_type":        body.CallType,
+		"timeout":          callInviteTimeout,
+		"unit_price":       unitPrice,
+		"unit_price_coins": round2(unitPrice * coinRate()),
+		"coin_name":        coinName(),
+		// 被叫展示信息（来电 UI 用）
+		"callee_nickname": p.RealName,
+		"callee_avatar":   p.Avatar,
 	})
+}
+
+// callInviteTimeout 呼叫邀请超时时间（秒）。主叫侧 TUICallKit 与服务端兜底校验共用此值。
+const callInviteTimeout = 60
+
+// ---------- 呼叫结果回调（接听 / 拒接 / 取消 / 超时未接）----------
+
+// hCallResult 统一处理呼叫终态：释放被叫忙碌态、未接通时解冻主叫余额。
+// 由前端在 TUICallKit 回调（onCallEnd / onCallNotConnected / 超时）时上报。
+func hCallResult(w http.ResponseWriter, r *http.Request, kind string) {
+	uid, ok := requireUser(r)
+	if !ok {
+		fail(w, "未登录")
+		return
+	}
+	var b struct {
+		RoomID string `json:"room_id"`
+		CallID int64  `json:"call_id"`
+	}
+	readJSON(r, &b)
+
+	nickname := ""
+	store.mu.Lock()
+	var rec *CallRecord
+	if b.CallID > 0 {
+		rec = store.db.Calls[b.CallID]
+	}
+	if rec == nil && b.RoomID != "" {
+		for _, c := range store.db.Calls {
+			if c.RoomID == b.RoomID {
+				rec = c
+				break
+			}
+		}
+	}
+	if rec == nil {
+		store.mu.Unlock()
+		fail(w, "通话不存在")
+		return
+	}
+	// 仅主叫或被叫本人可上报结果
+	if rec.UserID != uid && !userOwnsProvider(uid, rec.ProviderID) {
+		store.mu.Unlock()
+		fail(w, "无权操作")
+		return
+	}
+
+	// 未被接听的终态：解冻主叫余额 + 释放被叫忙碌
+	if kind == "reject" || kind == "cancel" || kind == "miss" {
+		if rec.Status == 0 {
+			u := store.db.Users[rec.UserID]
+			if u != nil && u.Frozen >= store.db.Config.MinBalance {
+				u.Frozen -= store.db.Config.MinBalance
+				u.Balance += store.db.Config.MinBalance
+			}
+			rec.Status = 2 // 2=未接通
+		}
+		if p := store.db.Providers[rec.ProviderID]; p != nil {
+			p.IsBusy = 0
+		}
+		nickname = store.db.Users[rec.UserID].Nickname
+	}
+	rec.UpdatedAt = now()
+	store.save()
+	store.mu.Unlock()
+
+	// 超时未接：给倾听者补发通知，避免其完全无感知（网络 IO，放在锁外）
+	// 双通道：IM 离线推送（实时）+ 订阅消息（小程序被回收时的兜底）
+	if kind == "miss" {
+		if p := getProviderNoLock(rec.ProviderID); p != nil {
+			imSendMissedCall(p.UserID, nickname, rec.CallType)
+			sendMissedCallSubscribe(p.UserID, nickname, rec.CallType, rec.RoomID)
+		}
+	}
+	sendOK(w, map[string]interface{}{"result": kind, "room_id": rec.RoomID})
+}
+
+func hCallAccept(w http.ResponseWriter, r *http.Request) { hCallResult(w, r, "accept") }
+func hCallReject(w http.ResponseWriter, r *http.Request) { hCallResult(w, r, "reject") }
+func hCallCancel(w http.ResponseWriter, r *http.Request) { hCallResult(w, r, "cancel") }
+func hCallMiss(w http.ResponseWriter, r *http.Request)   { hCallResult(w, r, "miss") }
+
+// userOwnsProvider 判断该用户是否是此服务者账号的持有者
+func userOwnsProvider(uid, providerID int64) bool {
+	p, ok := store.db.Providers[providerID]
+	return ok && p.UserID == uid
+}
+
+// getProviderNoLock 在不持锁的场景下安全读取 provider 快照（仅用于触发外部 IO）
+func getProviderNoLock(providerID int64) *Provider {
+	store.mu.Lock()
+	defer store.mu.Unlock()
+	if p, ok := store.db.Providers[providerID]; ok {
+		cp := *p
+		return &cp
+	}
+	return nil
 }
 
 func hCallStatus(w http.ResponseWriter, r *http.Request, params map[string]string) {
@@ -499,8 +634,8 @@ func hCallRating(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	var body struct {
-		RoomID string `json:"room_id"`
-		Rating int    `json:"rating"`
+		RoomID  string `json:"room_id"`
+		Rating  int    `json:"rating"`
 		Comment string `json:"comment"`
 	}
 	readJSON(r, &body)
@@ -1028,7 +1163,7 @@ func hAdminCalls(w http.ResponseWriter, r *http.Request) {
 		list = append(list, map[string]interface{}{
 			"id": c.ID, "user_name": store.db.Users[c.UserID].Nickname,
 			"provider_name": store.db.Providers[c.ProviderID].RealName,
-			"call_type": c.CallType, "duration": c.Duration, "amount": c.Amount,
+			"call_type":     c.CallType, "duration": c.Duration, "amount": c.Amount,
 			"provider_income": c.ProviderIncome, "platform_fee": c.PlatformFee,
 			"status": c.Status, "created_at": c.CreatedAt,
 		})
@@ -1166,22 +1301,42 @@ func generateUserSig(userID string) string {
 		return "MOCKSIG_" + userID
 	}
 	expire := 86400
-	ts := now()
-	payload := map[string]interface{}{
-		"TLS.ver":        "2.0",
-		"TLS.identifier": userID,
-		"TLS.sdkappid":   appCfg.TRTCAppID,
-		"TLS.expire":     expire,
-		"TLS.time":       ts,
+	return generateUserSigAt(userID, now(), expire)
+}
+
+// generateUserSigAt 允许注入固定时间戳，便于与腾讯官方 SDK 做逐字符交叉验证（见 im_probe_test.go）。
+func generateUserSigAt(userID string, ts int64, expire int) string {
+	if appCfg.TRTCAppID == 0 {
+		return "MOCKSIG_" + userID
 	}
-	pb, _ := json.Marshal(payload)
-	b64 := b64url(pb)
-	content := fmt.Sprintf("%s%d%s%d%d", b64, appCfg.TRTCAppID, userID, expire, ts)
-	mac := hmacSHA256(appCfg.TRTCSecret, content)
-	sig := b64url(mac)
-	payload["TLS.sig"] = sig
-	out, _ := json.Marshal(payload)
-	return b64url(out)
+	// ① 待签名串：腾讯官方 TLSSigAPIv2 固定格式，字段名/顺序/换行不可变。
+	//    注意：userbuf（payload 的 base64）仅在需要房间级权限时参与签名，普通 UserSig 不含该行。
+	content := fmt.Sprintf("TLS.identifier:%s\nTLS.sdkappid:%d\nTLS.time:%d\nTLS.expire:%d\n",
+		userID, appCfg.TRTCAppID, ts, expire)
+	sig := base64.StdEncoding.EncodeToString(hmacSHA256(appCfg.TRTCSecret, content))
+
+	// ② payload JSON：字段顺序与官方 SDK 保持一致（zlib 对字节序敏感，对齐后可与官方实现逐字符比对）。
+	//    带 userbuf 时需额外追加 "TLS.userbuf" 字段，此处不涉房权限，故省略。
+	doc := fmt.Sprintf(
+		`{"TLS.ver":"2.0","TLS.identifier":"%s","TLS.sdkappid":%d,"TLS.time":%d,"TLS.expire":%d,"TLS.sig":"%s"}`,
+		userID, appCfg.TRTCAppID, ts, expire, sig)
+
+	// ③ 官方规范：JSON → zlib deflate → base64 → 腾讯私有 URL-safe 转义。
+	//    历史上曾误用「明文 JSON 直接 base64」，服务端按压缩格式解压失败，返回 70003 UserSig 非法。
+	var buf bytes.Buffer
+	zw := zlib.NewWriter(&buf)
+	_, _ = zw.Write([]byte(doc))
+	_ = zw.Close()
+	return tencentBase64URLEscape(base64.StdEncoding.EncodeToString(buf.Bytes()))
+}
+
+// tencentBase64URLEscape 腾讯私有 base64url 变体：+ → *、/ → -、= → _。
+// 与官方 tls-sig-api-v2（node/go）实现保持一致，注意它并非标准 RFC4648 base64url。
+func tencentBase64URLEscape(s string) string {
+	s = strings.ReplaceAll(s, "+", "*")
+	s = strings.ReplaceAll(s, "/", "-")
+	s = strings.ReplaceAll(s, "=", "_")
+	return s
 }
 
 // ---------- 运维观测（真机联调用） ----------
@@ -1207,9 +1362,9 @@ func hDebugEnv(w http.ResponseWriter, r *http.Request) {
 			"dsn":     boolText(mysqlOK),
 		},
 		"trtc": map[string]interface{}{
-			"enabled":   appCfg.TRTCAppID != 0 && appCfg.TRTCSecret != "",
-			"sdkappid":  appCfg.TRTCAppID,
-			"secret":    boolText(appCfg.TRTCSecret != ""),
+			"enabled":  appCfg.TRTCAppID != 0 && appCfg.TRTCSecret != "",
+			"sdkappid": appCfg.TRTCAppID,
+			"secret":   boolText(appCfg.TRTCSecret != ""),
 		},
 		"wechat_login": map[string]interface{}{
 			"enabled": appCfg.WXAppID != "" && appCfg.WXSecret != "",
@@ -1278,17 +1433,17 @@ func hAdminUsers(w http.ResponseWriter, r *http.Request) {
 			}
 		}
 		list = append(list, map[string]interface{}{
-			"id":         u.ID,
-			"h_no":       u.HNo,
-			"openid":     u.Openid,
-			"unionid":    u.Unionid,
-			"is_real_wx": !strings.HasPrefix(u.Openid, "openid_"),
-			"nickname":   u.Nickname,
-			"avatar":     u.Avatar,
-			"phone":      u.Phone,
-			"balance":    u.Balance,
-			"frozen":     u.Frozen,
-			"status":     u.Status,
+			"id":              u.ID,
+			"h_no":            u.HNo,
+			"openid":          u.Openid,
+			"unionid":         u.Unionid,
+			"is_real_wx":      !strings.HasPrefix(u.Openid, "openid_"),
+			"nickname":        u.Nickname,
+			"avatar":          u.Avatar,
+			"phone":           u.Phone,
+			"balance":         u.Balance,
+			"frozen":          u.Frozen,
+			"status":          u.Status,
 			"call_count":      callCount[u.ID],
 			"total_spent":     round2(spent[u.ID]),
 			"recharge_count":  rechargeCount[u.ID],
@@ -1329,7 +1484,7 @@ func hAdminUserDetail(w http.ResponseWriter, r *http.Request, params map[string]
 		calls = append(calls, map[string]interface{}{
 			"id": c.ID, "call_type": c.CallType, "duration": c.Duration,
 			"amount": c.Amount, "amount_coins": round2(c.Amount * coinRate()),
-			"status": c.Status,
+			"status":        c.Status,
 			"provider_name": store.db.Providers[c.ProviderID].RealName,
 			"created_at":    c.CreatedAt,
 		})

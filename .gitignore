@@ -9,6 +9,8 @@ apiclient_cert.pem
 server/data/
 server/hearcup_server
 server/hearcup_server.exe
+server/server.exe
+*.exe
 *.log
 
 # ==== Node / 工具缓存 ====

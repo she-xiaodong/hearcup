@@ -10,7 +10,9 @@
     "pages/about/about",
     "pages/feedback/feedback",
     "pages/settings/settings",
-    "pages/devcheck/devcheck"
+    "pages/devcheck/devcheck",
+    "pages/listener/listener",
+    "TUICallKit/pages/globalCall/globalCall"
   ],
   "window": {
     "navigationBarBackgroundColor": "#008C8C",

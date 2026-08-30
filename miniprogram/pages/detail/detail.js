@@ -1,5 +1,6 @@
 const store = require('../../utils/store.js')
 const api = require('../../utils/api.js')
+const { startCall } = require('../../utils/startcall.js')
 
 const demoReviews = [
   { id: 1, rating: 5, comment: '很温柔，说完心里轻了很多。' },
@@ -39,18 +40,9 @@ Page({
     }
   },
 
-  onCall(e) {
+  // 发起呼叫：业务建单 → 冻结余额 → 交棒 TUICallKit（细节见 utils/startcall.js）
+  async onCall(e) {
     const callType = Number(e.currentTarget.dataset.type)
-    const cfg = store.getConfig()
-    if (store.getBalance() < cfg.minBalance) {
-      wx.showModal({
-        title: '余额不足',
-        content: `发起呼叫需至少 ${getApp().toCoins(cfg.minBalance)} H币，是否去充值？`,
-        confirmText: '去充值',
-        success: (r) => { if (r.confirm) wx.navigateTo({ url: '/pages/recharge/recharge' }) }
-      })
-      return
-    }
-    wx.navigateTo({ url: `/pages/calling/calling?pid=${this.data.p.id}&type=${callType}` })
+    await startCall(this.data.p.id, callType)
   }
 })
