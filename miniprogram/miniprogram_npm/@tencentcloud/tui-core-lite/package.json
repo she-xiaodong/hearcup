@@ -1,1 +1,0 @@
-{"name": "@tencentcloud/tui-core-lite", "version": "1.0.1", "main": "index.js", "dependencies": {"@tencentcloud/lite-chat": "^1.6.11"}}

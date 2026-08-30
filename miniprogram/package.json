@@ -10,7 +10,6 @@
   "author": "",
   "license": "ISC",
   "dependencies": {
-    "@trtc/calls-uikit-wx": "^5.0.0",
     "@trtc/call-engine-lite-wx": "~5.0.6",
     "@tencentcloud/tui-core-lite": "~1.0.1",
     "@tencentcloud/lite-chat": ">=1.6.0",
