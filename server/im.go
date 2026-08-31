@@ -125,6 +125,22 @@ func imOK(m map[string]interface{}, err error) error {
 	return nil
 }
 
+// sanitizeIMAvatar 过滤不适合写入 IM 头像字段的值。
+// 腾讯云 IM 的 Tag_Profile_IM_Image 限 500 字节，只接受图片 URL；
+// base64 data URL 或超长字符串会触发 40601，这里统一置空（通话界面回退默认头像）。
+func sanitizeIMAvatar(avatar string) string {
+	if avatar == "" {
+		return ""
+	}
+	if strings.HasPrefix(avatar, "data:") {
+		return ""
+	}
+	if len(avatar) > 500 {
+		return ""
+	}
+	return avatar
+}
+
 // imEnsureAccount 确保该 Hearcup 用户拥有可用的 IM 账号，并同步昵称/头像。
 // account_import 与 portrait_set 均幂等，重复调用无副作用。
 // 未配置 IM 时直接返回，不阻断登录等主流程。
@@ -132,6 +148,7 @@ func imEnsureAccount(uid int64, nickname, avatar string) {
 	if !imEnabled() || uid == 0 {
 		return
 	}
+	avatar = sanitizeIMAvatar(avatar)
 	userID := imUserID(uid)
 
 	imImportMu.Lock()

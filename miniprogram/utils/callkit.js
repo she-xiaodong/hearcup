@@ -37,6 +37,16 @@ function getMgr() {
   return _mgr
 }
 
+// IM 的 Tag_Profile_IM_Image 字段限 500 字节，只接受图片 URL。
+// base64 data URL（data:image/...）或超长字符串会触发 40601 错误，
+// 这里统一置空，让通话界面回退到默认头像。
+function sanitizeAvatar(avatar) {
+  if (!avatar) return ''
+  if (avatar.indexOf('data:') === 0) return ''
+  if (avatar.length > 500) return ''
+  return avatar
+}
+
 /**
  * 初始化通话组件（登录后调用一次，重复调用安全）
  * @param {{sdk_app_id:number, user_id:string, user_sig:string, nickname?:string, avatar?:string}} im
@@ -53,7 +63,7 @@ async function init(im, selfInfo) {
     try {
       await pkg().TUICallKitAPI.setSelfInfo({
         nickName: (selfInfo && selfInfo.nickname) || im.nickname || '',
-        avatar: (selfInfo && selfInfo.avatar) || im.avatar || '',
+        avatar: sanitizeAvatar((selfInfo && selfInfo.avatar) || im.avatar || ''),
       })
     } catch (e) {}
     return true
@@ -68,7 +78,7 @@ async function init(im, selfInfo) {
     try {
       await pkg().TUICallKitAPI.setSelfInfo({
         nickName: (selfInfo && selfInfo.nickname) || im.nickname || '',
-        avatar: (selfInfo && selfInfo.avatar) || im.avatar || '',
+        avatar: sanitizeAvatar((selfInfo && selfInfo.avatar) || im.avatar || ''),
       })
     } catch (e) {}
     _inited = true
