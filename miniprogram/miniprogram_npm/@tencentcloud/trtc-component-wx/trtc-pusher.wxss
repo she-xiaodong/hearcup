@@ -1,0 +1,20 @@
+.trtc-pusher-container {
+  height: 100%;
+  width: 100%;
+  position: relative;
+}
+.trtc-pusher {
+  height: 100%;
+  width: 100%;
+}
+
+.trtc-camera {
+  height: 100%;
+  position: absolute;
+  top: 0;
+}
+.trtc-player {
+  width: 0;
+  height: 0;
+  display: flex;
+}

@@ -24,7 +24,7 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.uiDesign = exports.TUIStore = exports.TUIGlobal = void 0;
 const index_1 = require("../const/index");
 // @ts-ignore
-const call_engine_lite_wx_1 = require("@trtc/call-engine-lite-wx");
+const call_engine_lite_wx_1 = require("../../../miniprogram_npm/@trtc/call-engine-lite-wx/index.js");
 const miniProgram_1 = require("./miniProgram");
 const backgroundHandler_1 = __importDefault(require("./backgroundHandler"));
 const permission_1 = require("../utils/permission");

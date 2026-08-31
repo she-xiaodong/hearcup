@@ -23,13 +23,13 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-const tui_core_lite_1 = require("@tencentcloud/tui-core-lite");
+const tui_core_lite_1 = require("../../../miniprogram_npm/@tencentcloud/tui-core-lite/index.js");
 const index_1 = require("../const/index");
 const common_utils_1 = require("../utils/common-utils");
 const utils_1 = require("./utils");
 const tuiStore_1 = __importDefault(require("../TUIStore/tuiStore"));
 // @ts-ignore
-const basic_1 = __importDefault(require("@tencentcloud/lite-chat/basic")); // 仅支持 calls 接口
+const basic_1 = __importDefault(require("../../../miniprogram_npm/@tencentcloud/lite-chat/basic.js")); // 仅支持 calls 接口
 const index_2 = require("../locales/index");
 const TUIStore = tuiStore_1.default.getInstance();
 const cmd2messageCardContentMap = {

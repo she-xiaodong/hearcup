@@ -22,7 +22,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 };
 Object.defineProperty(exports, "__esModule", { value: true });
 // @ts-ignore
-const call_engine_lite_wx_1 = require("@trtc/call-engine-lite-wx");
+const call_engine_lite_wx_1 = require("../../../miniprogram_npm/@trtc/call-engine-lite-wx/index.js");
 const permission_1 = require("../utils/permission");
 const index_1 = require("../const/index");
 const index_2 = require("../locales/index");

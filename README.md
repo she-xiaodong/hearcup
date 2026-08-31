@@ -192,17 +192,17 @@ export HEARCUP_MYSQL_DSN='root:root@tcp(127.0.0.1:3306)/hearcup?charset=utf8mb4&
 - `miniprogram/app.json` —— 注册全局来电页 `TUICallKit/pages/globalCall/globalCall`
 - `server/im.go` —— IM 服务端客户端（账号开通 / 在线查询 / 未接通知），关键职责边界见文件头注释
 
-### npm 依赖（构建 npm + 瘦身，两步）
+### npm 依赖（构建 npm + 后处理，两步）
 TUICallKit 的 npm 依赖（`@trtc/call-engine-lite-wx` / `@tencentcloud/tui-core-lite` / `@tencentcloud/lite-chat` / `@tencentcloud/trtc-component-wx`）已在 `miniprogram/package.json` 声明，`node_modules` 已装全。**必须用微信开发者工具「构建 npm」生成 `miniprogram_npm/`**（手动复制无法复现微信的模块注册机制，会导致「module is not defined」）。
 
 1. 微信开发者工具：**工具 → 构建 npm**。
-2. 构建完成后，在 `miniprogram/` 目录运行一次瘦身脚本（裁掉 lite-chat 的 5.6M 冗余变体，否则主包超 2M）：
+2. 构建完成后，在 `miniprogram/` 目录运行一次后处理脚本（两件事一起做：① 裁掉 lite-chat 5.6M 冗余避免主包超 2M；② 把 vendor 源码与 miniprogram_npm 内部的裸包名 require 改成相对路径，绕开微信不解析 vendor 目录 npm 引用的坑）：
    ```bash
-   python thin_litechat.py
+   python fix_npm.py
    ```
 3. 重新编译。
 
-> ⚠️ 瘦身必须在「构建 npm」之后做；以后若重新「构建 npm」，需再跑一次 `thin_litechat.py`。
+> ⚠️ `fix_npm.py` 必须在「构建 npm」之后、重新编译之前跑；以后若重新「构建 npm」，需再跑一次。脚本幂等，可重复执行。
 
 ### 体积核算（压缩后估算）
 业务代码 ~0.6M + TUICallKit UI ~0.7M + 引擎 ~0.5M + lite-chat/basic ~0.25M + trtc-component-wx ~0.13M ≈ 原始 2.2M、压缩后约 1.3~1.5M，**在 2M 主包限制内**（前提是已跑 lite-chat 瘦身）；若仍超限，再上分包方案（全局通话页迁入 `subPackages`）。
