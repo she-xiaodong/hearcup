@@ -37,11 +37,12 @@ def thin_litechat():
         removed.append(name)
     pkg = os.path.join(d, 'package.json')
     if os.path.exists(pkg):
-        data = json.load(io.open(pkg, encoding='utf-8'))
+        # binary 读写，避免 Windows text 模式把 LF 转成 CRLF（会让微信编译器崩溃）
+        data = json.load(open(pkg, 'rb'))
         data['main'] = 'basic.js'
         for k in ('miniprogram', 'exports', 'types'):
             data.pop(k, None)
-        json.dump(data, io.open(pkg, 'w', encoding='utf-8'), ensure_ascii=False)
+        open(pkg, 'wb').write(json.dumps(data, ensure_ascii=False).encode('utf-8'))
     print('[瘦身] 删除', len(removed), '个冗余项，lite-chat main -> basic.js')
 
 
@@ -49,14 +50,15 @@ def rewrite(path, pairs):
     if not os.path.exists(path):
         print('  缺失', path)
         return
-    c = io.open(path, encoding='utf-8').read()
+    # binary 读写：保持原换行符（LF），避免 Windows 下转成 CRLF 导致微信编译器崩溃
+    c = open(path, 'rb').read().decode('utf-8')
     changed = 0
     for old, new in pairs:
         n = c.count(old)
         if n:
             c = c.replace(old, new)
             changed += n
-    io.open(path, 'w', encoding='utf-8').write(c)
+    open(path, 'wb').write(c.encode('utf-8'))
     print('  改写', os.path.relpath(path, BASE), '共', changed, '处')
 
 
