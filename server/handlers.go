@@ -1862,7 +1862,7 @@ func hAdminWithdrawUpdate(w http.ResponseWriter, r *http.Request, params map[str
 		if b, ok := resp["transfer_bill_no"].(string); ok {
 			wxBillNo = b
 		}
-		// 领取凭证：新版「商家转账到零钱」发起后须倾听者手动领取，package_info 供小程序调 wx.requestTransferBills
+		// 领取凭证：新版「商家转账到零钱」发起后须倾听者手动领取，package_info 供小程序调 wx.requestMerchantTransfer
 		packageInfo := ""
 		if p, ok := resp["package_info"].(string); ok {
 			packageInfo = p
