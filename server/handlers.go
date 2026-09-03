@@ -9,6 +9,7 @@ import (
 	"io"
 	"math"
 	"net/http"
+	"reflect"
 	"sort"
 	"strconv"
 	"strings"
@@ -40,6 +41,39 @@ func fail(w http.ResponseWriter, msg string) {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
 	json.NewEncoder(w).Encode(map[string]interface{}{"code": 1, "msg": msg})
+}
+
+// respList 统一分页+返回格式：对已经过 keyword 过滤的全量切片 full，
+// 按 page/page_size 截取，返回 {list, total, page, page_size}（前端 el-pagination 直接用）。
+func respList(w http.ResponseWriter, full interface{}, r *http.Request) {
+	rv := reflect.ValueOf(full)
+	if rv.Kind() != reflect.Slice {
+		sendOK(w, full)
+		return
+	}
+	total := rv.Len()
+	page, _ := strconv.Atoi(r.URL.Query().Get("page"))
+	if page < 1 {
+		page = 1
+	}
+	ps, _ := strconv.Atoi(r.URL.Query().Get("page_size"))
+	if ps < 1 || ps > 200 {
+		ps = 20
+	}
+	start := (page - 1) * ps
+	if start > total {
+		start = total
+	}
+	end := start + ps
+	if end > total {
+		end = total
+	}
+	sendOK(w, map[string]interface{}{
+		"list":      rv.Slice(start, end).Interface(),
+		"total":     total,
+		"page":      page,
+		"page_size": ps,
+	})
 }
 
 func getClaims(r *http.Request) (*claims, bool) {
@@ -1392,13 +1426,20 @@ func hAdminProviders(w http.ResponseWriter, r *http.Request) {
 		fail(w, "无权限")
 		return
 	}
+	keyword := strings.ToLower(strings.TrimSpace(r.URL.Query().Get("keyword")))
 	store.mu.Lock()
 	defer store.mu.Unlock()
 	list := []*Provider{}
 	for _, p := range store.db.Providers {
+		if keyword != "" {
+			hay := strings.ToLower(fmt.Sprintf("%d %s %s %s %s %s", p.ID, p.Nickname, p.RealName, p.City, p.Phone, p.Education))
+			if !strings.Contains(hay, keyword) {
+				continue
+			}
+		}
 		list = append(list, decorateProvider(p))
 	}
-	sendOK(w, list)
+	respList(w, list, r)
 }
 
 func hAdminApplications(w http.ResponseWriter, r *http.Request) {
@@ -1407,15 +1448,23 @@ func hAdminApplications(w http.ResponseWriter, r *http.Request) {
 		fail(w, "无权限")
 		return
 	}
+	keyword := strings.ToLower(strings.TrimSpace(r.URL.Query().Get("keyword")))
 	store.mu.Lock()
 	defer store.mu.Unlock()
 	list := []*Provider{}
 	for _, p := range store.db.Providers {
-		if p.Status == 0 {
-			list = append(list, decorateProvider(p))
+		if p.Status != 0 {
+			continue
 		}
+		if keyword != "" {
+			hay := strings.ToLower(fmt.Sprintf("%d %s %s %s %s %s", p.ID, p.Nickname, p.RealName, p.City, p.Phone, p.Education))
+			if !strings.Contains(hay, keyword) {
+				continue
+			}
+		}
+		list = append(list, decorateProvider(p))
 	}
-	sendOK(w, list)
+	respList(w, list, r)
 }
 
 func hAdminApprove(w http.ResponseWriter, r *http.Request, params map[string]string) {
@@ -1607,19 +1656,28 @@ func hAdminCalls(w http.ResponseWriter, r *http.Request) {
 		fail(w, "无权限")
 		return
 	}
+	keyword := strings.ToLower(strings.TrimSpace(r.URL.Query().Get("keyword")))
 	store.mu.Lock()
 	defer store.mu.Unlock()
 	list := []map[string]interface{}{}
 	for _, c := range store.db.Calls {
+		un := store.db.Users[c.UserID].Nickname
+		pn := store.db.Providers[c.ProviderID].RealName
+		if keyword != "" {
+			hay := strings.ToLower(fmt.Sprintf("%d %s %s", c.ID, un, pn))
+			if !strings.Contains(hay, keyword) {
+				continue
+			}
+		}
 		list = append(list, map[string]interface{}{
-			"id": c.ID, "user_name": store.db.Users[c.UserID].Nickname,
-			"provider_name": store.db.Providers[c.ProviderID].RealName,
-			"call_type":     c.CallType, "duration": c.Duration, "amount": c.Amount,
+			"id": c.ID, "user_name": un,
+			"provider_name": pn,
+			"call_type":       c.CallType, "duration": c.Duration, "amount": c.Amount,
 			"provider_income": c.ProviderIncome, "platform_fee": c.PlatformFee,
 			"status": c.Status, "created_at": c.CreatedAt,
 		})
 	}
-	sendOK(w, list)
+	respList(w, list, r)
 }
 
 func hAdminRecharge(w http.ResponseWriter, r *http.Request) {
@@ -1628,16 +1686,25 @@ func hAdminRecharge(w http.ResponseWriter, r *http.Request) {
 		fail(w, "无权限")
 		return
 	}
+	keyword := strings.ToLower(strings.TrimSpace(r.URL.Query().Get("keyword")))
 	store.mu.Lock()
 	defer store.mu.Unlock()
 	list := []map[string]interface{}{}
 	for _, o := range store.db.Recharges {
+		un := store.db.Users[o.UserID].Nickname
+		if keyword != "" {
+			hay := strings.ToLower(fmt.Sprintf("%s %s", o.OrderNo, un))
+			if !strings.Contains(hay, keyword) {
+				continue
+			}
+		}
 		list = append(list, map[string]interface{}{
-			"order_no": o.OrderNo, "user_name": store.db.Users[o.UserID].Nickname,
+			"order_no": o.OrderNo, "user_name": un,
 			"amount": o.Amount, "pay_status": o.PayStatus, "pay_time": o.PayTime,
+			"created_at": o.CreatedAt,
 		})
 	}
-	sendOK(w, list)
+	respList(w, list, r)
 }
 
 func hAdminWithdraws(w http.ResponseWriter, r *http.Request) {
@@ -1646,16 +1713,24 @@ func hAdminWithdraws(w http.ResponseWriter, r *http.Request) {
 		fail(w, "无权限")
 		return
 	}
+	keyword := strings.ToLower(strings.TrimSpace(r.URL.Query().Get("keyword")))
 	store.mu.Lock()
 	defer store.mu.Unlock()
 	list := []map[string]interface{}{}
 	for _, wd := range store.db.Withdraws {
+		pn := store.db.Providers[wd.ProviderID].RealName
+		if keyword != "" {
+			hay := strings.ToLower(fmt.Sprintf("%d %s", wd.ID, pn))
+			if !strings.Contains(hay, keyword) {
+				continue
+			}
+		}
 		list = append(list, map[string]interface{}{
-			"id": wd.ID, "provider_name": store.db.Providers[wd.ProviderID].RealName,
+			"id": wd.ID, "provider_name": pn,
 			"amount": wd.Amount, "status": wd.Status, "created_at": wd.CreatedAt,
 		})
 	}
-	sendOK(w, list)
+	respList(w, list, r)
 }
 
 func hAdminWithdrawUpdate(w http.ResponseWriter, r *http.Request, params map[string]string) {
@@ -1693,6 +1768,130 @@ func hAdminWithdrawUpdate(w http.ResponseWriter, r *http.Request, params map[str
 	wd.UpdatedAt = t
 	store.save()
 	sendOK(w, map[string]interface{}{"status": wd.Status})
+}
+
+// ---------- 提示管理（平台通知）----------
+
+// GET /api/v1/admin/notifications —— 列表（分页 + 关键字搜索标题/内容）
+func hAdminNotifications(w http.ResponseWriter, r *http.Request) {
+	_, ok := requireAdmin(r)
+	if !ok {
+		fail(w, "无权限")
+		return
+	}
+	keyword := strings.ToLower(strings.TrimSpace(r.URL.Query().Get("keyword")))
+	store.mu.Lock()
+	defer store.mu.Unlock()
+	list := []*Notification{}
+	for _, n := range store.db.Notifications {
+		if keyword != "" {
+			hay := strings.ToLower(n.Title + " " + n.Content)
+			if !strings.Contains(hay, keyword) {
+				continue
+			}
+		}
+		list = append(list, n)
+	}
+	// 按 ID 倒序（新建的在后）
+	sort.Slice(list, func(i, j int) bool { return list[i].ID > list[j].ID })
+	respList(w, list, r)
+}
+
+// POST /api/v1/admin/notifications —— 新建
+func hAdminNotificationCreate(w http.ResponseWriter, r *http.Request) {
+	_, ok := requireAdmin(r)
+	if !ok {
+		fail(w, "无权限")
+		return
+	}
+	var body struct {
+		Title   string `json:"title"`
+		Content string `json:"content"`
+		Target  string `json:"target"`
+		Status  int    `json:"status"`
+	}
+	readJSON(r, &body)
+	if body.Title == "" {
+		fail(w, "标题不能为空")
+		return
+	}
+	if body.Target == "" {
+		body.Target = "all"
+	}
+	t := now()
+	store.mu.Lock()
+	store.db.SeqNotification++
+	n := &Notification{
+		ID:          store.db.SeqNotification,
+		Title:       body.Title,
+		Content:     body.Content,
+		Target:      body.Target,
+		Status:      body.Status,
+		CreatedAt:   t,
+		UpdatedAt:   t,
+		PublishedAt: t,
+	}
+	store.db.Notifications[n.ID] = n
+	store.save()
+	store.mu.Unlock()
+	sendOK(w, n)
+}
+
+// PUT /api/v1/admin/notifications/:id —— 编辑
+func hAdminNotificationUpdate(w http.ResponseWriter, r *http.Request, params map[string]string) {
+	_, ok := requireAdmin(r)
+	if !ok {
+		fail(w, "无权限")
+		return
+	}
+	id, _ := strconv.ParseInt(params["id"], 10, 64)
+	var body struct {
+		Title   string `json:"title"`
+		Content string `json:"content"`
+		Target  string `json:"target"`
+		Status  int    `json:"status"`
+	}
+	readJSON(r, &body)
+	store.mu.Lock()
+	defer store.mu.Unlock()
+	n, ok := store.db.Notifications[id]
+	if !ok {
+		fail(w, "通知不存在")
+		return
+	}
+	if body.Title != "" {
+		n.Title = body.Title
+	}
+	n.Content = body.Content
+	if body.Target != "" {
+		n.Target = body.Target
+	}
+	n.Status = body.Status
+	n.UpdatedAt = now()
+	if body.Status == 1 && n.PublishedAt == 0 {
+		n.PublishedAt = now()
+	}
+	store.save()
+	sendOK(w, n)
+}
+
+// DELETE /api/v1/admin/notifications/:id —— 删除
+func hAdminNotificationDelete(w http.ResponseWriter, r *http.Request, params map[string]string) {
+	_, ok := requireAdmin(r)
+	if !ok {
+		fail(w, "无权限")
+		return
+	}
+	id, _ := strconv.ParseInt(params["id"], 10, 64)
+	store.mu.Lock()
+	defer store.mu.Unlock()
+	if _, ok := store.db.Notifications[id]; !ok {
+		fail(w, "通知不存在")
+		return
+	}
+	delete(store.db.Notifications, id)
+	store.save()
+	sendOK(w, map[string]interface{}{"id": id})
 }
 
 func hAdminConfig(w http.ResponseWriter, r *http.Request) {
@@ -1907,7 +2106,7 @@ func hAdminUsers(w http.ResponseWriter, r *http.Request) {
 	sort.Slice(list, func(i, j int) bool {
 		return list[i]["created_at"].(int64) > list[j]["created_at"].(int64)
 	})
-	sendOK(w, map[string]interface{}{"total": len(list), "list": list})
+	respList(w, list, r)
 }
 
 // GET /api/v1/admin/users/:id —— 单个用户详情（基本信息 + 通话/消费/充值记录）

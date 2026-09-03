@@ -75,6 +75,10 @@ func ensureSchema(db *sql.DB) error {
 		`CREATE TABLE IF NOT EXISTS feedbacks (
 			id BIGINT PRIMARY KEY, user_id BIGINT, content TEXT, contact VARCHAR(128),
 			created_at BIGINT)`,
+		`CREATE TABLE IF NOT EXISTS notifications (
+			id BIGINT PRIMARY KEY, title VARCHAR(128), content TEXT,
+			target VARCHAR(16), status INT, created_at BIGINT,
+			updated_at BIGINT, published_at BIGINT)`,
 		`CREATE TABLE IF NOT EXISTS t_config (
 			id INT PRIMARY KEY, price_listener DOUBLE, price_counselor DOUBLE,
 			platform_rate DOUBLE, min_balance DOUBLE, overdraft DOUBLE, min_withdraw DOUBLE)`,
@@ -200,6 +204,13 @@ func (s *Store) persistMySQL() {
 	}
 	_ = replaceRows(s.sql, "feedbacks", []string{"id", "user_id", "content", "contact", "created_at"}, frows)
 
+	// notifications
+	nrows := [][]interface{}{}
+	for _, n := range db.Notifications {
+		nrows = append(nrows, []interface{}{n.ID, n.Title, n.Content, n.Target, n.Status, n.CreatedAt, n.UpdatedAt, n.PublishedAt})
+	}
+	_ = replaceRows(s.sql, "notifications", []string{"id", "title", "content", "target", "status", "created_at", "updated_at", "published_at"}, nrows)
+
 	// config
 	vr := db.Config.VideoRate
 	if vr <= 0 {
@@ -324,6 +335,18 @@ func (s *Store) loadFromMySQL() bool {
 	}
 	fbrows.Close()
 	s.db.SeqFeedback = maxFb
+
+	// notifications
+	nrows, _ := db.Query("SELECT id,title,content,target,status,created_at,updated_at,published_at FROM notifications")
+	var maxN int64
+	for nrows.Next() {
+		n := &Notification{}
+		_ = nrows.Scan(&n.ID, &n.Title, &n.Content, &n.Target, &n.Status, &n.CreatedAt, &n.UpdatedAt, &n.PublishedAt)
+		s.db.Notifications[n.ID] = n
+		maxN = max64(maxN, n.ID)
+	}
+	nrows.Close()
+	s.db.SeqNotification = maxN
 
 	// config（video_rate / coin_rate / coin_name 为后加列，扫描失败时保持默认值）
 	var vr, cr float64

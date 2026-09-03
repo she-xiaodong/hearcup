@@ -85,6 +85,10 @@ var routes = []route{
 	{http.MethodGet, "/api/v1/admin/orders/recharge", hAdminRecharge},
 	{http.MethodGet, "/api/v1/admin/withdraws", hAdminWithdraws},
 	{http.MethodPut, "/api/v1/admin/withdraws/:id", ph(hAdminWithdrawUpdate)},
+	{http.MethodGet, "/api/v1/admin/notifications", hAdminNotifications},
+	{http.MethodPost, "/api/v1/admin/notifications", hAdminNotificationCreate},
+	{http.MethodPut, "/api/v1/admin/notifications/:id", ph(hAdminNotificationUpdate)},
+	{http.MethodDelete, "/api/v1/admin/notifications/:id", ph(hAdminNotificationDelete)},
 	{http.MethodGet, "/api/v1/admin/config", hAdminConfig},
 	{http.MethodPut, "/api/v1/admin/config", hAdminConfig},
 }

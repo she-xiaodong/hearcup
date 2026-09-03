@@ -170,6 +170,18 @@ type Config struct {
 
 // ============ 持久化存储 ============
 
+// Notification 平台提示/通知（后台「提示管理」模块）
+type Notification struct {
+	ID          int64  `json:"id"`
+	Title       string `json:"title"`
+	Content     string `json:"content"`
+	Target      string `json:"target"`       // all=全部用户 provider=仅服务者 user=仅普通用户
+	Status      int    `json:"status"`       // 0草稿 1已发布
+	CreatedAt   int64  `json:"created_at"`
+	UpdatedAt   int64  `json:"updated_at"`
+	PublishedAt int64  `json:"published_at"`
+}
+
 type DB struct {
 	Users     map[int64]*User          `json:"users"`
 	Providers map[int64]*Provider      `json:"providers"`
@@ -179,6 +191,8 @@ type DB struct {
 	Tags      map[int64]*Tag           `json:"tags"`
 	Admins    map[int64]*Admin         `json:"admins"`
 	Feedbacks map[int64]*Feedback      `json:"feedbacks"`
+	Notifications map[int64]*Notification `json:"notifications"`
+	SeqNotification int64 `json:"seq_notification"`
 	SeqUser     int64 `json:"seq_user"`
 	SeqProvider int64 `json:"seq_provider"`
 	SeqRecharge int64 `json:"seq_recharge"`
