@@ -56,6 +56,14 @@ func getClaims(r *http.Request) (*claims, bool) {
 	return c, true
 }
 
+// maskPhone 隐藏手机号中间4位（隐私保护）
+func maskPhone(phone string) string {
+	if len(phone) != 11 {
+		return phone
+	}
+	return phone[:3] + "****" + phone[7:]
+}
+
 func requireUser(r *http.Request) (int64, bool) {
 	c, ok := getClaims(r)
 	if !ok || c.Role != "user" {
@@ -153,12 +161,6 @@ func hAuthLogin(w http.ResponseWriter, r *http.Request) {
 	sendOK(w, map[string]interface{}{
 		"token": tok, "user": userCopy,
 		"free_call": appCfg.FreeCall, // 免费通话模式标记：true 时前端跳过余额校验
-		// TUICallKit 初始化所需凭据：前端据此 init 后即可收发通话邀请
-		"im": map[string]interface{}{
-			"sdk_app_id": appCfg.TRTCAppID,
-			"user_id":    imUserID(uid),
-			"user_sig":   generateUserSig(imUserID(uid)),
-		},
 	})
 }
 
@@ -266,6 +268,15 @@ func round2(v float64) float64 {
 	return math.Round(v*100) / 100
 }
 
+// fmtCoins 把虚拟币数量格式化成不带多余小数的字符串（150 → "150"，150.5 → "150.5"）
+func fmtCoins(v float64) string {
+	r := round2(v)
+	if r == math.Trunc(r) {
+		return strconv.FormatFloat(r, 'f', 0, 64)
+	}
+	return strconv.FormatFloat(r, 'f', -1, 64)
+}
+
 // ---------- 服务者（用户端）----------
 
 func hProvidersOnline(w http.ResponseWriter, r *http.Request) {
@@ -333,6 +344,11 @@ func hProviderDetail(w http.ResponseWriter, r *http.Request, params map[string]s
 		return
 	}
 	dp := decorateProvider(p)
+	// 解析价格档位
+	priceTiers := map[string]float64{}
+	if p.PriceTiers != "" {
+		_ = json.Unmarshal([]byte(p.PriceTiers), &priceTiers)
+	}
 	// 历史评价
 	ratings := []map[string]interface{}{}
 	for _, c := range store.db.Calls {
@@ -342,11 +358,41 @@ func hProviderDetail(w http.ResponseWriter, r *http.Request, params map[string]s
 			})
 		}
 	}
-	sendOK(w, map[string]interface{}{"provider": dp, "ratings": ratings})
+	// 价格档位同时给出 H币口径，前端直接展示 H币（内部仍按元记账）
+	tiersCoins := map[string]float64{}
+	for k, v := range priceTiers {
+		tiersCoins[k] = round2(v * coinRate())
+	}
+	sendOK(w, map[string]interface{}{
+		"provider": dp,
+		"price_tiers": priceTiers,
+		"price_tiers_coins": tiersCoins,
+		"price_per_minute_coins": round2(p.PricePerMinute * coinRate()),
+		"coin_rate": coinRate(),
+		"coin_name": coinName(),
+		"ratings": ratings,
+	})
 }
 
 // ---------- 呼叫（核心）----------
 
+// validPackageMinutes 允许的套餐时长档位（分钟）
+var validPackageMinutes = map[int]bool{15: true, 30: true, 45: true, 60: true, 75: true, 90: true, 105: true, 120: true}
+
+// packageAmount 计算套餐价：优先取倾听师自定义档位，未配置则按单价×时长
+func packageAmount(p *Provider, minutes int) float64 {
+	tiers := map[string]float64{}
+	if p.PriceTiers != "" {
+		_ = json.Unmarshal([]byte(p.PriceTiers), &tiers)
+	}
+	if v, ok := tiers[strconv.Itoa(minutes)]; ok && v > 0 {
+		return v
+	}
+	return round2(float64(minutes) * p.PricePerMinute)
+}
+
+// hCallInvite 只「下单」，不扣费也不拨号。
+// 新流程：选时长 → 下单 → 支付（/api/v1/call/pay）→ 确认（/api/v1/call/confirm）→ 才拿到号码拨号。
 func hCallInvite(w http.ResponseWriter, r *http.Request) {
 	uid, ok := requireUser(r)
 	if !ok {
@@ -355,11 +401,12 @@ func hCallInvite(w http.ResponseWriter, r *http.Request) {
 	}
 	var body struct {
 		ProviderID int64 `json:"provider_id"`
-		CallType   int   `json:"call_type"`
+		Minutes    int   `json:"minutes"` // 套餐时长：15/30/45/60/75/90/105/120
 	}
 	readJSON(r, &body)
-	if body.CallType != 1 && body.CallType != 2 {
-		body.CallType = 1
+	if !validPackageMinutes[body.Minutes] {
+		fail(w, "时长档位无效")
+		return
 	}
 	store.mu.Lock()
 	defer store.mu.Unlock()
@@ -376,71 +423,203 @@ func hCallInvite(w http.ResponseWriter, r *http.Request) {
 		fail(w, "对方正在通话中")
 		return
 	}
-	u := store.db.Users[uid]
-	if !appCfg.FreeCall && u.Balance < store.db.Config.MinBalance {
-		fail(w, fmt.Sprintf("余额不足，至少需 %.2f 元", store.db.Config.MinBalance))
-		return
-	}
-	// 冻结 3 分钟费用（免费通话模式跳过：支付被限制时先跑通通话，不动余额）
-	if !appCfg.FreeCall {
-		u.Balance -= store.db.Config.MinBalance
-		u.Frozen += store.db.Config.MinBalance
-	}
-	p.IsBusy = 1
-
-	// 计费单价：语音=基础价；视频=基础价×加价倍率（四舍五入到分）
-	unitPrice := p.PricePerMinute
-	if body.CallType == 2 {
-		rate := store.db.Config.VideoRate
-		if rate <= 0 {
-			rate = 1.5
-		}
-		unitPrice = float64(int(p.PricePerMinute*rate*100+0.5)) / 100
-	}
+	amount := packageAmount(p, body.Minutes)
+	unitPrice := round2(amount / float64(body.Minutes))
 
 	store.db.SeqCall++
 	seq := store.db.SeqCall
 	roomID := fmt.Sprintf("call_%d_%d", now(), body.ProviderID)
+	orderNo := fmt.Sprintf("CO%d%03d", now(), seq)
 	rec := &CallRecord{
 		ID: seq, UserID: uid, ProviderID: body.ProviderID, RoomID: roomID,
-		CallType: body.CallType, StartTime: now(), UnitPrice: unitPrice,
+		CallType: 1, StartTime: 0, // 支付确认后才开始计时
+		UnitPrice: unitPrice, Amount: amount,
+		OrderNo: orderNo, PayStatus: 0, PackageMinutes: body.Minutes,
 		Status: 0, CreatedAt: now(), UpdatedAt: now(),
 	}
 	store.db.Calls[rec.ID] = rec
-
-	// IM 身份：统一使用 hearcup_{uid} 单一身份（不再区分 user_/provider_ 前缀）。
-	// TUICallKit 依据此 userID 完成「在线→信令直发 / 离线→推送触达」的自动路由。
-	callerID := imUserID(uid)
-	calleeID := imUserID(p.UserID)
-
-	// TUICallKit 的 roomID 必须是 1~2147483647 的数字，与业务字符串 room_id 并存：
-	// 前者给 SDK 用（音视频房间），后者给本服务用（计费关联主键）。
-	trtcRoomID := 1000000 + int(seq)
 	store.save()
 	sendOK(w, map[string]interface{}{
-		// —— 业务侧（计费关联）——
-		"room_id": roomID,
-		"call_id": seq,
-		// —— TUICallKit 侧 ——
-		"sdk_app_id":        appCfg.TRTCAppID,
-		"trtc_room_id":      trtcRoomID,
-		"caller_im_user_id": callerID,
-		"caller_im_sig":     generateUserSig(callerID),
-		"callee_im_user_id": calleeID,
-		// 通话参数
-		"call_type":        body.CallType,
-		"timeout":          callInviteTimeout,
-		"unit_price":       unitPrice,
+		"call_id":    seq,
+		"order_no":   orderNo,
+		"room_id":    roomID,
+		"minutes":    body.Minutes,
+		"amount":     amount,
+		"unit_price": unitPrice,
+		"pay_status": 0,
+		// H币口径（内部按元记账，对外统一以 H币 展示）
+		"amount_coins":     round2(amount * coinRate()),
 		"unit_price_coins": round2(unitPrice * coinRate()),
+		"coin_rate":        coinRate(),
 		"coin_name":        coinName(),
-		// 被叫展示信息（来电 UI 用）
-		"callee_nickname": p.RealName,
-		"callee_avatar":   p.Avatar,
+		"balance":          store.db.Users[uid].Balance,
+		"balance_coins":    round2(store.db.Users[uid].Balance * coinRate()),
+		"provider": map[string]interface{}{
+			"id": p.ID, "real_name": p.RealName, "nickname": p.Nickname, "avatar": p.Avatar,
+		},
 	})
 }
 
-// callInviteTimeout 呼叫邀请超时时间（秒）。主叫侧 TUICallKit 与服务端兜底校验共用此值。
+// hCallPay 订单支付。pay_type: balance=余额扣款；wxpay=微信支付下单。
+// 余额不足时返回 need_recharge=true，前端引导去充值。
+func hCallPay(w http.ResponseWriter, r *http.Request) {
+	uid, ok := requireUser(r)
+	if !ok {
+		fail(w, "未登录")
+		return
+	}
+	var body struct {
+		CallID  int64  `json:"call_id"`
+		PayType string `json:"pay_type"` // balance | wxpay
+	}
+	readJSON(r, &body)
+	if body.PayType == "" {
+		body.PayType = "wxpay"
+	}
+	store.mu.Lock()
+	defer store.mu.Unlock()
+	rec, ok := store.db.Calls[body.CallID]
+	if !ok {
+		fail(w, "订单不存在")
+		return
+	}
+	if rec.UserID != uid {
+		fail(w, "无权操作")
+		return
+	}
+	if rec.PayStatus == 1 {
+		sendOK(w, map[string]interface{}{"paid": true, "need_pay": false, "call_id": rec.ID})
+		return
+	}
+	if rec.Status == 1 {
+		fail(w, "订单已结束")
+		return
+	}
+	u := store.db.Users[uid]
+
+	// 余额支付：扣的是账户余额（内部按元记账，对外以 H币 展示）
+	if body.PayType == "balance" {
+		if u.Balance < rec.Amount {
+			lack := round2(rec.Amount - u.Balance)
+			sendOK(w, map[string]interface{}{
+				"paid": false, "need_recharge": true,
+				"amount": rec.Amount, "balance": u.Balance,
+				"amount_coins":     round2(rec.Amount * coinRate()),
+				"balance_coins":    round2(u.Balance * coinRate()),
+				"lack":             lack,
+				"lack_coins":       round2(lack * coinRate()),
+				"coin_rate":        coinRate(),
+				"coin_name":        coinName(),
+				"msg": fmt.Sprintf("余额不足，需 %s %s，当前 %s %s",
+					fmtCoins(rec.Amount*coinRate()), coinName(),
+					fmtCoins(u.Balance*coinRate()), coinName()),
+			})
+			return
+		}
+		u.Balance -= rec.Amount
+		rec.PayStatus = 1
+		rec.PayTime = now()
+		rec.UpdatedAt = now()
+		store.save()
+		sendOK(w, map[string]interface{}{
+			"paid": true, "need_pay": false, "call_id": rec.ID,
+			"balance": u.Balance, "balance_coins": round2(u.Balance * coinRate()),
+			"amount": rec.Amount, "amount_coins": round2(rec.Amount * coinRate()),
+			"coin_rate": coinRate(), "coin_name": coinName(),
+		})
+		return
+	}
+
+	// 微信支付下单（未配置商户号或 mock 用户时直接免单入账，保证链路可跑通）
+	if appCfg.WXPayMchID == "" || appCfg.WXAppID == "" || strings.HasPrefix(u.Openid, "openid_") {
+		rec.PayStatus = 1
+		rec.PayTime = now()
+		rec.UpdatedAt = now()
+		store.save()
+		sendOK(w, map[string]interface{}{"paid": true, "need_pay": false, "call_id": rec.ID})
+		return
+	}
+	payParams, err := createWxPayOrder(u.Openid, rec.OrderNo, rec.Amount)
+	if err != nil {
+		fmt.Println("[pay] 通话订单下单失败:", err)
+		fail(w, "微信下单失败: "+err.Error())
+		return
+	}
+	store.save()
+	sendOK(w, map[string]interface{}{
+		"paid": false, "need_pay": true, "call_id": rec.ID,
+		"order_no": rec.OrderNo, "amount": rec.Amount, "pay_params": payParams,
+	})
+}
+
+// callInviteTimeout 呼叫邀请超时时间（秒）。
 const callInviteTimeout = 60
+
+// hCallConfirmPay 支付成功后的确认：校验已支付 → 开始计时 → 返回双方手机号（此时才允许拨号）
+func hCallConfirmPay(w http.ResponseWriter, r *http.Request) {
+	uid, ok := requireUser(r)
+	if !ok {
+		fail(w, "未登录")
+		return
+	}
+	var body struct {
+		CallID int64 `json:"call_id"`
+	}
+	readJSON(r, &body)
+
+	store.mu.Lock()
+	defer store.mu.Unlock()
+	rec, ok := store.db.Calls[body.CallID]
+	if !ok {
+		fail(w, "订单不存在")
+		return
+	}
+	if rec.UserID != uid {
+		fail(w, "无权操作")
+		return
+	}
+	// 免费通话模式（FreeCall）下允许跳过支付；其余必须先支付
+	if rec.PayStatus != 1 && !appCfg.FreeCall {
+		fail(w, "订单未支付，请先完成支付")
+		return
+	}
+	if rec.Status == 1 {
+		fail(w, "订单已结束")
+		return
+	}
+	if rec.StartTime == 0 {
+		rec.StartTime = now()
+		rec.UpdatedAt = now()
+	}
+	p := store.db.Providers[rec.ProviderID]
+	u := store.db.Users[uid]
+
+	// 获取双方手机号（用于直接拨号方案）
+	callerPhone := maskPhone(u.Phone)
+	calleePhone := maskPhone(p.Phone)
+
+	store.save()
+	sendOK(w, map[string]interface{}{
+		"room_id": rec.RoomID,
+		"call_id": rec.ID,
+		"caller_phone":  u.Phone,
+		"callee_phone":  p.Phone,
+		"caller_phone_masked": callerPhone,
+		"callee_phone_masked":  calleePhone,
+		"caller_nickname": u.Nickname,
+		"callee_nickname": p.RealName,
+		"caller_avatar":   u.Avatar,
+		"callee_avatar":   p.Avatar,
+		"minutes": rec.PackageMinutes,
+		"amount": rec.Amount,
+		// H币口径
+		"amount_coins":     round2(rec.Amount * coinRate()),
+		"unit_price_coins": round2(rec.UnitPrice * coinRate()),
+		"coin_rate":        coinRate(),
+		"coin_name":        coinName(),
+		"unit_price": rec.UnitPrice,
+	})
+}
 
 // ---------- 呼叫结果回调（接听 / 拒接 / 取消 / 超时未接）----------
 
@@ -637,6 +816,117 @@ func hCallEnd(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
+// 电话拨号方案：前端上报通话时长并结算（避免依赖 TUICallKit）
+func hCallEndWithMinutes(w http.ResponseWriter, r *http.Request) {
+	uid, ok := requireUser(r)
+	if !ok {
+		fail(w, "未登录")
+		return
+	}
+	var body struct {
+		RoomID string `json:"room_id"`
+		CallID int64  `json:"call_id"`
+		Minutes int    `json:"minutes"` // 前端上报的时长（分钟）
+	}
+	readJSON(r, &body)
+
+	store.mu.Lock()
+	defer store.mu.Unlock()
+
+	var rec *CallRecord
+	if body.CallID > 0 {
+		rec = store.db.Calls[body.CallID]
+	}
+	if rec == nil && body.RoomID != "" {
+		for _, c := range store.db.Calls {
+			if c.RoomID == body.RoomID {
+				rec = c
+				break
+			}
+		}
+	}
+	if rec == nil {
+		fail(w, "通话不存在")
+		return
+	}
+
+	// 仅主叫或被叫本人可结束通话
+	if rec.UserID != uid && !userOwnsProvider(uid, rec.ProviderID) {
+		fail(w, "无权操作")
+		return
+	}
+
+	if rec.Status == 1 {
+		sendOK(w, map[string]interface{}{"amount": rec.Amount})
+		return
+	}
+
+	u := store.db.Users[rec.UserID]
+	p := store.db.Providers[rec.ProviderID]
+
+	// 使用前端上报的时长（最少1分钟）
+	minutes := body.Minutes
+	if minutes < 1 {
+		minutes = 1
+	}
+	duration := minutes * 60 // 转换为秒
+
+	// 套餐预付制：已付金额 = 套餐价；实际通话超出套餐时按单价补扣超出部分
+	packMinutes := rec.PackageMinutes
+	if packMinutes <= 0 {
+		packMinutes = int(rec.Amount / rec.UnitPrice)
+	}
+	amount := rec.Amount
+	extra := 0.0
+	if minutes > packMinutes {
+		extra = round2(float64(minutes-packMinutes) * rec.UnitPrice)
+		amount = round2(amount + extra)
+	}
+	platformFee := round2(amount * store.db.Config.PlatformRate)
+	providerIncome := round2(amount - platformFee)
+
+	if appCfg.FreeCall {
+		// 免费通话模式：不扣费、不动余额，金额记 0
+		amount = 0
+		platformFee = 0
+		providerIncome = 0
+	} else if extra > 0 {
+		// 超出套餐：从余额补扣（允许小额透支，按配置兜底）
+		u.Balance -= extra
+		if u.Balance < -store.db.Config.Overdraft {
+			u.Balance = -store.db.Config.Overdraft
+		}
+	}
+
+	// 服务者收益
+	p.Withdrawable += providerIncome
+	p.TotalEarnings += providerIncome
+	p.TotalSessions++
+	p.IsBusy = 0
+	p.TodaySessions++
+
+	rec.EndTime = now()
+	rec.Duration = duration
+	rec.Amount = amount
+	rec.ProviderIncome = providerIncome
+	rec.PlatformFee = platformFee
+	rec.Status = 1
+	rec.UpdatedAt = now()
+	store.save()
+
+	sendOK(w, map[string]interface{}{
+		"duration": duration, "minutes": minutes, "amount": amount,
+		"extra": extra, "package_minutes": packMinutes,
+		"provider_income": providerIncome, "platform_fee": platformFee, "balance": u.Balance,
+		// H币口径（内部按元结算，对外统一 H币）
+		"amount_coins":    round2(amount * coinRate()),
+		"extra_coins":     round2(extra * coinRate()),
+		"balance_coins":   round2(u.Balance * coinRate()),
+		"coin_rate":       coinRate(),
+		"coin_name":       coinName(),
+	})
+}
+
 func hCallRating(w http.ResponseWriter, r *http.Request) {
 	_, ok := requireUser(r)
 	if !ok {
@@ -796,10 +1086,29 @@ func hProviderApply(w http.ResponseWriter, r *http.Request) {
 		fail(w, "未登录")
 		return
 	}
-	var body Provider
+	var body struct {
+		RealName        string  `json:"real_name"`
+		Gender          int     `json:"gender"`
+		Age             int     `json:"age"`
+		City            string  `json:"city"`
+		Education       string  `json:"education"`
+		Major           string  `json:"major"`
+		IDCard          string  `json:"id_card"`
+		Phone           string  `json:"phone"`
+		Intro           string  `json:"intro"`
+		Expertise       string  `json:"expertise"`
+		Certificates    string  `json:"certificates"`
+		TrainingProof   string  `json:"training_proof"`
+		CertificateNo   string  `json:"certificate_no"`
+		CertificateImage string `json:"certificate_image"`
+		EducationImage  string  `json:"education_image"`
+		CounselorImage  string  `json:"counselor_image"`
+		YearsOfExp      int     `json:"years_of_exp"`
+		ConsultHours    int     `json:"consult_hours"`
+		Background      string  `json:"background"`
+	}
 	readJSON(r, &body)
-	body.Role = 1 // 统一「倾听者」，不再区分倾听师/咨询师
-	if body.RealName == "" || body.Phone == "" || body.Intro == "" || body.Expertise == "" {
+	if body.RealName == "" || body.Phone == "" || body.IDCard == "" || body.Intro == "" || body.Expertise == "" {
 		fail(w, "必填项缺失")
 		return
 	}
@@ -813,15 +1122,32 @@ func hProviderApply(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 	store.db.SeqProvider++
-	// 单价下放到服务者，默认 10 H币/分 = 1 元/分（可在后台服务者管理中调整）
-	price := 1.0
+	// 价格档位：15/30/45/60/75/90/105/120分钟（默认单价1元/分，批量打9折）
+	pricePerMinute := 1.0
+	priceTiers := map[string]float64{
+		"15":  15.0,
+		"30":  28.5,
+		"45":  40.5,
+		"60":  54.0,
+		"75":  67.5,
+		"90":  81.0,
+		"105": 94.5,
+		"120": 108.0,
+	}
+	priceTiersJSON, _ := json.Marshal(priceTiers)
+
 	p := &Provider{
-		ID: store.db.SeqProvider, UserID: uid, Role: 1, RealName: body.RealName,
+		ID: store.db.SeqProvider, UserID: uid, Role: 1,
+		RealName: body.RealName, Gender: body.Gender, Age: body.Age, City: body.City,
+		Education: body.Education, Major: body.Major,
 		IDCard: body.IDCard, Phone: body.Phone, Intro: body.Intro, Expertise: body.Expertise,
 		Certificates: body.Certificates, TrainingProof: body.TrainingProof,
 		CertificateNo: body.CertificateNo, CertificateImage: body.CertificateImage,
-		YearsOfExp: body.YearsOfExp, Background: body.Background,
-		PricePerMinute: price, Level: 1, IsOnline: 0, IsBusy: 0, Rating: 0,
+		EducationImage: body.EducationImage, CounselorImage: body.CounselorImage,
+		YearsOfExp: body.YearsOfExp, ConsultHours: body.ConsultHours,
+		Background: body.Background,
+		PricePerMinute: pricePerMinute, PriceTiers: string(priceTiersJSON),
+		Level: 1, IsOnline: 0, IsBusy: 0, Rating: 0,
 		TotalSessions: 0, TotalEarnings: 0, Withdrawable: 0, DailyLimit: 10,
 		TodaySessions: 0, Status: 0, CreatedAt: now(), UpdatedAt: now(),
 	}
@@ -1121,6 +1447,121 @@ func hAdminApprove(w http.ResponseWriter, r *http.Request, params map[string]str
 	p.UpdatedAt = now()
 	store.save()
 	sendOK(w, map[string]interface{}{"status": p.Status})
+}
+
+func hAdminProviderUpdate(w http.ResponseWriter, r *http.Request, params map[string]string) {
+	_, ok := requireAdmin(r)
+	if !ok {
+		fail(w, "无权限")
+		return
+	}
+	id, _ := strconv.ParseInt(params["id"], 10, 64)
+	var body struct {
+		RealName       string  `json:"real_name"`
+		Gender         int     `json:"gender"`
+		Age            int     `json:"age"`
+		City           string  `json:"city"`
+		Education      string  `json:"education"`
+		Major          string  `json:"major"`
+		YearsOfExp     int     `json:"years_of_exp"`
+		ConsultHours   int     `json:"consult_hours"`
+		Intro          string  `json:"intro"`
+		Expertise      string  `json:"expertise"`
+		PricePerMinute float64 `json:"price_per_minute"`
+		PriceTiers     string  `json:"price_tiers"`
+		Level          int     `json:"level"`
+		DailyLimit     int     `json:"daily_limit"`
+	}
+	readJSON(r, &body)
+	// 校验
+	if body.Gender != 0 && body.Gender != 1 {
+		fail(w, "性别无效")
+		return
+	}
+	if body.Age > 0 && body.Age < 18 {
+		fail(w, "年龄必须≥18岁")
+		return
+	}
+	if body.YearsOfExp < 0 {
+		fail(w, "从业年限无效")
+		return
+	}
+	if body.ConsultHours < 0 {
+		fail(w, "咨询时长无效")
+		return
+	}
+	if body.Level > 0 && body.Level < 1 || body.Level > 3 {
+		fail(w, "认证等级无效")
+		return
+	}
+	if body.DailyLimit < 0 {
+		fail(w, "每日限额无效")
+		return
+	}
+	if body.PricePerMinute < 0 {
+		fail(w, "单价无效")
+		return
+	}
+	if body.PriceTiers != "" {
+		var tiers map[string]float64
+		if err := json.Unmarshal([]byte(body.PriceTiers), &tiers); err != nil {
+			fail(w, "价格档位格式无效（需JSON对象）")
+			return
+		}
+	}
+	store.mu.Lock()
+	defer store.mu.Unlock()
+	p, ok := store.db.Providers[id]
+	if !ok {
+		fail(w, "服务者不存在")
+		return
+	}
+	// 只更新非零字段
+	if body.RealName != "" {
+		p.RealName = body.RealName
+	}
+	if body.Gender == 0 || body.Gender == 1 {
+		p.Gender = body.Gender
+	}
+	if body.Age >= 18 {
+		p.Age = body.Age
+	}
+	if body.City != "" {
+		p.City = body.City
+	}
+	if body.Education != "" {
+		p.Education = body.Education
+	}
+	if body.Major != "" {
+		p.Major = body.Major
+	}
+	if body.YearsOfExp >= 0 {
+		p.YearsOfExp = body.YearsOfExp
+	}
+	if body.ConsultHours >= 0 {
+		p.ConsultHours = body.ConsultHours
+	}
+	if body.Intro != "" {
+		p.Intro = body.Intro
+	}
+	if body.Expertise != "" {
+		p.Expertise = body.Expertise
+	}
+	if body.PricePerMinute >= 0 {
+		p.PricePerMinute = body.PricePerMinute
+	}
+	if body.PriceTiers != "" {
+		p.PriceTiers = body.PriceTiers
+	}
+	if body.Level >= 1 && body.Level <= 3 {
+		p.Level = body.Level
+	}
+	if body.DailyLimit >= 0 {
+		p.DailyLimit = body.DailyLimit
+	}
+	p.UpdatedAt = now()
+	store.save()
+	sendOK(w, decorateProvider(p))
 }
 
 func hAdminProviderStatus(w http.ResponseWriter, r *http.Request, params map[string]string) {

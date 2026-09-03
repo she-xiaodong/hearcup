@@ -116,10 +116,40 @@ const api = {
     return r
   },
 
-  // ===== 呼叫（核心）=====
-  async invite(pid, type) {
-    const r = await request('POST', '/api/v1/call/invite', { provider_id: pid, call_type: type })
-    if (r._mock) return { code: 0, data: { room_id: 'mock_room_' + Date.now(), user_sig: 'sig', provider_sig: 'sig', sdk_app_id: 0 } }
+  // ===== 倾听师详情（含价格档位）=====
+  // 与 getProvider 的区别：这里要拿后端下发的 price_tiers（套餐档位），且不做字段裁剪
+  async getListenerDetail(id) {
+    const r = await request('GET', '/api/v1/providers/' + id)
+    if (r._mock) {
+      const p = mock.providers.find(x => x.id === Number(id)) || {}
+      return { code: 0, data: { provider: p, price_tiers: {}, ratings: [] } }
+    }
+    return r
+  },
+
+  // ===== 下单 → 支付 → 确认 → 拨号 =====
+  // ① 下单：只建单，不扣费（返回 call_id / order_no / amount）
+  async createCallOrder(providerId, minutes) {
+    const r = await request('POST', '/api/v1/call/invite', { provider_id: providerId, minutes })
+    if (r._mock) return { code: 0, data: { call_id: 1, order_no: 'MOCK', amount: 0, minutes } }
+    return r
+  },
+  // ② 支付：pay_type = wxpay（默认，返回支付参数） / balance（余额扣款）
+  async payCallOrder(callId, payType) {
+    const r = await request('POST', '/api/v1/call/pay', { call_id: callId, pay_type: payType || 'wxpay' })
+    if (r._mock) return { code: 0, data: { paid: true, need_pay: false } }
+    return r
+  },
+  // ③ 确认：校验已支付后开始计时，返回双方手机号（此时才允许拨号）
+  async confirmCallOrder(callId) {
+    const r = await request('POST', '/api/v1/call/confirm', { call_id: callId })
+    if (r._mock) return { code: 0, data: { call_id: callId, minutes: 15, callee_phone: '', callee_phone_masked: '' } }
+    return r
+  },
+  // 兼容旧调用：保留 invite 但对齐新参数（分钟制套餐）
+  async invite(pid, minutes) {
+    const r = await request('POST', '/api/v1/call/invite', { provider_id: pid, minutes: minutes || 15 })
+    if (r._mock) return { code: 0, data: { call_id: 1, order_no: 'MOCK', amount: 0, minutes: minutes || 15 } }
     return r
   },
   async endCall(roomId) {
@@ -132,6 +162,15 @@ const api = {
   async reportCallResult(kind, roomId, callId) {
     if (useMock()) return { code: 0, data: { result: kind } }
     return request('POST', '/api/v1/call/' + kind, { room_id: roomId, call_id: callId || 0 })
+  },
+  // —— 电话拨号方案：上报通话时长并结算 ——
+  async reportCallResultWithMinutes(kind, roomId, callId, minutes) {
+    if (useMock()) return { code: 0, data: { result: kind, minutes } }
+    return request('POST', '/api/v1/call/' + kind + '/minutes', {
+      room_id: roomId,
+      call_id: callId || 0,
+      minutes: minutes
+    })
   },
   async rate(roomId, rating, comment) {
     const r = await request('POST', '/api/v1/call/rating', { room_id: roomId, rating, comment })
@@ -185,16 +224,22 @@ const api = {
   },
   async applyProvider(form) {
     const body = {
-      real_name: form.nickName,
+      real_name: form.realName,
+      gender: form.gender || 0,
+      age: parseInt(form.age) || 0,
+      city: form.city || '',
+      education: form.education || '',
+      major: form.major || '',
       phone: form.phone,
       id_card: form.idCard,
+      years_of_exp: parseInt(form.yearsOfExp) || 0,
+      consult_hours: parseInt(form.consultHours) || 0,
       intro: form.intro,
       expertise: (form.expertise || []).join(','),
-      certificates: (form.certImages || []).join(','),
-      certificate_no: form.certNo,
-      certificate_image: form.certImage,
-      years_of_exp: Number(form.years) || 0,
-      background: form.background
+      education_image: (form.educationImages || []).join(','),
+      counselor_image: (form.counselorImages || []).join(','),
+      certificate_no: form.certificateNo || '',
+      background: form.major || ''
     }
     const r = await request('POST', '/api/v1/provider/apply', body)
     if (r._mock) {

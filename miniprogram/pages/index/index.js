@@ -1,6 +1,5 @@
 const store = require('../../utils/store.js')
 const api = require('../../utils/api.js')
-const { startCall } = require('../../utils/startcall.js')
 
 function useMock() { return getApp().globalData.config.useMock }
 
@@ -16,7 +15,9 @@ Page({
   },
 
   onLoad() {
-    const sys = wx.getWindowInfo ? wx.getWindowInfo() : wx.getSystemInfoSync()
+    // 走 app.windowInfo()：基础库 3.15.x 上 getWindowInfo 偶发返回 null，
+    // 直接读属性会抛 SystemError，这里统一由 app.js 兜底。
+    const sys = getApp().windowInfo()
     this.setData({ statusBarHeight: sys.statusBarHeight || 20 })
   },
 
@@ -69,24 +70,11 @@ Page({
 
   goRecharge() { wx.navigateTo({ url: '/pages/recharge/recharge' }) },
 
-  async onCall(e) {
-    const { provider, callType } = e.detail
-    // 离线不再拦截：呼叫会经腾讯云 IM 通道以通知形式触达对方，
-    // 只是不能保证立刻接通，所以给用户一个预期提示。
-    if (provider.is_online === false) {
-      wx.showToast({ title: '对方可能不在线，将发送来电通知', icon: 'none', duration: 2000 })
-    }
-    const cfg = store.getConfig()
-    const balance = store.getBalance()
-    if (balance < cfg.minBalance) {
-      wx.showModal({
-        title: '余额不足',
-        content: `发起呼叫需至少 ${getApp().toCoins(cfg.minBalance)} ${getApp().globalData.config.coinName || 'H币'}，是否去充值？`,
-        confirmText: '去充值',
-        success: (r) => { if (r.confirm) this.goRecharge() }
-      })
-      return
-    }
-    await startCall(provider.id, callType)
+  // 新流程：先进入倾听师详情页选时长→支付→再拨号。
+  // 因此这里不再做余额校验（金额由所选时长决定，余额是否够在下单时判断）。
+  onCall(e) {
+    const provider = (e.detail && e.detail.provider) || {}
+    if (!provider.id) return
+    wx.navigateTo({ url: `/pages/listener-detail/index?id=${provider.id}` })
   }
 })

@@ -4,7 +4,7 @@
     "pages/calls/calls",
     "pages/profile/profile",
     "pages/detail/detail",
-    "pages/calling/calling",
+    "pages/calling-phone/index",
     "pages/recharge/recharge",
     "pages/apply/apply",
     "pages/about/about",
@@ -12,7 +12,7 @@
     "pages/settings/settings",
     "pages/devcheck/devcheck",
     "pages/listener/listener",
-    "TUICallKit/pages/globalCall/globalCall"
+    "pages/listener-detail/index"
   ],
   "window": {
     "navigationBarBackgroundColor": "#008C8C",
@@ -33,5 +33,6 @@
     ]
   },
   "style": "v2",
-  "sitemapLocation": "sitemap.json"
+  "sitemapLocation": "sitemap.json",
+  "debug": true
 }

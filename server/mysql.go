@@ -42,10 +42,12 @@ func ensureSchema(db *sql.DB) error {
 			created_at BIGINT, updated_at BIGINT)`,
 		`CREATE TABLE IF NOT EXISTS providers (
 			id BIGINT PRIMARY KEY, user_id BIGINT, role INT, real_name VARCHAR(64),
+			gender INT, age INT, city VARCHAR(64), education VARCHAR(32), major VARCHAR(64),
 			id_card VARCHAR(64), phone VARCHAR(32), intro TEXT, expertise VARCHAR(128),
 			certificates VARCHAR(512), training_proof VARCHAR(512), certificate_no VARCHAR(128),
-			certificate_image VARCHAR(512), years_of_exp INT, background VARCHAR(256),
-			price_per_minute DOUBLE, level INT, is_online INT, is_busy INT,
+			certificate_image VARCHAR(512), education_image VARCHAR(512), counselor_image VARCHAR(512),
+			years_of_exp INT, consult_hours INT, background VARCHAR(256),
+			price_per_minute DOUBLE, price_tiers TEXT, level INT, is_online INT, is_busy INT,
 			rating DOUBLE, total_sessions INT, total_earnings DOUBLE, withdrawable DOUBLE,
 			daily_limit INT, today_sessions INT, status INT, reject_reason VARCHAR(256),
 			approved_at BIGINT, created_at BIGINT, updated_at BIGINT)`,
@@ -57,7 +59,9 @@ func ensureSchema(db *sql.DB) error {
 			id BIGINT PRIMARY KEY, user_id BIGINT, provider_id BIGINT, room_id VARCHAR(128),
 			call_type INT, start_time BIGINT, end_time BIGINT, duration INT,
 			unit_price DOUBLE, amount DOUBLE, provider_income DOUBLE, platform_fee DOUBLE,
-			status INT, user_rating INT, user_comment TEXT, created_at BIGINT, updated_at BIGINT)`,
+			status INT, user_rating INT, user_comment TEXT,
+			order_no VARCHAR(64), pay_status INT, package_minutes INT, pay_time BIGINT,
+			created_at BIGINT, updated_at BIGINT)`,
 		`CREATE TABLE IF NOT EXISTS withdraws (
 			id BIGINT PRIMARY KEY, provider_id BIGINT, amount DOUBLE, fee DOUBLE, method INT,
 			openid VARCHAR(128), status INT, remark VARCHAR(256), approved_at BIGINT,
@@ -99,6 +103,23 @@ func ensureSchema(db *sql.DB) error {
 	_, _ = db.Exec("ALTER TABLE providers DROP COLUMN bank_branch")
 	// 迁移：头像扩容为 MEDIUMTEXT（存 base64 data URI）
 	_, _ = db.Exec("ALTER TABLE users MODIFY avatar MEDIUMTEXT")
+	// 迁移：倾听师新增字段（性别、年龄、城市、学历、专业、证书图片、价格档位、咨询时长）
+	_, _ = db.Exec("ALTER TABLE providers ADD COLUMN gender INT DEFAULT 0")
+	_, _ = db.Exec("ALTER TABLE providers ADD COLUMN age INT DEFAULT 0")
+	_, _ = db.Exec("ALTER TABLE providers ADD COLUMN city VARCHAR(64)")
+	_, _ = db.Exec("ALTER TABLE providers ADD COLUMN education VARCHAR(32)")
+	_, _ = db.Exec("ALTER TABLE providers ADD COLUMN major VARCHAR(64)")
+	_, _ = db.Exec("ALTER TABLE providers ADD COLUMN education_image VARCHAR(512)")
+	_, _ = db.Exec("ALTER TABLE providers ADD COLUMN counselor_image VARCHAR(512)")
+	_, _ = db.Exec("ALTER TABLE providers ADD COLUMN price_tiers TEXT")
+	_, _ = db.Exec("ALTER TABLE providers ADD COLUMN consult_hours INT DEFAULT 0")
+	// 迁移：通话订单套餐预付制（先下单支付，再拨号）
+	_, _ = db.Exec("ALTER TABLE calls ADD COLUMN order_no VARCHAR(64)")
+	_, _ = db.Exec("ALTER TABLE calls ADD COLUMN pay_status INT DEFAULT 0")
+	_, _ = db.Exec("ALTER TABLE calls ADD COLUMN package_minutes INT DEFAULT 0")
+	_, _ = db.Exec("ALTER TABLE calls ADD COLUMN pay_time BIGINT DEFAULT 0")
+	// 迁移：为历史倾听师补齐默认价格档位（15~120 分钟，按单价 1 元/分打 9 折）
+	_, _ = db.Exec("UPDATE providers SET price_tiers='{\"15\":15.0,\"30\":28.5,\"45\":40.5,\"60\":54.0,\"75\":67.5,\"90\":81.0,\"105\":94.5,\"120\":108.0}' WHERE price_tiers IS NULL OR price_tiers=''")
 	return nil
 }
 
@@ -133,9 +154,9 @@ func (s *Store) persistMySQL() {
 	// providers
 	prows := [][]interface{}{}
 	for _, p := range db.Providers {
-		prows = append(prows, []interface{}{p.ID, p.UserID, p.Role, p.RealName, p.IDCard, p.Phone, p.Intro, p.Expertise, p.Certificates, p.TrainingProof, p.CertificateNo, p.CertificateImage, p.YearsOfExp, p.Background, p.PricePerMinute, p.Level, p.IsOnline, p.IsBusy, p.Rating, p.TotalSessions, p.TotalEarnings, p.Withdrawable, p.DailyLimit, p.TodaySessions, p.Status, p.RejectReason, p.ApprovedAt, p.CreatedAt, p.UpdatedAt})
+		prows = append(prows, []interface{}{p.ID, p.UserID, p.Role, p.RealName, p.Gender, p.Age, p.City, p.Education, p.Major, p.IDCard, p.Phone, p.Intro, p.Expertise, p.Certificates, p.TrainingProof, p.CertificateNo, p.CertificateImage, p.EducationImage, p.CounselorImage, p.YearsOfExp, p.ConsultHours, p.Background, p.PricePerMinute, p.PriceTiers, p.Level, p.IsOnline, p.IsBusy, p.Rating, p.TotalSessions, p.TotalEarnings, p.Withdrawable, p.DailyLimit, p.TodaySessions, p.Status, p.RejectReason, p.ApprovedAt, p.CreatedAt, p.UpdatedAt})
 	}
-	_ = replaceRows(s.sql, "providers", []string{"id", "user_id", "role", "real_name", "id_card", "phone", "intro", "expertise", "certificates", "training_proof", "certificate_no", "certificate_image", "years_of_exp", "background", "price_per_minute", "level", "is_online", "is_busy", "rating", "total_sessions", "total_earnings", "withdrawable", "daily_limit", "today_sessions", "status", "reject_reason", "approved_at", "created_at", "updated_at"}, prows)
+	_ = replaceRows(s.sql, "providers", []string{"id", "user_id", "role", "real_name", "gender", "age", "city", "education", "major", "id_card", "phone", "intro", "expertise", "certificates", "training_proof", "certificate_no", "certificate_image", "education_image", "counselor_image", "years_of_exp", "consult_hours", "background", "price_per_minute", "price_tiers", "level", "is_online", "is_busy", "rating", "total_sessions", "total_earnings", "withdrawable", "daily_limit", "today_sessions", "status", "reject_reason", "approved_at", "created_at", "updated_at"}, prows)
 
 	// recharges
 	rrows := [][]interface{}{}
@@ -147,9 +168,9 @@ func (s *Store) persistMySQL() {
 	// calls
 	crows := [][]interface{}{}
 	for _, c := range db.Calls {
-		crows = append(crows, []interface{}{c.ID, c.UserID, c.ProviderID, c.RoomID, c.CallType, c.StartTime, c.EndTime, c.Duration, c.UnitPrice, c.Amount, c.ProviderIncome, c.PlatformFee, c.Status, c.UserRating, c.UserComment, c.CreatedAt, c.UpdatedAt})
+		crows = append(crows, []interface{}{c.ID, c.UserID, c.ProviderID, c.RoomID, c.CallType, c.StartTime, c.EndTime, c.Duration, c.UnitPrice, c.Amount, c.ProviderIncome, c.PlatformFee, c.Status, c.UserRating, c.UserComment, c.OrderNo, c.PayStatus, c.PackageMinutes, c.PayTime, c.CreatedAt, c.UpdatedAt})
 	}
-	_ = replaceRows(s.sql, "calls", []string{"id", "user_id", "provider_id", "room_id", "call_type", "start_time", "end_time", "duration", "unit_price", "amount", "provider_income", "platform_fee", "status", "user_rating", "user_comment", "created_at", "updated_at"}, crows)
+	_ = replaceRows(s.sql, "calls", []string{"id", "user_id", "provider_id", "room_id", "call_type", "start_time", "end_time", "duration", "unit_price", "amount", "provider_income", "platform_fee", "status", "user_rating", "user_comment", "order_no", "pay_status", "package_minutes", "pay_time", "created_at", "updated_at"}, crows)
 
 	// withdraws
 	wrows := [][]interface{}{}
@@ -221,11 +242,11 @@ func (s *Store) loadFromMySQL() bool {
 	s.db.SeqUser = maxU
 
 	// providers
-	prows, _ := db.Query("SELECT id,user_id,role,real_name,id_card,phone,intro,expertise,certificates,training_proof,certificate_no,certificate_image,years_of_exp,background,price_per_minute,level,is_online,is_busy,rating,total_sessions,total_earnings,withdrawable,daily_limit,today_sessions,status,reject_reason,approved_at,created_at,updated_at FROM providers")
+	prows, _ := db.Query("SELECT id,user_id,role,real_name,gender,age,city,education,major,id_card,phone,intro,expertise,certificates,training_proof,certificate_no,certificate_image,education_image,counselor_image,years_of_exp,consult_hours,background,price_per_minute,price_tiers,level,is_online,is_busy,rating,total_sessions,total_earnings,withdrawable,daily_limit,today_sessions,status,reject_reason,approved_at,created_at,updated_at FROM providers")
 	var maxP int64
 	for prows.Next() {
 		p := &Provider{}
-		_ = prows.Scan(&p.ID, &p.UserID, &p.Role, &p.RealName, &p.IDCard, &p.Phone, &p.Intro, &p.Expertise, &p.Certificates, &p.TrainingProof, &p.CertificateNo, &p.CertificateImage, &p.YearsOfExp, &p.Background, &p.PricePerMinute, &p.Level, &p.IsOnline, &p.IsBusy, &p.Rating, &p.TotalSessions, &p.TotalEarnings, &p.Withdrawable, &p.DailyLimit, &p.TodaySessions, &p.Status, &p.RejectReason, &p.ApprovedAt, &p.CreatedAt, &p.UpdatedAt)
+		_ = prows.Scan(&p.ID, &p.UserID, &p.Role, &p.RealName, &p.Gender, &p.Age, &p.City, &p.Education, &p.Major, &p.IDCard, &p.Phone, &p.Intro, &p.Expertise, &p.Certificates, &p.TrainingProof, &p.CertificateNo, &p.CertificateImage, &p.EducationImage, &p.CounselorImage, &p.YearsOfExp, &p.ConsultHours, &p.Background, &p.PricePerMinute, &p.PriceTiers, &p.Level, &p.IsOnline, &p.IsBusy, &p.Rating, &p.TotalSessions, &p.TotalEarnings, &p.Withdrawable, &p.DailyLimit, &p.TodaySessions, &p.Status, &p.RejectReason, &p.ApprovedAt, &p.CreatedAt, &p.UpdatedAt)
 		s.db.Providers[p.ID] = p
 		maxP = max64(maxP, p.ID)
 	}
@@ -245,11 +266,11 @@ func (s *Store) loadFromMySQL() bool {
 	s.db.SeqRecharge = maxR
 
 	// calls
-	crows, _ := db.Query("SELECT id,user_id,provider_id,room_id,call_type,start_time,end_time,duration,unit_price,amount,provider_income,platform_fee,status,user_rating,user_comment,created_at,updated_at FROM calls")
+	crows, _ := db.Query("SELECT id,user_id,provider_id,room_id,call_type,start_time,end_time,duration,unit_price,amount,provider_income,platform_fee,status,user_rating,user_comment,order_no,pay_status,package_minutes,pay_time,created_at,updated_at FROM calls")
 	var maxC int64
 	for crows.Next() {
 		c := &CallRecord{}
-		_ = crows.Scan(&c.ID, &c.UserID, &c.ProviderID, &c.RoomID, &c.CallType, &c.StartTime, &c.EndTime, &c.Duration, &c.UnitPrice, &c.Amount, &c.ProviderIncome, &c.PlatformFee, &c.Status, &c.UserRating, &c.UserComment, &c.CreatedAt, &c.UpdatedAt)
+		_ = crows.Scan(&c.ID, &c.UserID, &c.ProviderID, &c.RoomID, &c.CallType, &c.StartTime, &c.EndTime, &c.Duration, &c.UnitPrice, &c.Amount, &c.ProviderIncome, &c.PlatformFee, &c.Status, &c.UserRating, &c.UserComment, &c.OrderNo, &c.PayStatus, &c.PackageMinutes, &c.PayTime, &c.CreatedAt, &c.UpdatedAt)
 		s.db.Calls[c.ID] = c
 		maxC = max64(maxC, c.ID)
 	}

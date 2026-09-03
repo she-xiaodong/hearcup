@@ -14,11 +14,11 @@ Component({
   data: { priceCoins: '' },
   methods: {
     onTapCard() {
-      wx.navigateTo({ url: `/pages/detail/detail?id=${this.data.provider.id}` })
+      wx.navigateTo({ url: `/pages/listener-detail/index?id=${this.data.provider.id}` })
     },
     onCall(e) {
-      const callType = Number(e.currentTarget.dataset.type)
-      this.triggerEvent('call', { provider: this.data.provider, callType })
+      // 已改为点击卡片进入详情页下单，不再直接呼叫
+      this.onTapCard()
     }
   }
 })

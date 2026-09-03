@@ -9,10 +9,5 @@
   "keywords": [],
   "author": "",
   "license": "ISC",
-  "dependencies": {
-    "@trtc/call-engine-lite-wx": "~5.0.6",
-    "@tencentcloud/tui-core-lite": "~1.0.1",
-    "@tencentcloud/lite-chat": ">=1.6.0",
-    "@tencentcloud/trtc-component-wx": "^1.0.7"
-  }
+  "dependencies": {}
 }

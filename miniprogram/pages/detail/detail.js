@@ -1,6 +1,5 @@
 const store = require('../../utils/store.js')
 const api = require('../../utils/api.js')
-const { startCall } = require('../../utils/startcall.js')
 
 const demoReviews = [
   { id: 1, rating: 5, comment: '很温柔，说完心里轻了很多。' },
@@ -40,9 +39,9 @@ Page({
     }
   },
 
-  // 发起呼叫：业务建单 → 冻结余额 → 交棒 TUICallKit（细节见 utils/startcall.js）
-  async onCall(e) {
-    const callType = Number(e.currentTarget.dataset.type)
-    await startCall(this.data.p.id, callType)
+  // 旧详情页不再直接呼叫：选时长与支付统一在倾听师详情页完成
+  onCall() {
+    if (!this.data.p) return
+    wx.redirectTo({ url: `/pages/listener-detail/index?id=${this.data.p.id}` })
   }
 })

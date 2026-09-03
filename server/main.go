@@ -43,6 +43,8 @@ var routes = []route{
 	{http.MethodGet, "/api/v1/providers/:id", ph(hProviderDetail)},
 
 	{http.MethodPost, "/api/v1/call/invite", hCallInvite},
+	{http.MethodPost, "/api/v1/call/pay", hCallPay},
+	{http.MethodPost, "/api/v1/call/confirm", hCallConfirmPay},
 	{http.MethodGet, "/api/v1/call/status/:roomId", ph(hCallStatus)},
 	{http.MethodPost, "/api/v1/call/end", hCallEnd},
 	// 呼叫终态上报（由 TUICallKit 回调驱动：接听/拒接/主叫取消/超时未接）
@@ -50,6 +52,8 @@ var routes = []route{
 	{http.MethodPost, "/api/v1/call/reject", hCallReject},
 	{http.MethodPost, "/api/v1/call/cancel", hCallCancel},
 	{http.MethodPost, "/api/v1/call/miss", hCallMiss},
+	// 电话拨号方案：上报通话时长并结算
+	{http.MethodPost, "/api/v1/call/end/minutes", hCallEndWithMinutes},
 	{http.MethodPost, "/api/v1/call/rating", hCallRating},
 	{http.MethodGet, "/api/v1/call/records", hCallRecords},
 
@@ -75,6 +79,7 @@ var routes = []route{
 	{http.MethodGet, "/api/v1/admin/providers", hAdminProviders},
 	{http.MethodGet, "/api/v1/admin/providers/applications", hAdminApplications},
 	{http.MethodPut, "/api/v1/admin/providers/:id/approve", ph(hAdminApprove)},
+	{http.MethodPut, "/api/v1/admin/providers/:id/update", ph(hAdminProviderUpdate)},
 	{http.MethodPut, "/api/v1/admin/providers/:id/status", ph(hAdminProviderStatus)},
 	{http.MethodGet, "/api/v1/admin/orders/calls", hAdminCalls},
 	{http.MethodGet, "/api/v1/admin/orders/recharge", hAdminRecharge},

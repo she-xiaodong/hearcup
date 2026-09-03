@@ -34,6 +34,11 @@ type Provider struct {
 	UserID           int64   `json:"user_id"`
 	Role             int     `json:"role"` // 统一「倾听者」（历史字段，恒为 1）
 	RealName         string  `json:"real_name"`
+	Gender           int     `json:"gender"`           // 性别：0女 1男
+	Age              int     `json:"age"`              // 年龄
+	City             string  `json:"city"`             // 城市
+	Education        string  `json:"education"`        // 学历
+	Major            string  `json:"major"`            // 专业背景
 	IDCard           string  `json:"id_card"`
 	Phone            string  `json:"phone"`
 	Intro            string  `json:"intro"`
@@ -42,9 +47,13 @@ type Provider struct {
 	TrainingProof    string  `json:"training_proof"`
 	CertificateNo    string  `json:"certificate_no"`
 	CertificateImage string  `json:"certificate_image"`
+	EducationImage   string  `json:"education_image"`   // 学历证书图片
+	CounselorImage   string  `json:"counselor_image"`   // 咨询师证书图片
 	YearsOfExp       int     `json:"years_of_exp"`
+	ConsultHours     int     `json:"consult_hours"`     // 咨询时长（小时）
 	Background       string  `json:"background"`
 	PricePerMinute   float64 `json:"price_per_minute"`
+	PriceTiers       string  `json:"price_tiers"`       // JSON字符串：{"15":15.0,"30":28.5,"45":40.5,"60":54.0,"75":67.5,"90":81.0,"105":94.5,"120":108.0}
 	Level            int     `json:"level"` // 1实习 2认证 3资深
 	IsOnline         int     `json:"is_online"`
 	IsBusy           int     `json:"is_busy"`
@@ -92,6 +101,11 @@ type CallRecord struct {
 	Status         int     `json:"status"` // 0进行中 1已结束 2异常中断
 	UserRating     int     `json:"user_rating"`
 	UserComment    string  `json:"user_comment"`
+	// —— 套餐预付制（先下单支付，再拨号）新增字段 ——
+	OrderNo        string  `json:"order_no"`        // 订单号，CO 前缀，微信支付回调据此匹配
+	PayStatus      int     `json:"pay_status"`      // 0待支付 1已支付 2已退款
+	PackageMinutes int     `json:"package_minutes"` // 套餐时长：15/30/45/60/75/90/105/120
+	PayTime        int64   `json:"pay_time"`
 	CreatedAt      int64   `json:"created_at"`
 	UpdatedAt      int64   `json:"updated_at"`
 	// 关联字段

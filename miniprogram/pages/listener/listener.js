@@ -58,7 +58,10 @@ Page({
   // 识别系统，给出对应的保活引导与低版本提示
   detectPlatform() {
     let info = {}
-    try { info = wx.getSystemInfoSync() || {} } catch (e) {}
+    try {
+      info = (wx.getDeviceInfo && wx.getDeviceInfo())
+        || wx.getSystemInfoSync() || {}
+    } catch (e) { info = {} }
     const platform = String(info.platform || '').toLowerCase()
     const sysVersion = String(info.system || '')
     let lowAndroid = false

@@ -1,0 +1,64 @@
+<view class="call-page">
+  <!-- 顶部：对方信息（对齐微信通话界面布局） -->
+  <view class="top">
+    <image class="avatar" src="{{callee_avatar || '/images/default-avatar.png'}}" mode="aspectFill"></image>
+    <text class="nickname">{{callee_nickname || '倾听师'}}</text>
+    <text class="status-text">{{statusText}}</text>
+    <text class="timer" wx:if="{{status === 'connected'}}">{{timerText}}</text>
+  </view>
+
+  <!-- 订单信息：已支付后才进入本页 -->
+  <view class="order-card">
+    <view class="order-row">
+      <text class="order-label">已购时长</text>
+      <text class="order-value">{{minutes}} 分钟</text>
+    </view>
+    <view class="order-row">
+      <text class="order-label">已付{{coinName}}</text>
+      <text class="order-value">{{amountCoins}} {{coinName}}</text>
+    </view>
+    <view class="order-row" wx:if="{{unit_price > 0}}">
+      <text class="order-label">超时单价</text>
+      <text class="order-value">{{unitPriceCoins}} {{coinName}} / 分钟</text>
+    </view>
+  </view>
+
+  <!-- 中部：号码提示 -->
+  <view class="phone-hint">
+    <text class="hint-label">对方号码</text>
+    <text class="hint-phone">{{callee_phone_masked}}</text>
+    <text class="hint-tip">点击呼叫后调起系统电话，通话由运营商承载</text>
+  </view>
+
+  <!-- 底部操作区 -->
+  <view class="bottom">
+    <block wx:if="{{status === 'ready'}}">
+      <view class="btn-cell">
+        <view class="btn-ring btn-green" bindtap="makeCall"><text class="btn-icon">📞</text></view>
+        <text class="btn-caption">呼叫</text>
+      </view>
+    </block>
+
+    <block wx:elif="{{status === 'connected'}}">
+      <view class="btn-cell">
+        <view class="btn-ring btn-gray" bindtap="switchCall"><text class="btn-icon">🔊</text></view>
+        <text class="btn-caption">免提</text>
+      </view>
+      <view class="btn-cell">
+        <view class="btn-ring btn-red" bindtap="endCall"><text class="btn-icon">✆</text></view>
+        <text class="btn-caption">结束</text>
+      </view>
+    </block>
+
+    <block wx:elif="{{status === 'ended'}}">
+      <view class="summary">
+        <text class="summary-line">通话时长 {{duration}} 分钟</text>
+        <text class="summary-line">费用 {{costCoins}} {{coinName}}</text>
+      </view>
+      <view class="btn-cell">
+        <view class="btn-ring btn-green" bindtap="back"><text class="btn-icon">✓</text></view>
+        <text class="btn-caption">返回</text>
+      </view>
+    </block>
+  </view>
+</view>

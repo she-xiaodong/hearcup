@@ -183,6 +183,24 @@ func hWxPayCallback(w http.ResponseWriter, r *http.Request) {
 	}
 	store.mu.Lock()
 	defer store.mu.Unlock()
+	// ① 通话套餐订单（CO 前缀）：只标记已支付，不入账余额（金额用于结算给倾听师）
+	if strings.HasPrefix(tx.OutTradeNo, "CO") {
+		for _, c := range store.db.Calls {
+			if c.OrderNo == tx.OutTradeNo {
+				if c.PayStatus != 1 {
+					c.PayStatus = 1
+					c.PayTime = now()
+					c.UpdatedAt = now()
+					store.save()
+				}
+				fmt.Println("[pay] 通话订单已支付 call_id=", c.ID, " order=", c.OrderNo)
+				break
+			}
+		}
+		sendOK(w, map[string]interface{}{"code": "SUCCESS", "message": "成功"})
+		return
+	}
+	// ② 充值订单（RC 前缀）：标记已支付并入账余额
 	var order *RechargeOrder
 	for _, o := range store.db.Recharges {
 		if o.OrderNo == tx.OutTradeNo {
