@@ -28,6 +28,7 @@ Page({
     applyStatus: -1,
     isOnline: false,
     earnings: { today_income: 0, withdrawable: 0, total_earnings: 0, today_calls: 0 },
+    transfers: [],       // 分佣转账记录（含待领取）
     platform: '',        // android / ios / devtools
     sysVersion: '',
     lowAndroid: false,   // Android 10 以下：系统层面不支持锁屏来电弹窗
@@ -83,6 +84,11 @@ Page({
       if (st === 1) {
         const er = await api.getProviderEarnings()
         if (er && er.code === 0 && er.data) this.setData({ earnings: er.data })
+        // 分佣领取记录（倾听者发起转账后需手动领取）
+        const tr = await api.getProviderTransfers()
+        if (tr && tr.code === 0) this.setData({ transfers: this.mapTransfers(tr.data || []) })
+      } else {
+        this.setData({ transfers: [] })
       }
     } catch (e) {
       wx.showToast({ title: '加载失败', icon: 'none' })
@@ -174,5 +180,63 @@ Page({
 
   goApply() {
     wx.navigateTo({ url: '/pages/apply/apply' })
+  },
+
+  // —— 分佣领取 ——
+  // 把后端分佣记录映射为前端展示结构（含状态文案、时间、领取凭证）
+  mapTransfers(list) {
+    const self = this
+    return (list || []).map(t => {
+      const d = new Date((t.created_at || 0) * 1000)
+      const p2 = n => String(n).padStart(2, '0')
+      const timeText = (t.created_at ? `${p2(d.getMonth() + 1)}-${p2(d.getDate())} ${p2(d.getHours())}:${p2(d.getMinutes())}` : '')
+      return {
+        id: t.id,
+        amount: t.amount || 0,
+        state: t.state || '',
+        stateText: self.transferStateText(t.state),
+        canClaim: !!t.can_claim,
+        package_info: t.package_info || '',
+        timeText
+      }
+    })
+  },
+
+  transferStateText(state) {
+    const m = {
+      ACCEPTED: '待领取', PROCESSING: '处理中', FINISHED: '已到账',
+      FAIL: '打款失败', CANCELING: '撤销中', CANCELLED: '已撤销'
+    }
+    return m[state] || (state ? state : '受理中')
+  },
+
+  // 点击「去领取」：后端重新查询微信最新凭证 → 调起微信领取页
+  async onClaim(e) {
+    const id = e.currentTarget.dataset.id
+    const item = (this.data.transfers || []).find(x => x.id === id)
+    if (!item || !item.canClaim) return
+    wx.showLoading({ title: '唤起领取…', mask: true })
+    const r = await api.claimTransfer(id)
+    wx.hideLoading()
+    if (r.code !== 0) { wx.showToast({ title: r.msg || '领取失败', icon: 'none' }); return }
+    const pkg = r.data && r.data.package_info
+    if (!pkg) {
+      // 没有可领取凭证：可能已到账或微信暂未生成，刷新列表
+      wx.showToast({ title: (r.data && r.data.msg) || '暂无可领取凭证，稍后再试', icon: 'none' })
+      this.refresh()
+      return
+    }
+    // 调起微信「领取分佣」页（商家转账到零钱：用户须手动点击领取才到账）
+    wx.requestTransferBills({
+      package: pkg,
+      success: () => {
+        wx.showToast({ title: '请在微信中点击领取', icon: 'none' })
+        // 领取为异步结果，稍后拉取列表刷新状态
+        setTimeout(() => this.refresh(), 2500)
+      },
+      fail: () => {
+        wx.showToast({ title: '唤起领取失败，请重试', icon: 'none' })
+      }
+    })
   },
 })

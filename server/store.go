@@ -145,6 +145,7 @@ type TransferRecord struct {
 	Status       int     `json:"status"`       // 0受理中 1成功 2失败
 	FailReason   string  `json:"fail_reason"`
 	Remark       string  `json:"remark"`
+	PackageInfo  string  `json:"package_info"`  // 微信领取凭证（base64）：新版「商家转账到零钱」发起后须倾听者手动领取
 	CreatedAt    int64   `json:"created_at"`
 	UpdatedAt    int64   `json:"updated_at"`
 }

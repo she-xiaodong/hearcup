@@ -1811,13 +1811,18 @@ func hAdminWithdrawUpdate(w http.ResponseWriter, r *http.Request, params map[str
 		if b, ok := resp["transfer_bill_no"].(string); ok {
 			wxBillNo = b
 		}
+		// 领取凭证：新版「商家转账到零钱」发起后须倾听者手动领取，package_info 供小程序调 wx.requestTransferBills
+		packageInfo := ""
+		if p, ok := resp["package_info"].(string); ok {
+			packageInfo = p
+		}
 		store.mu.Lock()
 		store.db.SeqTransfer++
 		tr := &TransferRecord{
 			ID: store.db.SeqTransfer, WithdrawID: wd.ID, ProviderID: providerID,
 			ProviderName: providerName, Openid: openid, Amount: amount,
 			OutBillNo: outBillNo, WxBillNo: wxBillNo, State: state, Status: 1,
-			Remark: body.Remark, CreatedAt: now(), UpdatedAt: now(),
+			Remark: body.Remark, PackageInfo: packageInfo, CreatedAt: now(), UpdatedAt: now(),
 		}
 		store.db.Transfers[tr.ID] = tr
 		wd.Status = 2
@@ -1917,10 +1922,17 @@ func hAdminTransferQuery(w http.ResponseWriter, r *http.Request, params map[stri
 	if b, ok := resp["transfer_bill_no"].(string); ok {
 		wxBillNo = b
 	}
+	pkgInfo := ""
+	if p, ok := resp["package_info"].(string); ok {
+		pkgInfo = p
+	}
 	store.mu.Lock()
 	tr.State = state
 	if wxBillNo != "" {
 		tr.WxBillNo = wxBillNo
+	}
+	if pkgInfo != "" {
+		tr.PackageInfo = pkgInfo
 	}
 	tr.UpdatedAt = now()
 	if state == "FINISHED" {
@@ -1934,6 +1946,135 @@ func hAdminTransferQuery(w http.ResponseWriter, r *http.Request, params map[stri
 	store.save()
 	store.mu.Unlock()
 	sendOK(w, map[string]interface{}{"state": state, "wx_bill_no": wxBillNo, "msg": "已更新"})
+}
+
+// hProviderTransfers：倾听者查看自己的分佣转账记录（仅本人名下），含待领取标记与领取凭证。
+// 新版「商家转账到零钱」发起后，收款方须在小程序手动领取，package_info 为调起领取页凭证。
+func hProviderTransfers(w http.ResponseWriter, r *http.Request) {
+	uid, ok := requireUser(r)
+	if !ok {
+		fail(w, "未登录")
+		return
+	}
+	store.mu.Lock()
+	defer store.mu.Unlock()
+	var me *Provider
+	for _, p := range store.db.Providers {
+		if p.UserID == uid {
+			me = p
+			break
+		}
+	}
+	if me == nil {
+		fail(w, "尚未入驻")
+		return
+	}
+	list := []map[string]interface{}{}
+	for _, tr := range store.db.Transfers {
+		if tr.ProviderID != me.ID {
+			continue
+		}
+		canClaim := tr.Status == 1 && (tr.State == "ACCEPTED" || tr.State == "PROCESSING") && tr.PackageInfo != ""
+		item := map[string]interface{}{
+			"id":          tr.ID,
+			"withdraw_id": tr.WithdrawID,
+			"amount":      tr.Amount,
+			"state":       tr.State,
+			"status":      tr.Status,
+			"wx_bill_no":  tr.WxBillNo,
+			"created_at":  tr.CreatedAt,
+			"updated_at":  tr.UpdatedAt,
+			"can_claim":   canClaim,
+		}
+		if canClaim {
+			item["package_info"] = tr.PackageInfo
+		}
+		list = append(list, item)
+	}
+	// 按创建时间倒序（最新在前）
+	sort.Slice(list, func(i, j int) bool {
+		return list[i]["created_at"].(int64) > list[j]["created_at"].(int64)
+	})
+	sendOK(w, list)
+}
+
+// hProviderTransferClaim：倾听者发起领取——重新向微信查询最新状态/领取凭证并回写，
+// 返回最新 package_info 供小程序调 wx.requestTransferBills 调起领取页。仅能领取本人名下转账。
+func hProviderTransferClaim(w http.ResponseWriter, r *http.Request, params map[string]string) {
+	uid, ok := requireUser(r)
+	if !ok {
+		fail(w, "未登录")
+		return
+	}
+	id, _ := strconv.ParseInt(params["id"], 10, 64)
+	store.mu.Lock()
+	var me *Provider
+	for _, p := range store.db.Providers {
+		if p.UserID == uid {
+			me = p
+			break
+		}
+	}
+	if me == nil {
+		store.mu.Unlock()
+		fail(w, "尚未入驻")
+		return
+	}
+	tr, ok := store.db.Transfers[id]
+	if !ok || tr.ProviderID != me.ID {
+		store.mu.Unlock()
+		fail(w, "转账记录不存在")
+		return
+	}
+	outBillNo := tr.OutBillNo
+	store.mu.Unlock()
+	if outBillNo == "" {
+		fail(w, "该记录无商户单号，无法领取")
+		return
+	}
+	// 已到账：直接返回，无需再唤起领取
+	if tr.Status == 1 && tr.State == "FINISHED" {
+		sendOK(w, map[string]interface{}{"state": tr.State, "package_info": "", "can_claim": false, "msg": "已领取到账"})
+		return
+	}
+	resp, err := queryWxTransfer(outBillNo)
+	if err != nil {
+		fail(w, "查询失败: "+err.Error())
+		return
+	}
+	state := ""
+	if s, ok := resp["state"].(string); ok {
+		state = s
+	}
+	wxBillNo := ""
+	if b, ok := resp["transfer_bill_no"].(string); ok {
+		wxBillNo = b
+	}
+	pkgInfo := ""
+	if p, ok := resp["package_info"].(string); ok {
+		pkgInfo = p
+	}
+	store.mu.Lock()
+	tr.State = state
+	if wxBillNo != "" {
+		tr.WxBillNo = wxBillNo
+	}
+	if pkgInfo != "" {
+		tr.PackageInfo = pkgInfo
+	}
+	tr.UpdatedAt = now()
+	if state == "FINISHED" {
+		tr.Status = 1
+	} else if state == "FAIL" {
+		tr.Status = 2
+	}
+	if wd, ok := store.db.Withdraws[tr.WithdrawID]; ok {
+		wd.TransferState = state
+	}
+	store.save()
+	store.mu.Unlock()
+	canClaim := tr.Status == 1 && (state == "ACCEPTED" || state == "PROCESSING") && pkgInfo != ""
+	sendOK(w, map[string]interface{}{"state": state, "package_info": pkgInfo, "can_claim": canClaim, "msg": "ok"})
 }
 
 // ---------- 提示管理（平台通知）----------

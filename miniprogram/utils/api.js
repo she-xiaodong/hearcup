@@ -270,6 +270,20 @@ const api = {
     return r
   },
 
+  // ===== 分佣领取（商家转账到零钱：发起后须倾听者手动领取）=====
+  // 查看本人名下分佣转账记录（含待领取标记）
+  async getProviderTransfers() {
+    const r = await request('GET', '/api/v1/provider/transfers')
+    if (r._mock) return { code: 0, data: [] }
+    return r
+  },
+  // 发起领取：后端重新向微信查询最新状态/领取凭证并返回 package_info
+  async claimTransfer(id) {
+    const r = await request('POST', '/api/v1/provider/transfers/' + id + '/claim', {})
+    if (r._mock) return { code: 0, data: { package_info: '', can_claim: false, state: '' } }
+    return r
+  },
+
   // ===== 用户资料 / 反馈 =====
   async updateProfile(nickname, avatar) {
     const r = await request('POST', '/api/v1/user/profile', { nickname, avatar })

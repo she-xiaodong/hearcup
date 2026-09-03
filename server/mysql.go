@@ -84,6 +84,7 @@ func ensureSchema(db *sql.DB) error {
 			provider_name VARCHAR(64), openid VARCHAR(128), amount DOUBLE,
 			out_bill_no VARCHAR(64), wx_bill_no VARCHAR(64), state VARCHAR(32),
 			status INT, fail_reason VARCHAR(512), remark VARCHAR(256),
+			package_info TEXT,
 			created_at BIGINT, updated_at BIGINT)`,
 		`CREATE TABLE IF NOT EXISTS t_config (
 			id INT PRIMARY KEY, price_listener DOUBLE, price_counselor DOUBLE,
@@ -133,6 +134,7 @@ func ensureSchema(db *sql.DB) error {
 	// 迁移：提现单关联微信转账单号与状态（商家转账到零钱）
 	_, _ = db.Exec("ALTER TABLE withdraws ADD COLUMN transfer_no VARCHAR(64)")
 	_, _ = db.Exec("ALTER TABLE withdraws ADD COLUMN transfer_state VARCHAR(32)")
+	_, _ = db.Exec("ALTER TABLE transfers ADD COLUMN package_info TEXT")
 	return nil
 }
 
@@ -223,9 +225,9 @@ func (s *Store) persistMySQL() {
 	// transfers（商家转账到零钱记录）
 	trows2 := [][]interface{}{}
 	for _, t := range db.Transfers {
-		trows2 = append(trows2, []interface{}{t.ID, t.WithdrawID, t.ProviderID, t.ProviderName, t.Openid, t.Amount, t.OutBillNo, t.WxBillNo, t.State, t.Status, t.FailReason, t.Remark, t.CreatedAt, t.UpdatedAt})
+		trows2 = append(trows2, []interface{}{t.ID, t.WithdrawID, t.ProviderID, t.ProviderName, t.Openid, t.Amount, t.OutBillNo, t.WxBillNo, t.State, t.Status, t.FailReason, t.Remark, t.PackageInfo, t.CreatedAt, t.UpdatedAt})
 	}
-	_ = replaceRows(s.sql, "transfers", []string{"id", "withdraw_id", "provider_id", "provider_name", "openid", "amount", "out_bill_no", "wx_bill_no", "state", "status", "fail_reason", "remark", "created_at", "updated_at"}, trows2)
+	_ = replaceRows(s.sql, "transfers", []string{"id", "withdraw_id", "provider_id", "provider_name", "openid", "amount", "out_bill_no", "wx_bill_no", "state", "status", "fail_reason", "remark", "package_info", "created_at", "updated_at"}, trows2)
 
 	// config
 	vr := db.Config.VideoRate
@@ -365,11 +367,11 @@ func (s *Store) loadFromMySQL() bool {
 	s.db.SeqNotification = maxN
 
 	// transfers
-	trows2, _ := db.Query("SELECT id,withdraw_id,provider_id,provider_name,openid,amount,out_bill_no,wx_bill_no,state,status,fail_reason,remark,created_at,updated_at FROM transfers")
+	trows2, _ := db.Query("SELECT id,withdraw_id,provider_id,provider_name,openid,amount,out_bill_no,wx_bill_no,state,status,fail_reason,remark,package_info,created_at,updated_at FROM transfers")
 	var maxTr int64
 	for trows2.Next() {
 		t := &TransferRecord{}
-		_ = trows2.Scan(&t.ID, &t.WithdrawID, &t.ProviderID, &t.ProviderName, &t.Openid, &t.Amount, &t.OutBillNo, &t.WxBillNo, &t.State, &t.Status, &t.FailReason, &t.Remark, &t.CreatedAt, &t.UpdatedAt)
+		_ = trows2.Scan(&t.ID, &t.WithdrawID, &t.ProviderID, &t.ProviderName, &t.Openid, &t.Amount, &t.OutBillNo, &t.WxBillNo, &t.State, &t.Status, &t.FailReason, &t.Remark, &t.PackageInfo, &t.CreatedAt, &t.UpdatedAt)
 		s.db.Transfers[t.ID] = t
 		maxTr = max64(maxTr, t.ID)
 	}

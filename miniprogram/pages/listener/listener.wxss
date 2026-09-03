@@ -37,3 +37,9 @@
 .keep-guide { display: flex; align-items: center; justify-content: space-between; margin-top: 24rpx; padding-top: 24rpx; border-top: 1rpx solid var(--line); }
 .kg-main { flex: 1; min-width: 0; margin-right: 16rpx; }
 .kg-title { font-size: 28rpx; font-weight: 700; }
+
+/* 分佣领取 */
+.transfer-item { display: flex; align-items: center; justify-content: space-between; padding: 20rpx 0; border-bottom: 1rpx solid var(--line); }
+.transfer-item:last-of-type { border-bottom: none; }
+.claim-tip { font-size: 22rpx; line-height: 1.6; margin-top: 12rpx; }
+.btn-sm { font-size: 24rpx; padding: 0 28rpx; height: 56rpx; line-height: 56rpx; border-radius: 28rpx; }
