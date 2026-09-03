@@ -1734,6 +1734,35 @@ func hAdminWithdraws(w http.ResponseWriter, r *http.Request) {
 	respList(w, list, r)
 }
 
+// 微信「商家转账到零钱」限额（微信平台硬性规则，超限将被拒付 / 触发风控）
+const (
+	transferSingleMax       = 200.0   // 单笔最大 200 元
+	transferUserDailyMax    = 2000.0  // 单日向同一服务者累计 2000 元
+	transferCompanyDailyMax = 50000.0 // 公司单日累计 50000 元
+)
+
+// 统计某服务者当日已受理（Status=1）的转账总额
+func transferDailyUsedByProvider(providerID, since int64) float64 {
+	used := 0.0
+	for _, t := range store.db.Transfers {
+		if t.ProviderID == providerID && t.Status == 1 && t.CreatedAt >= since {
+			used += t.Amount
+		}
+	}
+	return used
+}
+
+// 统计公司当日已受理（Status=1）的转账总额
+func transferDailyUsedCompany(since int64) float64 {
+	used := 0.0
+	for _, t := range store.db.Transfers {
+		if t.Status == 1 && t.CreatedAt >= since {
+			used += t.Amount
+		}
+	}
+	return used
+}
+
 func hAdminWithdrawUpdate(w http.ResponseWriter, r *http.Request, params map[string]string) {
 	_, ok := requireAdmin(r)
 	if !ok {
