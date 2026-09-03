@@ -63,8 +63,8 @@ function stateType(s) {
 async function load() {
   try {
     const res = await getTransfers(page.value, pageSize.value, keyword.value)
-    list.value = res.data.list || []
-    total.value = res.data.total || 0
+    list.value = res.list || []
+    total.value = res.total || 0
   } catch (e) { ElMessage.error('加载失败: ' + (e.response?.data?.msg || e.message)) }
 }
 function onSearch() { page.value = 1; load() }
@@ -76,7 +76,7 @@ async function doQuery(row) {
   row._loading = true
   try {
     const res = await queryTransfer(row.id)
-    ElMessage.success('已更新：' + (res.data.state || ''))
+    ElMessage.success('已更新：' + (res.state || ''))
     await load()
   } catch (e) { ElMessage.error('查询失败: ' + (e.response?.data?.msg || e.message)) }
   finally { row._loading = false }

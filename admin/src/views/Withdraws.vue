@@ -83,8 +83,8 @@ function trText(s) {
 async function load() {
   try {
     const res = await getWithdraws(page.value, pageSize.value, keyword.value)
-    list.value = res.data.list || []
-    total.value = res.data.total || 0
+    list.value = res.list || []
+    total.value = res.total || 0
   } catch (e) { ElMessage.error('加载失败: ' + (e.response?.data?.msg || e.message)) }
 }
 function onSearch() { page.value = 1; load() }
@@ -99,10 +99,10 @@ function doAudit(row, status) {
       try {
         const res = await updateWithdraw(row.id, status, '')
         row.status = status
-        if (status === 2 && res.data) {
-          row.transfer_no = res.data.transfer_no || ''
-          row.transfer_state = res.data.transfer_state || ''
-          const st = trText(res.data.transfer_state || '')
+        if (status === 2 && res) {
+          row.transfer_no = res.transfer_no || ''
+          row.transfer_state = res.transfer_state || ''
+          const st = trText(res.transfer_state || '')
           ElMessage.success(`已提交微信打款（${st}）`)
         } else {
           ElMessage.success(`已${txt}`)

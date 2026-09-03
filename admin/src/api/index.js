@@ -2,12 +2,43 @@ import axios from 'axios'
 
 const http = axios.create({ baseURL: '/api/v1' })
 
+// 请求拦截：自动携带管理员 token
+http.interceptors.request.use(config => {
+  const token = localStorage.getItem('admin_token')
+  if (token) config.headers.Authorization = 'Bearer ' + token
+  return config
+})
+
+// 响应拦截：解包后端 {code, data, msg}，业务错误抛错，401 跳登录
+http.interceptors.response.use(
+  res => {
+    const body = res.data
+    if (body && body.code !== 0) {
+      const err = new Error(body.msg || '请求失败')
+      err.msg = body.msg || ''
+      return Promise.reject(err)
+    }
+    // 直接返回 data 字段，页面里用 res.list / res.total / res.token 等
+    return body ? body.data : null
+  },
+  err => {
+    if (err.response && err.response.status === 401) {
+      localStorage.removeItem('admin_token')
+      window.location.href = '/admin/login'
+    }
+    return Promise.reject(err)
+  }
+)
+
 // 列表通用分页/搜索参数
 const listParams = (page, size, keyword) => ({
   params: { page: page || 1, page_size: size || 20, keyword: keyword || '' }
 })
 
 export default http
+
+// 登录
+export const adminLogin = (username, password) => http.post('/admin/login', { username, password })
 
 // 管理后台接口
 export const getDashboard = () => http.get('/admin/dashboard')

@@ -29,4 +29,13 @@ const routes = [
   }
 ]
 
-export default createRouter({ history: createWebHistory(), routes })
+const router = createRouter({ history: createWebHistory('/admin/'), routes })
+
+router.beforeEach((to) => {
+  const token = localStorage.getItem('admin_token')
+  if (!token && to.path !== '/login') return '/login'
+  if (token && to.path === '/login') return '/dashboard'
+  return true
+})
+
+export default router

@@ -16,7 +16,7 @@
 
     <el-table :data="tab === 'pending' ? pendList : allList" border style="width:100%">
       <el-table-column prop="nickname" label="昵称" width="120" />
-      <el-table-column prop="realName" label="真实姓名" width="100" />
+      <el-table-column prop="real_name" label="真实姓名" width="100" />
       <el-table-column label="性别" width="60">
         <template #default="{ row }">{{ row.gender === 1 ? '男' : '女' }}</template>
       </el-table-column>
@@ -24,13 +24,13 @@
       <el-table-column prop="city" label="城市" width="100" />
       <el-table-column prop="education" label="学历" width="100" />
       <el-table-column prop="major" label="专业" width="120" />
-      <el-table-column prop="yearsOfExp" label="从业年限" width="90" />
-      <el-table-column prop="consultHours" label="咨询时长" width="90">
-        <template #default="{ row }">{{ row.consultHours }}h</template>
+      <el-table-column prop="years_of_exp" label="从业年限" width="90" />
+      <el-table-column prop="consult_hours" label="咨询时长" width="90">
+        <template #default="{ row }">{{ row.consult_hours }}h</template>
       </el-table-column>
       <el-table-column label="价格档位" width="150">
         <template #default="{ row }">
-          <el-tag v-for="(price, mins) in priceTiers(row.priceTiers)" :key="mins" size="small" style="margin-right:4px">
+          <el-tag v-for="(price, mins) in priceTiers(row.price_tiers)" :key="mins" size="small" style="margin-right:4px">
             {{ mins }}分 {{ price }}元
           </el-tag>
         </template>
@@ -44,7 +44,7 @@
         </template>
       </el-table-column>
       <el-table-column prop="rating" label="评分" width="70" />
-      <el-table-column prop="totalSessions" label="服务次数" width="90" />
+      <el-table-column prop="total_sessions" label="服务次数" width="90" />
       <el-table-column label="操作" min-width="240">
         <template #default="{ row }">
           <el-button size="small" @click="edit(row)">编辑</el-button>
@@ -53,8 +53,8 @@
             <el-button size="small" type="danger" @click="approve(row, false)">拒绝</el-button>
           </template>
           <template v-else>
-            <el-button size="small" :type="row.isOnline ? 'warning' : 'success'" @click="toggleOnline(row)">
-              {{ row.isOnline ? '下线' : '上线' }}
+            <el-button size="small" :type="row.is_online ? 'warning' : 'success'" @click="toggleOnline(row)">
+              {{ row.is_online ? '下线' : '上线' }}
             </el-button>
             <el-button size="small" :type="row.status === 3 ? 'success' : 'danger'" @click="toggleStatus(row)">
               {{ row.status === 3 ? '启用' : '禁用' }}
@@ -128,18 +128,18 @@ const currentRow = ref(null)
 async function loadAll() {
   try {
     const res = await getProviders(page.value, pageSize.value, keyword.value)
-    allList.value = res.data.list || []
-    total.value = res.data.total || 0
+    allList.value = res.list || []
+    total.value = res.total || 0
   } catch (e) {
-    ElMessage.error('加载失败: ' + (e.response?.data?.msg || e.response?.data?.error || e.message))
+    ElMessage.error('加载失败: ' + (e.msg || e.response?.data?.msg || e.response?.data?.error || e.message))
   }
 }
 async function loadPend() {
   try {
     const res = await getApplications(1, 999, keyword.value)
-    pendList.value = res.data.list || []
+    pendList.value = res.list || []
   } catch (e) {
-    ElMessage.error('加载待审核失败: ' + (e.response?.data?.msg || e.message))
+    ElMessage.error('加载待审核失败: ' + (e.msg || e.response?.data?.msg || e.message))
   }
 }
 function load() { loadAll(); loadPend() }
@@ -156,12 +156,12 @@ function priceTiers(str) {
 
 function edit(row) {
   editForm.value = {
-    id: row.id, nickname: row.nickname, realName: row.realName, gender: row.gender,
+    id: row.id, nickname: row.nickname, realName: row.real_name, gender: row.gender,
     age: row.age, city: row.city, education: row.education, major: row.major,
-    yearsOfExp: row.yearsOfExp, consultHours: row.consultHours, intro: row.intro,
-    expertise: row.expertise, pricePerMinute: row.pricePerMinute,
-    priceTiers: row.priceTiers || JSON.stringify({ '15': 15, '30': 28.5, '60': 54 }),
-    level: row.level, dailyLimit: row.dailyLimit
+    yearsOfExp: row.years_of_exp, consultHours: row.consult_hours, intro: row.intro,
+    expertise: row.expertise, pricePerMinute: row.price_per_minute,
+    priceTiers: row.price_tiers || JSON.stringify({ '15': 15, '30': 28.5, '60': 54 }),
+    level: row.level, dailyLimit: row.daily_limit
   }
   currentRow.value = row
   editVisible.value = true
@@ -186,7 +186,7 @@ async function saveEdit() {
     ElMessage.success('已保存')
     load()
   } catch (e) {
-    ElMessage.error('保存失败: ' + (e.response?.data?.msg || e.response?.data?.error || e.message))
+    ElMessage.error('保存失败: ' + (e.msg || e.response?.data?.msg || e.response?.data?.error || e.message))
   }
 }
 
@@ -198,7 +198,7 @@ function approve(row, pass) {
           await approveProvider(row.id, true, '')
           row.status = 1
           ElMessage.success('已通过'); load()
-        } catch (e) { ElMessage.error('操作失败: ' + (e.response?.data?.error || e.message)) }
+        } catch (e) { ElMessage.error('操作失败: ' + (e.msg || e.response?.data?.error || e.message)) }
       })
   } else {
     currentRow.value = row; rejectReason.value = ''; rejectVisible.value = true
@@ -213,17 +213,17 @@ async function confirmReject() {
     currentRow.value.rejectReason = rejectReason.value
     rejectVisible.value = false
     ElMessage.success('已拒绝'); load()
-  } catch (e) { ElMessage.error('操作失败: ' + (e.response?.data?.error || e.message)) }
+  } catch (e) { ElMessage.error('操作失败: ' + (e.msg || e.response?.data?.error || e.message)) }
 }
 
 async function toggleOnline(row) {
-  const newStatus = row.isOnline ? 0 : 1
+  const newStatus = row.is_online ? 0 : 1
   try {
-    await setProviderStatus(row.id, row.status, newStatus, row.pricePerMinute)
-    row.isOnline = newStatus
-    if (newStatus === 0) row.isBusy = 0
+    await setProviderStatus(row.id, row.status, newStatus, row.price_per_minute)
+    row.is_online = newStatus
+    if (newStatus === 0) row.is_busy = 0
     ElMessage.success(newStatus ? '已上线' : '已下线')
-  } catch (e) { ElMessage.error('操作失败: ' + (e.response?.data?.error || e.message)) }
+  } catch (e) { ElMessage.error('操作失败: ' + (e.msg || e.response?.data?.error || e.message)) }
 }
 
 async function toggleStatus(row) {
@@ -232,10 +232,10 @@ async function toggleStatus(row) {
   ElMessageBox.confirm(`确认${action}该服务者？`, '提示', { type: 'warning' })
     .then(async () => {
       try {
-        await setProviderStatus(row.id, newStatus, row.isOnline, row.pricePerMinute)
+        await setProviderStatus(row.id, newStatus, row.is_online, row.price_per_minute)
         row.status = newStatus
         ElMessage.success(`已${action}`); load()
-      } catch (e) { ElMessage.error('操作失败: ' + (e.response?.data?.error || e.message)) }
+      } catch (e) { ElMessage.error('操作失败: ' + (e.msg || e.response?.data?.error || e.message)) }
     })
 }
 

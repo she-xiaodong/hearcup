@@ -53,8 +53,8 @@ const total = ref(0)
 async function load() {
   try {
     const res = await getUsers(page.value, pageSize.value, keyword.value)
-    list.value = res.data.list || []
-    total.value = res.data.total || 0
+    list.value = res.list || []
+    total.value = res.total || 0
   } catch (e) { ElMessage.error('加载失败: ' + (e.response?.data?.msg || e.message)) }
 }
 function onSearch() { page.value = 1; load() }

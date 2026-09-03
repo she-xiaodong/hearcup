@@ -7,28 +7,38 @@
         <p class="sub">管理后台 · 倾听每一份情绪</p>
       </div>
       <el-input v-model="form.username" placeholder="管理员账号" size="large" />
-      <el-input v-model="form.password" type="password" placeholder="密码" size="large" show-password style="margin-top:18rpx" />
-      <el-button type="primary" size="large" class="login-btn" @click="onLogin">登 录</el-button>
+      <el-input v-model="form.password" type="password" placeholder="密码" size="large" show-password style="margin-top:18px" />
+      <el-button type="primary" size="large" class="login-btn" :loading="loading" @click="onLogin">登 录</el-button>
     </div>
   </div>
 </template>
 
 <script setup>
-import { reactive } from 'vue'
+import { reactive, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
+import { adminLogin } from '../api'
 
 const router = useRouter()
 const form = reactive({ username: '', password: '' })
+const loading = ref(false)
 
-function onLogin() {
+async function onLogin() {
   if (!form.username || !form.password) {
     ElMessage.warning('请输入账号和密码')
     return
   }
-  // 真实环境：POST /api/v1/admin/login -> 存 token
-  ElMessage.success('登录成功（演示）')
-  router.push('/dashboard')
+  loading.value = true
+  try {
+    const data = await adminLogin(form.username, form.password)
+    localStorage.setItem('admin_token', data.token)
+    ElMessage.success('登录成功')
+    router.push('/dashboard')
+  } catch (e) {
+    ElMessage.error(e.msg || e.message || '登录失败')
+  } finally {
+    loading.value = false
+  }
 }
 </script>
 

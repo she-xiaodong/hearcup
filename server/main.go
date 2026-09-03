@@ -139,7 +139,12 @@ func router(w http.ResponseWriter, r *http.Request) {
 
 // 管理后台静态文件（零构建，由 Go 直接托管）
 func adminFS() http.Handler {
-	candidates := []string{"../admin", "admin", filepath.Join("..", "admin")}
+	candidates := []string{
+		filepath.Join("..", "admin", "dist"), // 优先：Vue 构建产物
+		filepath.Join("admin", "dist"),
+		filepath.Join("..", "admin"),
+		"admin",
+	}
 	var root string
 	for _, c := range candidates {
 		if info, err := os.Stat(c); err == nil && info.IsDir() {
