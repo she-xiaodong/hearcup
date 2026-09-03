@@ -2053,7 +2053,7 @@ func hProviderTransfers(w http.ResponseWriter, r *http.Request) {
 }
 
 // hProviderTransferClaim：倾听者发起领取——重新向微信查询最新状态/领取凭证并回写，
-// 返回最新 package_info 供小程序调 wx.requestTransferBills 调起领取页。仅能领取本人名下转账。
+// 返回最新 package_info 供小程序调 wx.requestMerchantTransfer 调起领取页。仅能领取本人名下转账。
 func hProviderTransferClaim(w http.ResponseWriter, r *http.Request, params map[string]string) {
 	uid, ok := requireUser(r)
 	if !ok {
