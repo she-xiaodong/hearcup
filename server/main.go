@@ -168,15 +168,18 @@ func adminFS() http.Handler {
 			return
 		}
 		data, err := os.ReadFile(full)
+		ct := contentType(full)
 		if err != nil {
-			// SPA 回退
+			// SPA 回退：返回 index.html 内容，Content-Type 必须按 html 处理
+			// （否则用失败路径 full 的扩展名推断会得到 application/octet-stream，浏览器直接下载）
 			data, err = os.ReadFile(filepath.Join(root, "index.html"))
 			if err != nil {
 				http.Error(w, "not found", 404)
 				return
 			}
+			ct = "text/html; charset=utf-8"
 		}
-		w.Header().Set("Content-Type", contentType(full))
+		w.Header().Set("Content-Type", ct)
 		w.Write(data)
 	})
 }
