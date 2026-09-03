@@ -60,6 +60,7 @@ var routes = []route{
 	{http.MethodPost, "/api/v1/recharge/create", hRechargeCreate},
 	{http.MethodGet, "/api/v1/recharge/records", hRechargeRecords},
 	{http.MethodPost, "/api/v1/pay/callback", hWxPayCallback},
+	{http.MethodPost, "/api/v1/pay/transfer/callback", hWxTransferCallback},
 
 	{http.MethodPost, "/api/v1/provider/apply", hProviderApply},
 	{http.MethodGet, "/api/v1/provider/status", hProviderStatus},
@@ -85,6 +86,8 @@ var routes = []route{
 	{http.MethodGet, "/api/v1/admin/orders/recharge", hAdminRecharge},
 	{http.MethodGet, "/api/v1/admin/withdraws", hAdminWithdraws},
 	{http.MethodPut, "/api/v1/admin/withdraws/:id", ph(hAdminWithdrawUpdate)},
+	{http.MethodGet, "/api/v1/admin/transfers", hAdminTransfers},
+	{http.MethodGet, "/api/v1/admin/transfers/:id/query", ph(hAdminTransferQuery)},
 	{http.MethodGet, "/api/v1/admin/notifications", hAdminNotifications},
 	{http.MethodPost, "/api/v1/admin/notifications", hAdminNotificationCreate},
 	{http.MethodPut, "/api/v1/admin/notifications/:id", ph(hAdminNotificationUpdate)},

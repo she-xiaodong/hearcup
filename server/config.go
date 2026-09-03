@@ -20,6 +20,10 @@ type AppConfig struct {
 	WXPayAPIv3Key   string // 微信支付 APIv3 密钥（回调 AES 解密用）
 	WXPayPrivateKey string // 商户 API 私钥 PEM（内容或文件路径）
 	WXPayNotifyURL  string // 支付结果回调地址（需公网 HTTPS）
+	// 商家转账到零钱（分佣打款给倾听者）
+	WXPayTransferSceneID    string // 转账场景ID（须在商户平台-商家转账开通，如 1001 分销佣金）
+	WXPayTransferSceneInfos string // transfer_scene_report_infos 的 JSON 字符串（按场景报备，如 岗位类型/报酬说明）
+	WXPayTransferNotifyURL  string // 转账结果异步回调地址（可选，公网 HTTPS）
 	SubscribeTplID  string // 微信订阅消息模板 ID（通话邀请通知，未接来电兜底）
 	FreeCall        bool   // 免费通话模式：跳过余额校验/冻结/扣费（支付被限制时用于先跑通通话）
 	JWTSecret       string
@@ -40,6 +44,9 @@ func loadConfig() {
 		WXPayAPIv3Key:   os.Getenv("HEARCUP_WXPAY_APIV3_KEY"),
 		WXPayPrivateKey: os.Getenv("HEARCUP_WXPAY_PRIVATE_KEY"),
 		WXPayNotifyURL:  os.Getenv("HEARCUP_WXPAY_NOTIFY_URL"),
+		WXPayTransferSceneID:    os.Getenv("HEARCUP_WXPAY_TRANSFER_SCENE_ID"),
+		WXPayTransferSceneInfos: os.Getenv("HEARCUP_WXPAY_TRANSFER_SCENE_INFOS"),
+		WXPayTransferNotifyURL:  os.Getenv("HEARCUP_WXPAY_TRANSFER_NOTIFY_URL"),
 		SubscribeTplID:  os.Getenv("HEARCUP_SUBSCRIBE_TPL_ID"),
 		FreeCall:        envBool(os.Getenv("HEARCUP_FREE_CALL")),
 		JWTSecret:       os.Getenv("HEARCUP_JWT_SECRET"),

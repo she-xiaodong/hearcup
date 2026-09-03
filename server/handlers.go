@@ -1728,6 +1728,7 @@ func hAdminWithdraws(w http.ResponseWriter, r *http.Request) {
 		list = append(list, map[string]interface{}{
 			"id": wd.ID, "provider_name": pn,
 			"amount": wd.Amount, "status": wd.Status, "created_at": wd.CreatedAt,
+			"transfer_no": wd.TransferNo, "transfer_state": wd.TransferState,
 		})
 	}
 	respList(w, list, r)
@@ -1745,20 +1746,100 @@ func hAdminWithdrawUpdate(w http.ResponseWriter, r *http.Request, params map[str
 		Remark string `json:"remark"`
 	}
 	readJSON(r, &body)
+
+	// 先在校内锁内做校验并取出发款所需数据，避免在持锁状态下发起网络请求（微信接口耗时）。
 	store.mu.Lock()
-	defer store.mu.Unlock()
 	wd, ok := store.db.Withdraws[id]
 	if !ok {
+		store.mu.Unlock()
 		fail(w, "提现记录不存在")
 		return
 	}
+	if body.Status == 2 && wd.Status == 2 {
+		store.mu.Unlock()
+		fail(w, "该提现已打款，无需重复")
+		return
+	}
+	// 打款：准备参数（openid 缺失时回退到 服务者→用户）
+	amount := wd.Amount
+	openid := wd.Openid
+	providerName := ""
+	var providerID int64
+	if p, ok := store.db.Providers[wd.ProviderID]; ok {
+		providerName = p.RealName
+		providerID = p.ID
+		if openid == "" && p.UserID != 0 {
+			if u := store.db.Users[p.UserID]; u != nil {
+				openid = u.Openid
+			}
+		}
+	}
+	store.mu.Unlock()
+
+	// 打款：调用微信「商家转账到零钱」
+	if body.Status == 2 {
+		if openid == "" {
+			fail(w, "该服务者无 openid，无法打款")
+			return
+		}
+		// 商户单号：WD + 时间戳 + 随机，保证唯一且仅含数字字母
+		outBillNo := "WD" + strconv.FormatInt(now(), 10) + randomNonce()[:6]
+		resp, err := createWxTransferToBalance(openid, outBillNo, amount, "Hearcup 倾听者分佣")
+		if err != nil {
+			// 打款失败：记录转账失败单，但提现单不标记为已打款（保持审核通过，可重试）
+			store.mu.Lock()
+			store.db.SeqTransfer++
+			tr := &TransferRecord{
+				ID: store.db.SeqTransfer, WithdrawID: wd.ID, ProviderID: providerID,
+				ProviderName: providerName, Openid: openid, Amount: amount,
+				OutBillNo: outBillNo, State: "FAIL", Status: 2, FailReason: err.Error(),
+				Remark: body.Remark, CreatedAt: now(), UpdatedAt: now(),
+			}
+			store.db.Transfers[tr.ID] = tr
+			store.save()
+			store.mu.Unlock()
+			fmt.Println("[transfer] 打款失败 withdraw_id=", wd.ID, " err=", err.Error())
+			fail(w, "微信打款失败: "+err.Error())
+			return
+		}
+		// 受理成功（state 多为 ACCEPTED/PROCESSING，结果异步通知）
+		state := ""
+		if s, ok := resp["state"].(string); ok {
+			state = s
+		}
+		wxBillNo := ""
+		if b, ok := resp["transfer_bill_no"].(string); ok {
+			wxBillNo = b
+		}
+		store.mu.Lock()
+		store.db.SeqTransfer++
+		tr := &TransferRecord{
+			ID: store.db.SeqTransfer, WithdrawID: wd.ID, ProviderID: providerID,
+			ProviderName: providerName, Openid: openid, Amount: amount,
+			OutBillNo: outBillNo, WxBillNo: wxBillNo, State: state, Status: 1,
+			Remark: body.Remark, CreatedAt: now(), UpdatedAt: now(),
+		}
+		store.db.Transfers[tr.ID] = tr
+		wd.Status = 2
+		wd.TransferNo = outBillNo
+		wd.TransferState = state
+		wd.PaidAt = now()
+		wd.Remark = body.Remark
+		wd.UpdatedAt = now()
+		store.save()
+		store.mu.Unlock()
+		fmt.Println("[transfer] 打款受理成功 withdraw_id=", wd.ID, " out_bill_no=", outBillNo, " state=", state)
+		sendOK(w, map[string]interface{}{"status": 2, "transfer_no": outBillNo, "transfer_state": state, "msg": "微信已受理打款"})
+		return
+	}
+
+	// 通过 / 拒绝：常规更新
+	store.mu.Lock()
 	wd.Status = body.Status
 	wd.Remark = body.Remark
 	t := now()
 	if body.Status == 1 {
 		wd.ApprovedAt = t
-	} else if body.Status == 2 {
-		wd.PaidAt = t
 	} else if body.Status == 3 {
 		// 拒绝：退还可提现
 		if p, ok := store.db.Providers[wd.ProviderID]; ok {
@@ -1767,7 +1848,92 @@ func hAdminWithdrawUpdate(w http.ResponseWriter, r *http.Request, params map[str
 	}
 	wd.UpdatedAt = t
 	store.save()
+	store.mu.Unlock()
 	sendOK(w, map[string]interface{}{"status": wd.Status})
+}
+
+// hAdminTransfers：转账记录（商家转账到零钱）列表，分页 + 搜索（服务者名 / 商户单号 / 微信状态）
+func hAdminTransfers(w http.ResponseWriter, r *http.Request) {
+	_, ok := requireAdmin(r)
+	if !ok {
+		fail(w, "无权限")
+		return
+	}
+	keyword := strings.ToLower(strings.TrimSpace(r.URL.Query().Get("keyword")))
+	store.mu.Lock()
+	defer store.mu.Unlock()
+	list := []map[string]interface{}{}
+	for _, tr := range store.db.Transfers {
+		if keyword != "" {
+			hay := strings.ToLower(fmt.Sprintf("%d %s %s %s", tr.ID, tr.ProviderName, tr.OutBillNo, tr.State))
+			if !strings.Contains(hay, keyword) {
+				continue
+			}
+		}
+		list = append(list, map[string]interface{}{
+			"id": tr.ID, "withdraw_id": tr.WithdrawID, "provider_name": tr.ProviderName,
+			"openid": tr.Openid, "amount": tr.Amount, "out_bill_no": tr.OutBillNo,
+			"wx_bill_no": tr.WxBillNo, "state": tr.State, "status": tr.Status,
+			"fail_reason": tr.FailReason, "remark": tr.Remark,
+			"created_at": tr.CreatedAt, "updated_at": tr.UpdatedAt,
+		})
+	}
+	// 按 ID 倒序（最新在前）
+	sort.Slice(list, func(i, j int) bool { return list[i]["id"].(int64) > list[j]["id"].(int64) })
+	respList(w, list, r)
+}
+
+// hAdminTransferQuery：按转账记录 ID 重新向微信查询最新状态并回写（结果异步，受理后可轮询）。
+func hAdminTransferQuery(w http.ResponseWriter, r *http.Request, params map[string]string) {
+	_, ok := requireAdmin(r)
+	if !ok {
+		fail(w, "无权限")
+		return
+	}
+	id, _ := strconv.ParseInt(params["id"], 10, 64)
+	store.mu.Lock()
+	tr, ok := store.db.Transfers[id]
+	if !ok {
+		store.mu.Unlock()
+		fail(w, "转账记录不存在")
+		return
+	}
+	outBillNo := tr.OutBillNo
+	store.mu.Unlock()
+	if outBillNo == "" {
+		fail(w, "该记录无商户单号，无法查询")
+		return
+	}
+	resp, err := queryWxTransfer(outBillNo)
+	if err != nil {
+		fail(w, "查询失败: "+err.Error())
+		return
+	}
+	state := ""
+	if s, ok := resp["state"].(string); ok {
+		state = s
+	}
+	wxBillNo := ""
+	if b, ok := resp["transfer_bill_no"].(string); ok {
+		wxBillNo = b
+	}
+	store.mu.Lock()
+	tr.State = state
+	if wxBillNo != "" {
+		tr.WxBillNo = wxBillNo
+	}
+	tr.UpdatedAt = now()
+	if state == "FINISHED" {
+		tr.Status = 1
+	} else if state == "FAIL" {
+		tr.Status = 2
+	}
+	if wd, ok := store.db.Withdraws[tr.WithdrawID]; ok {
+		wd.TransferState = state
+	}
+	store.save()
+	store.mu.Unlock()
+	sendOK(w, map[string]interface{}{"state": state, "wx_bill_no": wxBillNo, "msg": "已更新"})
 }
 
 // ---------- 提示管理（平台通知）----------

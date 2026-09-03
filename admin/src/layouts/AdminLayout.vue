@@ -10,6 +10,7 @@
           <el-menu-item index="/calls">通话订单</el-menu-item>
           <el-menu-item index="/recharge">充值记录</el-menu-item>
           <el-menu-item index="/withdraws">提现审核</el-menu-item>
+          <el-menu-item index="/transfers">打款记录</el-menu-item>
         </el-sub-menu>
         <el-menu-item index="/users">👤 用户管理</el-menu-item>
         <el-menu-item index="/notifications">🔔 提示管理</el-menu-item>

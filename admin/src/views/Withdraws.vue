@@ -19,6 +19,18 @@
           <el-tag :type="wdType(row.status)">{{ wdText(row.status) }}</el-tag>
         </template>
       </el-table-column>
+      <el-table-column label="微信打款状态" width="130">
+        <template #default="{ row }">
+          <span v-if="row.transfer_state">{{ trText(row.transfer_state) }}</span>
+          <span v-else class="muted">—</span>
+        </template>
+      </el-table-column>
+      <el-table-column prop="transfer_no" label="转账单号" width="200" show-overflow-tooltip>
+        <template #default="{ row }">
+          <span v-if="row.transfer_no">{{ row.transfer_no }}</span>
+          <span v-else class="muted">—</span>
+        </template>
+      </el-table-column>
       <el-table-column label="创建时间" width="170">
         <template #default="{ row }">{{ fmtTime(row.created_at) }}</template>
       </el-table-column>
@@ -63,6 +75,10 @@ const currentRow = ref(null)
 // 状态：0待审核 1已通过 2已打款 3已拒绝
 function wdText(s) { return ['待审核', '已通过', '已打款', '已拒绝'][s] || s }
 function wdType(s) { return ['warning', 'success', 'primary', 'danger'][s] || 'info' }
+// 微信转账状态文案
+function trText(s) {
+  return { ACCEPTED: '受理成功', PROCESSING: '处理中', FINISHED: '已到账', FAIL: '失败', CANCELING: '撤销中', CANCELLED: '已撤销' }[s] || s
+}
 
 async function load() {
   try {
@@ -81,9 +97,16 @@ function doAudit(row, status) {
   ElMessageBox.confirm(`确认${txt}该提现申请？`, '提示', { type: 'warning' })
     .then(async () => {
       try {
-        await updateWithdraw(row.id, status, '')
+        const res = await updateWithdraw(row.id, status, '')
         row.status = status
-        ElMessage.success(`已${txt}`)
+        if (status === 2 && res.data) {
+          row.transfer_no = res.data.transfer_no || ''
+          row.transfer_state = res.data.transfer_state || ''
+          const st = trText(res.data.transfer_state || '')
+          ElMessage.success(`已提交微信打款（${st}）`)
+        } else {
+          ElMessage.success(`已${txt}`)
+        }
       } catch (e) { ElMessage.error('操作失败: ' + (e.response?.data?.msg || e.message)) }
     })
 }
@@ -105,4 +128,5 @@ onMounted(load)
 .topbar { display: flex; align-items: center; justify-content: space-between; margin-bottom: 16px; }
 .topbar h2 { margin: 0; color: #2D3142; }
 .pager { margin-top: 16px; justify-content: flex-end; }
+.muted { color: #c0c4cc; }
 </style>

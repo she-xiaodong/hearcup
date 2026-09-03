@@ -122,10 +122,31 @@ type WithdrawRecord struct {
 	Openid     string  `json:"openid"`
 	Status     int     `json:"status"` // 0待审核 1审核通过 2已打款 3拒绝
 	Remark     string  `json:"remark"`
+	// 微信转账关联（打款后回填）
+	TransferNo   string `json:"transfer_no"`   // 商户转账单号 out_bill_no
+	TransferState string `json:"transfer_state"` // 微信侧状态 ACCEPTED/PROCESSING/FINISHED/FAIL
 	ApprovedAt int64   `json:"approved_at"`
 	PaidAt     int64   `json:"paid_at"`
 	CreatedAt  int64   `json:"created_at"`
 	UpdatedAt  int64   `json:"updated_at"`
+}
+
+// TransferRecord 商家转账到零钱（分佣打款）记录：每次打款/重试一笔，与提现单 withdraw_id 关联。
+type TransferRecord struct {
+	ID           int64   `json:"id"`
+	WithdrawID   int64   `json:"withdraw_id"`
+	ProviderID   int64   `json:"provider_id"`
+	ProviderName string  `json:"provider_name"`
+	Openid       string  `json:"openid"`
+	Amount       float64 `json:"amount"`       // 打款金额（元）
+	OutBillNo    string  `json:"out_bill_no"`  // 商户单号
+	WxBillNo     string  `json:"wx_bill_no"`   // 微信转账单号
+	State        string  `json:"state"`        // 微信侧状态
+	Status       int     `json:"status"`       // 0受理中 1成功 2失败
+	FailReason   string  `json:"fail_reason"`
+	Remark       string  `json:"remark"`
+	CreatedAt    int64   `json:"created_at"`
+	UpdatedAt    int64   `json:"updated_at"`
 }
 
 type Tag struct {
@@ -188,6 +209,7 @@ type DB struct {
 	Recharges map[int64]*RechargeOrder `json:"recharges"`
 	Calls     map[int64]*CallRecord    `json:"calls"`
 	Withdraws map[int64]*WithdrawRecord `json:"withdraws"`
+	Transfers map[int64]*TransferRecord `json:"transfers"`
 	Tags      map[int64]*Tag           `json:"tags"`
 	Admins    map[int64]*Admin         `json:"admins"`
 	Feedbacks map[int64]*Feedback      `json:"feedbacks"`
@@ -198,6 +220,7 @@ type DB struct {
 	SeqRecharge int64 `json:"seq_recharge"`
 	SeqCall     int64 `json:"seq_call"`
 	SeqWithdraw int64 `json:"seq_withdraw"`
+	SeqTransfer int64 `json:"seq_transfer"`
 	SeqTag      int64 `json:"seq_tag"`
 	SeqAdmin    int64 `json:"seq_admin"`
 	SeqFeedback int64 `json:"seq_feedback"`
@@ -237,6 +260,7 @@ func loadStore(path string) *Store {
 		Recharges: map[int64]*RechargeOrder{},
 		Calls:     map[int64]*CallRecord{},
 		Withdraws: map[int64]*WithdrawRecord{},
+		Transfers: map[int64]*TransferRecord{},
 		Tags:      map[int64]*Tag{},
 		Admins:    map[int64]*Admin{},
 		Feedbacks: map[int64]*Feedback{},

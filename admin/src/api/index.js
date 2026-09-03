@@ -28,6 +28,8 @@ export const getRecharge = (page, size, keyword) => http.get('/admin/orders/rech
 export const getWithdraws = (page, size, keyword) => http.get('/admin/withdraws', listParams(page, size, keyword))
 export const updateWithdraw = (id, status, remark) =>
   http.put(`/admin/withdraws/${id}`, { status, remark })
+export const getTransfers = (page, size, keyword) => http.get('/admin/transfers', listParams(page, size, keyword))
+export const queryTransfer = (id) => http.get(`/admin/transfers/${id}/query`)
 
 // 用户
 export const getUsers = (page, size, keyword) => http.get('/admin/users', listParams(page, size, keyword))

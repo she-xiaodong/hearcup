@@ -79,6 +79,12 @@ func ensureSchema(db *sql.DB) error {
 			id BIGINT PRIMARY KEY, title VARCHAR(128), content TEXT,
 			target VARCHAR(16), status INT, created_at BIGINT,
 			updated_at BIGINT, published_at BIGINT)`,
+		`CREATE TABLE IF NOT EXISTS transfers (
+			id BIGINT PRIMARY KEY, withdraw_id BIGINT, provider_id BIGINT,
+			provider_name VARCHAR(64), openid VARCHAR(128), amount DOUBLE,
+			out_bill_no VARCHAR(64), wx_bill_no VARCHAR(64), state VARCHAR(32),
+			status INT, fail_reason VARCHAR(512), remark VARCHAR(256),
+			created_at BIGINT, updated_at BIGINT)`,
 		`CREATE TABLE IF NOT EXISTS t_config (
 			id INT PRIMARY KEY, price_listener DOUBLE, price_counselor DOUBLE,
 			platform_rate DOUBLE, min_balance DOUBLE, overdraft DOUBLE, min_withdraw DOUBLE)`,
@@ -124,6 +130,9 @@ func ensureSchema(db *sql.DB) error {
 	_, _ = db.Exec("ALTER TABLE calls ADD COLUMN pay_time BIGINT DEFAULT 0")
 	// 迁移：为历史倾听师补齐默认价格档位（15~120 分钟，按单价 1 元/分打 9 折）
 	_, _ = db.Exec("UPDATE providers SET price_tiers='{\"15\":15.0,\"30\":28.5,\"45\":40.5,\"60\":54.0,\"75\":67.5,\"90\":81.0,\"105\":94.5,\"120\":108.0}' WHERE price_tiers IS NULL OR price_tiers=''")
+	// 迁移：提现单关联微信转账单号与状态（商家转账到零钱）
+	_, _ = db.Exec("ALTER TABLE withdraws ADD COLUMN transfer_no VARCHAR(64)")
+	_, _ = db.Exec("ALTER TABLE withdraws ADD COLUMN transfer_state VARCHAR(32)")
 	return nil
 }
 
@@ -210,6 +219,13 @@ func (s *Store) persistMySQL() {
 		nrows = append(nrows, []interface{}{n.ID, n.Title, n.Content, n.Target, n.Status, n.CreatedAt, n.UpdatedAt, n.PublishedAt})
 	}
 	_ = replaceRows(s.sql, "notifications", []string{"id", "title", "content", "target", "status", "created_at", "updated_at", "published_at"}, nrows)
+
+	// transfers（商家转账到零钱记录）
+	trows2 := [][]interface{}{}
+	for _, t := range db.Transfers {
+		trows2 = append(trows2, []interface{}{t.ID, t.WithdrawID, t.ProviderID, t.ProviderName, t.Openid, t.Amount, t.OutBillNo, t.WxBillNo, t.State, t.Status, t.FailReason, t.Remark, t.CreatedAt, t.UpdatedAt})
+	}
+	_ = replaceRows(s.sql, "transfers", []string{"id", "withdraw_id", "provider_id", "provider_name", "openid", "amount", "out_bill_no", "wx_bill_no", "state", "status", "fail_reason", "remark", "created_at", "updated_at"}, trows2)
 
 	// config
 	vr := db.Config.VideoRate
@@ -347,6 +363,18 @@ func (s *Store) loadFromMySQL() bool {
 	}
 	nrows.Close()
 	s.db.SeqNotification = maxN
+
+	// transfers
+	trows2, _ := db.Query("SELECT id,withdraw_id,provider_id,provider_name,openid,amount,out_bill_no,wx_bill_no,state,status,fail_reason,remark,created_at,updated_at FROM transfers")
+	var maxTr int64
+	for trows2.Next() {
+		t := &TransferRecord{}
+		_ = trows2.Scan(&t.ID, &t.WithdrawID, &t.ProviderID, &t.ProviderName, &t.Openid, &t.Amount, &t.OutBillNo, &t.WxBillNo, &t.State, &t.Status, &t.FailReason, &t.Remark, &t.CreatedAt, &t.UpdatedAt)
+		s.db.Transfers[t.ID] = t
+		maxTr = max64(maxTr, t.ID)
+	}
+	trows2.Close()
+	s.db.SeqTransfer = maxTr
 
 	// config（video_rate / coin_rate / coin_name 为后加列，扫描失败时保持默认值）
 	var vr, cr float64
