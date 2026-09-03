@@ -1327,6 +1327,10 @@ func hProviderWithdraw(w http.ResponseWriter, r *http.Request) {
 		fail(w, fmt.Sprintf("提现金额不得低于 %.0f 元", store.db.Config.MinWithdraw))
 		return
 	}
+	if body.Amount > transferSingleMax {
+		fail(w, fmt.Sprintf("单笔提现不能超过 %.0f 元（微信单笔转账上限）", transferSingleMax))
+		return
+	}
 	if body.Amount > me.Withdrawable {
 		fail(w, "可提现余额不足")
 		return
@@ -1807,6 +1811,24 @@ func hAdminWithdrawUpdate(w http.ResponseWriter, r *http.Request, params map[str
 
 	// 打款：调用微信「商家转账到零钱」
 	if body.Status == 2 {
+		// —— 微信转账额度校验（平台硬性限额，超限直接拦截，避免被拒付/触发风控）——
+		if amount > transferSingleMax {
+			fail(w, fmt.Sprintf("单笔转账不能超过 %.0f 元（当前 %.2f 元）", transferSingleMax, amount))
+			return
+		}
+		store.mu.Lock()
+		since := startOfToday()
+		usedUser := transferDailyUsedByProvider(providerID, since)
+		usedCompany := transferDailyUsedCompany(since)
+		store.mu.Unlock()
+		if amount+usedUser > transferUserDailyMax {
+			fail(w, fmt.Sprintf("该服务者今日转账额度已满（单日上限 %.0f 元，已用 %.2f 元）", transferUserDailyMax, usedUser))
+			return
+		}
+		if amount+usedCompany > transferCompanyDailyMax {
+			fail(w, fmt.Sprintf("今日公司转账额度已满（单日上限 %.0f 元，已用 %.2f 元）", transferCompanyDailyMax, usedCompany))
+			return
+		}
 		if openid == "" {
 			fail(w, "该服务者无 openid，无法打款")
 			return
