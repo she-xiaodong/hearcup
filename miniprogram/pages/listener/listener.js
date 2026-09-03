@@ -204,7 +204,8 @@ Page({
 
   transferStateText(state) {
     const m = {
-      ACCEPTED: '待领取', PROCESSING: '处理中', FINISHED: '已到账',
+      ACCEPTED: '待领取', PROCESSING: '处理中', WAIT_USER_CONFIRM: '待领取',
+      TRANSFERING: '转账中', FINISHED: '已到账', SUCCESS: '已到账',
       FAIL: '打款失败', CANCELING: '撤销中', CANCELLED: '已撤销'
     }
     return m[state] || (state ? state : '受理中')
@@ -227,11 +228,14 @@ Page({
       return
     }
     // 调起微信「领取分佣」页（商家转账到零钱：用户须手动点击领取才到账）
-    wx.requestTransferBills({
+    // 注意：小程序端 API 为 wx.requestMerchantTransfer，需传 mchId/appId/package
+    wx.requestMerchantTransfer({
+      mchId: (r.data && r.data.mch_id) || item.mch_id || '',
+      appId: (r.data && r.data.app_id) || item.app_id || '',
       package: pkg,
       success: () => {
         wx.showToast({ title: '请在微信中点击领取', icon: 'none' })
-        // 领取为异步结果，稍后拉取列表刷新状态
+        // 领取为异步结果（微信回调确认到账），稍后拉取列表刷新状态
         setTimeout(() => this.refresh(), 2500)
       },
       fail: () => {

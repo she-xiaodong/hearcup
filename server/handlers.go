@@ -1969,12 +1969,13 @@ func hProviderTransfers(w http.ResponseWriter, r *http.Request) {
 		fail(w, "尚未入驻")
 		return
 	}
-	list := []map[string]interface{}{}
+		list := []map[string]interface{}{}
 	for _, tr := range store.db.Transfers {
 		if tr.ProviderID != me.ID {
 			continue
 		}
-		canClaim := tr.Status == 1 && (tr.State == "ACCEPTED" || tr.State == "PROCESSING") && tr.PackageInfo != ""
+		// 有领取凭证即视为待领取（state 可能是 WAIT_USER_CONFIRM/ACCEPTED/PROCESSING，以凭证为准最稳）
+		canClaim := tr.Status == 1 && tr.PackageInfo != ""
 		item := map[string]interface{}{
 			"id":          tr.ID,
 			"withdraw_id": tr.WithdrawID,
@@ -1985,6 +1986,8 @@ func hProviderTransfers(w http.ResponseWriter, r *http.Request) {
 			"created_at":  tr.CreatedAt,
 			"updated_at":  tr.UpdatedAt,
 			"can_claim":   canClaim,
+			"mch_id":      appCfg.WXPayMchID,
+			"app_id":      appCfg.WXAppID,
 		}
 		if canClaim {
 			item["package_info"] = tr.PackageInfo
@@ -2033,8 +2036,8 @@ func hProviderTransferClaim(w http.ResponseWriter, r *http.Request, params map[s
 		return
 	}
 	// 已到账：直接返回，无需再唤起领取
-	if tr.Status == 1 && tr.State == "FINISHED" {
-		sendOK(w, map[string]interface{}{"state": tr.State, "package_info": "", "can_claim": false, "msg": "已领取到账"})
+	if tr.Status == 1 && (tr.State == "FINISHED" || tr.State == "SUCCESS") {
+		sendOK(w, map[string]interface{}{"state": tr.State, "package_info": "", "can_claim": false, "msg": "已领取到账", "mch_id": appCfg.WXPayMchID, "app_id": appCfg.WXAppID})
 		return
 	}
 	resp, err := queryWxTransfer(outBillNo)
@@ -2073,8 +2076,8 @@ func hProviderTransferClaim(w http.ResponseWriter, r *http.Request, params map[s
 	}
 	store.save()
 	store.mu.Unlock()
-	canClaim := tr.Status == 1 && (state == "ACCEPTED" || state == "PROCESSING") && pkgInfo != ""
-	sendOK(w, map[string]interface{}{"state": state, "package_info": pkgInfo, "can_claim": canClaim, "msg": "ok"})
+	canClaim := tr.Status == 1 && pkgInfo != ""
+	sendOK(w, map[string]interface{}{"state": state, "package_info": pkgInfo, "can_claim": canClaim, "msg": "ok", "mch_id": appCfg.WXPayMchID, "app_id": appCfg.WXAppID})
 }
 
 // ---------- 提示管理（平台通知）----------
