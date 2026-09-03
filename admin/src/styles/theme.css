@@ -1,0 +1,109 @@
+/* theme.css —— Hearcup 管理后台主题：还原旧版单文件后台的「薄荷绿 + 米白」清新视觉
+ *
+ * 旧版配色（ee078aa 之前）：主色薄荷绿 #4FB8A8、深 #3aa293、橙 #FF9E80、淡紫 #B5A8E0、
+ * 背景米白 #FBF7F2、卡片白、文字深灰绿 #2f3a3a、灰 #8a9a98、暖米边框 #eee5dc。
+ * 这里通过覆盖 Element Plus 的 CSS 变量，让整套组件（按钮/分页/菜单/开关/标签）回到薄荷绿系。
+ */
+
+:root {
+  /* —— Element Plus 主色：默认蓝 #409EFF → 薄荷绿 #4FB8A8 —— */
+  --el-color-primary: #4FB8A8;
+  --el-color-primary-light-3: #6FC4B7;
+  --el-color-primary-light-5: #8FD4CA;
+  --el-color-primary-light-7: #AFE3DC;
+  --el-color-primary-light-8: #BFEAE4;
+  --el-color-primary-light-9: #DFF4F0;
+  --el-color-primary-dark-2: #3A9386;
+
+  /* 圆角：Element Plus 默认 4px 偏方，旧版是 10px+ 圆角 */
+  --el-border-radius-base: 8px;
+  --el-border-radius-small: 6px;
+  --el-border-radius-round: 999px;
+
+  /* 旧版品牌变量（供页面直接引用） */
+  --hc-mint: #4FB8A8;
+  --hc-mint-d: #3aa293;
+  --hc-orange: #FF9E80;
+  --hc-lav: #B5A8E0;
+  --hc-bg: #FBF7F2;
+  --hc-text: #2f3a3a;
+  --hc-muted: #8a9a98;
+  --hc-line: #eee5dc;
+}
+
+/* —— 表格：暖米边框 + 米白表头，还原旧版 table 风格 —— */
+.el-table {
+  --el-table-border-color: var(--hc-line);
+  --el-table-header-bg-color: #faf6f0;
+  --el-table-header-text-color: var(--hc-muted);
+  --el-table-text-color: var(--hc-text);
+}
+.el-table th.el-table__cell {
+  background: #faf6f0 !important;
+  color: var(--hc-muted) !important;
+  font-weight: 600;
+}
+.el-table td.el-table__cell {
+  border-bottom: 1px solid var(--hc-line);
+}
+.el-table--border .el-table__inner-wrapper::after {
+  background-color: var(--hc-line);
+}
+
+/* —— 卡片：圆角 + 柔和阴影（还原旧版 .panel）—— */
+.el-card {
+  border-radius: 16px;
+  border-color: var(--hc-line);
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.04);
+}
+.el-card__header {
+  border-bottom: 1px solid var(--hc-line);
+  color: var(--hc-text);
+  font-weight: 600;
+}
+
+/* —— 分页 active 用薄荷绿 —— */
+.el-pagination.is-background .el-pager li.is-active {
+  background-color: var(--hc-mint);
+  color: #fff;
+}
+.el-pagination.is-background .el-pager li:not(.is-active):hover {
+  color: var(--hc-mint);
+}
+
+/* —— 输入框聚焦边框薄荷绿 —— */
+.el-input__wrapper.is-focus,
+.el-textarea__inner:focus {
+  box-shadow: 0 0 0 1px var(--hc-mint) inset !important;
+}
+
+/* —— 标签：贴近旧版 tag 配色（浅底深字）—— */
+.el-tag {
+  border-radius: 20px;
+  border: none;
+  font-weight: 500;
+}
+.el-tag--success {
+  background: #e3f5f0;
+  color: var(--hc-mint-d);
+}
+.el-tag--warning {
+  background: #fff3e6;
+  color: #d98326;
+}
+.el-tag--danger {
+  background: #fde8e8;
+  color: #c0392b;
+}
+.el-tag--info {
+  background: #f1ece6;
+  color: #8a9a98;
+}
+
+/* —— 弹窗圆角 —— */
+.el-dialog {
+  border-radius: 16px;
+}
+.el-message-box {
+  border-radius: 16px;
+}

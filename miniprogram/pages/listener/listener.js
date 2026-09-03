@@ -197,6 +197,8 @@ Page({
         stateText: self.transferStateText(t.state),
         canClaim: !!t.can_claim,
         package_info: t.package_info || '',
+        mch_id: t.mch_id || '',
+        app_id: t.app_id || '',
         timeText
       }
     })

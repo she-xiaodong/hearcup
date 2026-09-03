@@ -2,9 +2,9 @@
   <div class="login-wrap">
     <div class="login-card">
       <div class="brand">
-        <div class="logo">🍵</div>
-        <h1>一杯心晴</h1>
-        <p class="sub">管理后台 · 倾听每一份情绪</p>
+        <div class="logo">🫖</div>
+        <h1>Hearcup 后台</h1>
+        <p class="sub">一杯心晴 · 管理控制台</p>
       </div>
       <el-input v-model="form.username" placeholder="管理员账号" size="large" />
       <el-input v-model="form.password" type="password" placeholder="密码" size="large" show-password style="margin-top:18px" />

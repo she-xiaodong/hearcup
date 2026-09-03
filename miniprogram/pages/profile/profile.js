@@ -136,13 +136,14 @@ Page({
     if (!me) return
     if (me.withdrawable <= 0) { wx.showToast({ title: '暂无可提现余额', icon: 'none' }); return }
     wx.showModal({
-      title: '申请提现',
+      title: '申请提现（单笔最高 ¥200）',
       editable: true,
-      placeholderText: '请输入提现金额（元）',
+      placeholderText: '请输入提现金额（元，单笔≤200）',
       success: async (res) => {
         if (!res.confirm) return
         const amount = Number(res.content)
         if (!amount || amount <= 0) { wx.showToast({ title: '金额无效', icon: 'none' }); return }
+        if (amount > 200) { wx.showToast({ title: '单笔提现不能超过 200 元', icon: 'none' }); return }
         const r = await api.withdraw(amount)
         if (r.code === 0) {
           wx.showToast({ title: (r.data && r.data.msg) || '提现申请已提交', icon: 'none' })
