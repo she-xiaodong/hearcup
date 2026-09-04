@@ -45,7 +45,7 @@
     <view class="ico ico-ear-w pv-e-ico"></view>
     <view class="pv-e-main">
       <view class="pv-e-title">倾听者平台</view>
-      <view class="pv-e-sub muted">上线接单 · 收益明细 · 提现 · 接听记录</view>
+      <view class="pv-e-sub muted">上线接单 · 收益明细 · 服务订单 · 提现记录</view>
     </view>
     <text class="muted pv-e-arrow">›</text>
   </view>

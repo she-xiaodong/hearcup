@@ -1,5 +1,5 @@
 // pages/profile/profile —— 「我的」：资料 + H号 + 余额 + 入驻状态/平台入口 + 菜单
-// 说明：倾听者侧功能（在线开关/收益/提现/接听记录）已整体并入「倾听者平台」页 pages/listener，
+// 说明：倾听者侧功能（在线开关/收益/提现/服务订单）已整体并入「倾听者平台」页 pages/listener，
 //       本页只保留入口与通用菜单。
 const store = require('../../utils/store.js')
 const { callRecords } = require('../../utils/mock.js')

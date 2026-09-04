@@ -27,7 +27,7 @@
 
     <!-- 接听列表 -->
     <view class="card list-card">
-      <view wx:if="{{list.length === 0}}" class="muted list-empty">还没有接听记录</view>
+      <view wx:if="{{list.length === 0}}" class="muted list-empty">还没有服务订单</view>
       <view wx:for="{{list}}" wx:key="id" class="call-item">
         <view class="call-avatar avatar" style="background-color:#3A9E8F;"><view class="ico ico-phone-white" style="width:38rpx;height:38rpx;"></view></view>
         <view class="call-main">
