@@ -127,6 +127,18 @@ func requireSuper(r *http.Request) bool {
 	return adminRoleOf(r) == "super"
 }
 
+// requireSuperDetail 校验为超级管理员并返回其管理员 ID
+func requireSuperDetail(r *http.Request) (int64, bool) {
+	if !requireSuper(r) {
+		return 0, false
+	}
+	c, ok := getClaims(r)
+	if !ok {
+		return 0, false
+	}
+	return c.UID, true
+}
+
 func decorateProvider(p *Provider) *Provider {
 	cp := *p
 	if u, ok := store.db.Users[p.UserID]; ok {
@@ -2428,6 +2440,9 @@ func hAdminUserBalance(w http.ResponseWriter, r *http.Request) {
 
 // ---------- 管理员管理（仅超级管理员 super 可操作）----------
 
+// isSuperAdmin 判断是否为超级管理员账号（唯一，禁止删除/降级/禁用）
+func isSuperAdmin(a *Admin) bool { return a != nil && a.Role == "super" }
+
 // GET /api/v1/admin/admins —— 管理员列表
 func hAdminAdmins(w http.ResponseWriter, r *http.Request) {
 	if !requireSuper(r) {
@@ -2439,7 +2454,7 @@ func hAdminAdmins(w http.ResponseWriter, r *http.Request) {
 	list := make([]map[string]interface{}, 0, len(store.db.Admins))
 	for _, a := range store.db.Admins {
 		list = append(list, map[string]interface{}{
-			"id": a.ID, "username": a.Username, "real_name": a.RealName,
+			"id": a.ID, "username": a.Username, "real_name": a.RealName, "phone": a.Phone,
 			"role": a.Role, "status": a.Status, "last_login_at": a.LastLogin,
 			"created_at": a.CreatedAt,
 		})
@@ -2448,7 +2463,7 @@ func hAdminAdmins(w http.ResponseWriter, r *http.Request) {
 	sendOK(w, map[string]interface{}{"total": len(list), "list": list})
 }
 
-// POST /api/v1/admin/admins —— 新增管理员
+// POST /api/v1/admin/admins —— 新增普通管理员（不允许再建超级管理员，保持超管唯一）
 func hAdminAdminCreate(w http.ResponseWriter, r *http.Request) {
 	if !requireSuper(r) {
 		fail(w, "仅超级管理员可操作")
@@ -2458,15 +2473,22 @@ func hAdminAdminCreate(w http.ResponseWriter, r *http.Request) {
 		Username string `json:"username"`
 		Password string `json:"password"`
 		RealName string `json:"real_name"`
-		Role     string `json:"role"` // super/operator/finance
+		Phone    string `json:"phone"`
+		Role     string `json:"role"` // operator/finance（禁止 super）
 	}
 	readJSON(r, &body)
+	body.Username = strings.TrimSpace(body.Username)
+	body.Phone = strings.TrimSpace(body.Phone)
 	if body.Username == "" || body.Password == "" {
 		fail(w, "账号和密码必填")
 		return
 	}
-	if body.Role != "super" && body.Role != "operator" && body.Role != "finance" {
-		fail(w, "角色必须是 super/operator/finance")
+	if len(body.Password) < 6 {
+		fail(w, "密码至少 6 位")
+		return
+	}
+	if body.Role != "operator" && body.Role != "finance" {
+		fail(w, "角色只能是 operator/finance")
 		return
 	}
 	store.mu.Lock()
@@ -2476,31 +2498,48 @@ func hAdminAdminCreate(w http.ResponseWriter, r *http.Request) {
 			fail(w, "账号已存在")
 			return
 		}
+		if body.Phone != "" && a.Phone == body.Phone {
+			fail(w, "手机号已被其它管理员绑定")
+			return
+		}
 	}
 	store.db.SeqAdmin++
 	ad := &Admin{
 		ID: store.db.SeqAdmin, Username: body.Username, Password: sha256hex(body.Password),
-		RealName: body.RealName, Role: body.Role, Status: 1, CreatedAt: now(), UpdatedAt: now(),
+		RealName: body.RealName, Phone: body.Phone, Role: body.Role, Status: 1,
+		CreatedAt: now(), UpdatedAt: now(),
 	}
 	store.db.Admins[ad.ID] = ad
 	store.save()
 	sendOK(w, map[string]interface{}{"id": ad.ID})
 }
 
-// PUT /api/v1/admin/admins/:id —— 更新角色/状态/密码
+// PUT /api/v1/admin/admins/:id —— 更新管理员
+// 保护规则：超级管理员「只能改密码」，不可改名/改手机号/降级/禁用；不允许把普通管理员提为 super。
 func hAdminAdminUpdate(w http.ResponseWriter, r *http.Request, params map[string]string) {
-	if !requireSuper(r) {
+	caller, ok := requireSuperDetail(r)
+	if !ok {
 		fail(w, "仅超级管理员可操作")
 		return
 	}
 	id, _ := strconv.ParseInt(params["id"], 10, 64)
 	var body struct {
 		RealName string `json:"real_name"`
+		Phone    string `json:"phone"`
 		Role     string `json:"role"`
 		Status   int    `json:"status"`   // 1启用 3禁用
 		Password string `json:"password"` // 非空则重置密码
 	}
 	readJSON(r, &body)
+	body.Phone = strings.TrimSpace(body.Phone)
+	if body.Role != "" && body.Role != "operator" && body.Role != "finance" {
+		fail(w, "角色只能是 operator/finance")
+		return
+	}
+	if body.Password != "" && len(body.Password) < 6 {
+		fail(w, "密码至少 6 位")
+		return
+	}
 	store.mu.Lock()
 	defer store.mu.Unlock()
 	a, ok := store.db.Admins[id]
@@ -2508,23 +2547,120 @@ func hAdminAdminUpdate(w http.ResponseWriter, r *http.Request, params map[string
 		fail(w, "管理员不存在")
 		return
 	}
-	if body.Role != "" && body.Role != "super" && body.Role != "operator" && body.Role != "finance" {
-		fail(w, "角色必须是 super/operator/finance")
+
+	// 不允许禁用自己
+	if id == caller && body.Status == 3 {
+		fail(w, "不能禁用当前登录账号")
 		return
 	}
-	if body.Role != "" {
-		a.Role = body.Role
-	}
-	if body.RealName != "" {
-		a.RealName = body.RealName
-	}
-	if body.Status == 1 || body.Status == 3 {
-		a.Status = body.Status
-	}
-	if body.Password != "" {
-		a.Password = sha256hex(body.Password)
+	// 超级管理员账号：仅允许修改密码
+	if isSuperAdmin(a) {
+		if body.RealName != "" || body.Phone != "" || body.Role != "" || body.Status == 1 || body.Status == 3 {
+			fail(w, "超级管理员仅可修改密码")
+			return
+		}
+		if body.Password != "" {
+			a.Password = sha256hex(body.Password)
+		}
+	} else {
+		if body.Phone != "" {
+			for _, x := range store.db.Admins {
+				if x.ID != a.ID && x.Phone == body.Phone && x.Phone != "" {
+					fail(w, "手机号已被其它管理员绑定")
+					return
+				}
+			}
+			a.Phone = body.Phone
+		}
+		if body.RealName != "" {
+			a.RealName = body.RealName
+		}
+		if body.Role != "" {
+			a.Role = body.Role
+		}
+		if body.Status == 1 || body.Status == 3 {
+			a.Status = body.Status
+		}
+		if body.Password != "" {
+			a.Password = sha256hex(body.Password)
+		}
 	}
 	a.UpdatedAt = now()
 	store.save()
-	sendOK(w, map[string]interface{}{"id": a.ID, "role": a.Role, "status": a.Status})
+	sendOK(w, map[string]interface{}{"id": a.ID, "role": a.Role, "status": a.Status, "phone": a.Phone})
+}
+
+// DELETE /api/v1/admin/admins/:id —— 删除普通管理员（不能删自己 / 不能删超级管理员）
+func hAdminAdminDelete(w http.ResponseWriter, r *http.Request, params map[string]string) {
+	caller, ok := requireSuperDetail(r)
+	if !ok {
+		fail(w, "仅超级管理员可操作")
+		return
+	}
+	id, _ := strconv.ParseInt(params["id"], 10, 64)
+	store.mu.Lock()
+	defer store.mu.Unlock()
+	a, ok := store.db.Admins[id]
+	if !ok {
+		fail(w, "管理员不存在")
+		return
+	}
+	if id == caller {
+		fail(w, "不能删除自己")
+		return
+	}
+	if isSuperAdmin(a) {
+		fail(w, "超级管理员不可删除")
+		return
+	}
+	delete(store.db.Admins, id)
+	store.save()
+	sendOK(w, map[string]interface{}{"id": id})
+}
+
+// POST /api/v1/admin/password/forgot —— 手机号找回密码（公开接口）
+// 说明：管理员需先在账号中绑定手机号；校验「账号 + 绑定手机号」一致才允许重置。
+// 无短信网关时以「手机号持有人」作为验证因素；上线建议开启短信验证码后升级此接口。
+func hAdminPasswordForgot(w http.ResponseWriter, r *http.Request) {
+	var body struct {
+		Username string `json:"username"`
+		Phone    string `json:"phone"`
+		Password string `json:"password"`
+	}
+	readJSON(r, &body)
+	body.Username = strings.TrimSpace(body.Username)
+	body.Phone = strings.TrimSpace(body.Phone)
+	if body.Username == "" || body.Phone == "" || body.Password == "" {
+		fail(w, "账号、手机号、新密码必填")
+		return
+	}
+	if len(body.Password) < 6 {
+		fail(w, "密码至少 6 位")
+		return
+	}
+	store.mu.Lock()
+	defer store.mu.Unlock()
+	for _, a := range store.db.Admins {
+		if a.Username == body.Username {
+			if a.Phone == "" {
+				fail(w, "该账号未绑定手机号，请联系超级管理员处理")
+				return
+			}
+			if a.Phone != body.Phone {
+				fail(w, "手机号与该账号不匹配")
+				return
+			}
+			if a.Status != 1 {
+				fail(w, "账号已被禁用")
+				return
+			}
+			a.Password = sha256hex(body.Password)
+			a.UpdatedAt = now()
+			store.save()
+			fmt.Printf("[admin] 手机号找回密码 username=%s phone=%s（账号可能已被接管，请注意核实）\n", a.Username, maskPhone(body.Phone))
+			sendOK(w, map[string]interface{}{"ok": true, "msg": "密码已重置，请用新密码登录"})
+			return
+		}
+	}
+	fail(w, "账号不存在")
 }

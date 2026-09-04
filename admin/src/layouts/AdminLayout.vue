@@ -34,6 +34,9 @@
         <el-menu-item index="/notifications">
           <svg class="ico" viewBox="0 0 24 24" v-html="icons.bell"></svg><span>提示管理</span>
         </el-menu-item>
+        <el-menu-item v-if="isSuper" index="/admins">
+          <svg class="ico" viewBox="0 0 24 24" v-html="icons.admins"></svg><span>管理员管理</span>
+        </el-menu-item>
       </el-menu>
 
       <div class="logout" @click="logout">
@@ -61,9 +64,16 @@ const route = useRoute()
 const router = useRouter()
 const active = computed(() => route.path)
 const title = computed(() => route.meta?.title || '管理后台')
+// 当前登录角色（登录时写入 localStorage；兼容旧会话：无角色按 super 放行，后端仍会校验）
+const isSuper = computed(() => {
+  const role = localStorage.getItem('admin_role')
+  return role === null ? true : role === 'super'
+})
 
 function logout() {
   localStorage.removeItem('admin_token')
+  localStorage.removeItem('admin_role')
+  localStorage.removeItem('admin_name')
   router.push('/login')
 }
 
@@ -77,6 +87,7 @@ const icons = {
   withdraws: '<rect x="3" y="6" width="18" height="13" rx="2.5"/><path d="M3 10h18"/><path d="M16.5 14.5h2"/>',
   bell: '<path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.7 21a2 2 0 0 1-3.4 0"/>',
   transfers: '<rect x="2.5" y="6" width="19" height="12" rx="2.5"/><path d="M2.5 10h19"/><path d="M6 15h4"/>',
+  admins: '<circle cx="12" cy="8.5" r="3.2"/><path d="M4.5 20c0-3 3-5 7.5-5s7.5 2 7.5 5"/><path d="M17 4l.9 2 2 .9-2 .9-.9 2-.9-2-2-.9 2-.9z"/>',
   logout: '<path d="M14 4h4a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2h-4"/><path d="M9 12h11M16 9l3 3-3 3"/>'
 }
 </script>

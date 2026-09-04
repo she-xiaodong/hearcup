@@ -70,7 +70,7 @@ func ensureSchema(db *sql.DB) error {
 			id INT PRIMARY KEY, name VARCHAR(32), icon VARCHAR(256), sort INT)`,
 		`CREATE TABLE IF NOT EXISTS admins (
 			id BIGINT PRIMARY KEY, username VARCHAR(64), password VARCHAR(128),
-			real_name VARCHAR(64), role VARCHAR(32), status INT,
+			real_name VARCHAR(64), phone VARCHAR(24), role VARCHAR(32), status INT,
 			last_login_at BIGINT, created_at BIGINT, updated_at BIGINT)`,
 		`CREATE TABLE IF NOT EXISTS feedbacks (
 			id BIGINT PRIMARY KEY, user_id BIGINT, content TEXT, contact VARCHAR(128),
@@ -107,6 +107,8 @@ func ensureSchema(db *sql.DB) error {
 	_, _ = db.Exec("UPDATE t_config SET coin_name='H币' WHERE coin_name='心晴币'")
 	// 迁移：用户 H号（旧库补 h_no 列）
 	_, _ = db.Exec("ALTER TABLE users ADD COLUMN h_no VARCHAR(16)")
+	// 迁移：管理员手机号（找回密码用，旧库补 phone 列）
+	_, _ = db.Exec("ALTER TABLE admins ADD COLUMN phone VARCHAR(24)")
 	// 迁移：清理 v1.6 临时加的银行卡列（改为微信零钱提现，不再用银行卡）
 	_, _ = db.Exec("ALTER TABLE providers DROP COLUMN bank_account_name")
 	_, _ = db.Exec("ALTER TABLE providers DROP COLUMN bank_card_no")
@@ -204,9 +206,9 @@ func (s *Store) persistMySQL() {
 	// admins
 	arows := [][]interface{}{}
 	for _, a := range db.Admins {
-		arows = append(arows, []interface{}{a.ID, a.Username, a.Password, a.RealName, a.Role, a.Status, a.LastLogin, a.CreatedAt, a.UpdatedAt})
+		arows = append(arows, []interface{}{a.ID, a.Username, a.Password, a.RealName, a.Phone, a.Role, a.Status, a.LastLogin, a.CreatedAt, a.UpdatedAt})
 	}
-	_ = replaceRows(s.sql, "admins", []string{"id", "username", "password", "real_name", "role", "status", "last_login_at", "created_at", "updated_at"}, arows)
+	_ = replaceRows(s.sql, "admins", []string{"id", "username", "password", "real_name", "phone", "role", "status", "last_login_at", "created_at", "updated_at"}, arows)
 
 	// feedbacks
 	frows := [][]interface{}{}
@@ -331,11 +333,11 @@ func (s *Store) loadFromMySQL() bool {
 	s.db.SeqTag = maxT
 
 	// admins
-	arows, _ := db.Query("SELECT id,username,password,real_name,role,status,last_login_at,created_at,updated_at FROM admins")
+	arows, _ := db.Query("SELECT id,username,password,real_name,phone,role,status,last_login_at,created_at,updated_at FROM admins")
 	var maxA int64
 	for arows.Next() {
 		a := &Admin{}
-		_ = arows.Scan(&a.ID, &a.Username, &a.Password, &a.RealName, &a.Role, &a.Status, &a.LastLogin, &a.CreatedAt, &a.UpdatedAt)
+		_ = arows.Scan(&a.ID, &a.Username, &a.Password, &a.RealName, &a.Phone, &a.Role, &a.Status, &a.LastLogin, &a.CreatedAt, &a.UpdatedAt)
 		s.db.Admins[a.ID] = a
 		maxA = max64(maxA, a.ID)
 	}

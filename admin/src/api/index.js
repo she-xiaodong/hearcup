@@ -67,6 +67,14 @@ export const getUsers = (page, size, keyword) => http.get('/admin/users', listPa
 // 调整用户余额（元，可正可负；走内存+save 持久化，测试/运营用）
 export const adjustUserBalance = (data) => http.post('/admin/user/balance', data)
 
+// ===== 管理员管理（仅超级管理员）=====
+export const getAdmins = () => http.get('/admin/admins')
+export const createAdmin = (data) => http.post('/admin/admins', data)
+export const updateAdmin = (id, data) => http.put(`/admin/admins/${id}`, data)
+export const deleteAdmin = (id) => http.delete(`/admin/admins/${id}`)
+// 手机号找回密码（公开，须账号已绑定手机号且一致）
+export const forgotAdminPassword = (data) => http.post('/admin/password/forgot', data)
+
 // 提示管理
 export const getNotifications = (page, size, keyword) => http.get('/admin/notifications', listParams(page, size, keyword))
 export const createNotification = (data) => http.post('/admin/notifications', data)

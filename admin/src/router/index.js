@@ -9,6 +9,7 @@ import Withdraws from '../views/Withdraws.vue'
 import Transfers from '../views/Transfers.vue'
 import Users from '../views/Users.vue'
 import Notifications from '../views/Notifications.vue'
+import Admins from '../views/Admins.vue'
 
 const routes = [
   { path: '/login', component: Login },
@@ -24,7 +25,8 @@ const routes = [
       { path: 'withdraws', component: Withdraws, meta: { title: '提现审核' } },
       { path: 'transfers', component: Transfers, meta: { title: '打款记录' } },
       { path: 'users', component: Users, meta: { title: '用户管理' } },
-      { path: 'notifications', component: Notifications, meta: { title: '提示管理' } }
+      { path: 'notifications', component: Notifications, meta: { title: '提示管理' } },
+      { path: 'admins', component: Admins, meta: { title: '管理员管理', super: true } }
     ]
   }
 ]
@@ -35,6 +37,8 @@ router.beforeEach((to) => {
   const token = localStorage.getItem('admin_token')
   if (!token && to.path !== '/login') return '/login'
   if (token && to.path === '/login') return '/dashboard'
+  // 超管专属页面：非超管跳回看板
+  if (to.meta?.super && localStorage.getItem('admin_role') !== 'super') return '/dashboard'
   return true
 })
 

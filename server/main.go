@@ -73,6 +73,8 @@ var routes = []route{
 	{http.MethodGet, "/api/v1/admin/admins", hAdminAdmins},
 	{http.MethodPost, "/api/v1/admin/admins", hAdminAdminCreate},
 	{http.MethodPut, "/api/v1/admin/admins/:id", ph(hAdminAdminUpdate)},
+	{http.MethodDelete, "/api/v1/admin/admins/:id", ph(hAdminAdminDelete)},
+	{http.MethodPost, "/api/v1/admin/password/forgot", hAdminPasswordForgot},
 	{http.MethodGet, "/api/v1/debug/env", hDebugEnv},
 	{http.MethodGet, "/api/v1/admin/providers", hAdminProviders},
 	{http.MethodGet, "/api/v1/admin/providers/applications", hAdminApplications},

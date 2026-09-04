@@ -164,7 +164,8 @@ type Admin struct {
 	Username  string `json:"username"`
 	Password  string `json:"password"` // sha256(plain)
 	RealName  string `json:"real_name"`
-	Role      string `json:"role"` // super/operator/finance
+	Phone     string `json:"phone"` // 绑定手机号（找回密码用）
+	Role      string `json:"role"`  // super/operator/finance
 	Status    int    `json:"status"`
 	LastLogin int64  `json:"last_login_at"`
 	CreatedAt int64  `json:"created_at"`
