@@ -2358,6 +2358,72 @@ func hAdminUserDetail(w http.ResponseWriter, r *http.Request, params map[string]
 	})
 }
 
+// POST /api/v1/admin/user/balance —— 管理员调整用户余额（测试/运营用）
+// body: { user_id?: number, h_no?: string, amount: 元（可正可负）, reason: 原因 }
+// 说明：走内存 + store.save() 持久化，避免「直改数据库被运行期全量写回覆盖」。
+func hAdminUserBalance(w http.ResponseWriter, r *http.Request) {
+	adminID, ok := requireAdmin(r)
+	if !ok {
+		fail(w, "无权限")
+		return
+	}
+	var body struct {
+		UserID int64   `json:"user_id"`
+		HNo    string  `json:"h_no"`
+		Amount float64 `json:"amount"`
+		Reason string  `json:"reason"`
+	}
+	readJSON(r, &body)
+	if body.Amount == 0 {
+		fail(w, "调整金额不能为 0")
+		return
+	}
+	store.mu.Lock()
+	defer store.mu.Unlock()
+
+	var u *User
+	if body.UserID > 0 {
+		if v, ok := store.db.Users[body.UserID]; ok {
+			u = v
+		}
+	} else if body.HNo != "" {
+		for _, v := range store.db.Users {
+			if v.HNo == body.HNo {
+				u = v
+				break
+			}
+		}
+	}
+	if u == nil {
+		fail(w, "用户不存在（需 user_id 或 h_no）")
+		return
+	}
+
+	amount := round2(body.Amount)
+	newBalance := round2(u.Balance + amount)
+	// 扣减时兜底不允许低于透支上限
+	floor := -round2(store.db.Config.Overdraft)
+	if newBalance < floor {
+		newBalance = floor
+	}
+	u.Balance = newBalance
+	u.UpdatedAt = now()
+	store.save()
+
+	reason := body.Reason
+	if reason == "" {
+		reason = "(未填)"
+	}
+	fmt.Printf("[admin] 调整余额 uid=%d h_no=%s amount=%+v -> balance=%v reason=%s by_admin=%d\n",
+		u.ID, u.HNo, amount, newBalance, reason, adminID)
+	sendOK(w, map[string]interface{}{
+		"user_id": u.ID, "h_no": u.HNo, "amount": amount,
+		"balance":       u.Balance,                      // 元
+		"balance_coins": round2(u.Balance * coinRate()), // H币
+		"coin_rate":     coinRate(), "coin_name": coinName(),
+	})
+}
+
 // ---------- 管理员管理（仅超级管理员 super 可操作）----------
 
 // GET /api/v1/admin/admins —— 管理员列表

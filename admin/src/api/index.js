@@ -64,6 +64,8 @@ export const queryTransfer = (id) => http.get(`/admin/transfers/${id}/query`)
 
 // 用户
 export const getUsers = (page, size, keyword) => http.get('/admin/users', listParams(page, size, keyword))
+// 调整用户余额（元，可正可负；走内存+save 持久化，测试/运营用）
+export const adjustUserBalance = (data) => http.post('/admin/user/balance', data)
 
 // 提示管理
 export const getNotifications = (page, size, keyword) => http.get('/admin/notifications', listParams(page, size, keyword))
