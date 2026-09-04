@@ -74,6 +74,11 @@ Page({
     wx.navigateTo({ url: '/pages/apply/apply' })
   },
 
+  // —— 资料与价格设置 ——
+  goProviderEdit() {
+    wx.navigateTo({ url: '/pages/provider-edit/index' })
+  },
+
   // —— 收益明细 / 接听记录 ——
   goIncome() {
     wx.navigateTo({ url: '/pages/income/index' })

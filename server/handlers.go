@@ -1054,6 +1054,128 @@ func hProviderStatus(w http.ResponseWriter, r *http.Request) {
 	sendOK(w, map[string]interface{}{"status": -1, "msg": "未申请入驻"})
 }
 
+// PUT /api/v1/provider/profile —— 倾听者自助修改资料与档位价格（须已通过审核）
+// 允许修改：简介/年龄/城市/学历/专业/从业年限/咨询时长/背景/擅长领域/档位价格(元)
+// 不允许自改：认证等级 level / 评分 / is_online / 审核状态（后台管理）。
+func hProviderProfileUpdate(w http.ResponseWriter, r *http.Request) {
+	uid, ok := requireUser(r)
+	if !ok {
+		fail(w, "未登录")
+		return
+	}
+	var body struct {
+		Intro          string             `json:"intro"`
+		Age            int                `json:"age"`
+		City           string             `json:"city"`
+		Education      string             `json:"education"`
+		Major          string             `json:"major"`
+		YearsOfExp     int                `json:"years_of_exp"`
+		ConsultHours   int                `json:"consult_hours"`
+		Background     string             `json:"background"`
+		Expertise      string             `json:"expertise"`        // 逗号分隔标签
+		PriceTiers     map[string]float64 `json:"price_tiers"`      // 分钟 -> 元，至少一档
+		PricePerMinute float64            `json:"price_per_minute"` // 可选：每分钟单价（无档位时兜底）
+	}
+	readJSON(r, &body)
+	if body.Age != 0 && body.Age < 18 {
+		fail(w, "年龄必须≥18岁")
+		return
+	}
+	if body.YearsOfExp < 0 || body.ConsultHours < 0 {
+		fail(w, "从业年限/咨询时长不能为负")
+		return
+	}
+	// 档位价格预校验：分钟合法、金额>0、至少一档
+	tiersJSON := ""
+	var tiersMinutes []int
+	if len(body.PriceTiers) > 0 {
+		tiers := map[string]float64{}
+		for k, v := range body.PriceTiers {
+			m, err := strconv.Atoi(k)
+			if err != nil || !validPackageMinutes[m] {
+				fail(w, "存在非法时长档位："+k)
+				return
+			}
+			if v <= 0 {
+				fail(w, "档位价格必须大于 0")
+				return
+			}
+			tiers[k] = round2(v)
+			tiersMinutes = append(tiersMinutes, m)
+		}
+		if len(tiers) == 0 {
+			fail(w, "至少需要配置一个时长档位价格")
+			return
+		}
+		if b, err := json.Marshal(tiers); err == nil {
+			tiersJSON = string(b)
+		}
+	}
+	sort.Ints(tiersMinutes)
+
+	store.mu.Lock()
+	defer store.mu.Unlock()
+	var me *Provider
+	for _, p := range store.db.Providers {
+		if p.UserID == uid {
+			me = p
+			break
+		}
+	}
+	if me == nil {
+		fail(w, "尚未入驻")
+		return
+	}
+	if me.Status != 1 {
+		fail(w, "需通过入驻审核后才能修改资料")
+		return
+	}
+	if tiersJSON != "" {
+		me.PriceTiers = tiersJSON
+		if len(tiersMinutes) > 0 {
+			// 同步单价（元/分）：列表价与兜底保持一致
+			var tm map[string]float64
+			_ = json.Unmarshal([]byte(tiersJSON), &tm)
+			first := fmt.Sprint(tiersMinutes[0])
+			me.PricePerMinute = round2(tm[first] / float64(tiersMinutes[0]))
+		}
+	} else if body.PricePerMinute > 0 {
+		me.PricePerMinute = round2(body.PricePerMinute)
+	}
+	if body.Intro != "" {
+		me.Intro = body.Intro
+	}
+	if body.Age > 0 {
+		me.Age = body.Age
+	}
+	if body.City != "" {
+		me.City = body.City
+	}
+	if body.Education != "" {
+		me.Education = body.Education
+	}
+	if body.Major != "" {
+		me.Major = body.Major
+	}
+	if body.YearsOfExp >= 0 {
+		me.YearsOfExp = body.YearsOfExp
+	}
+	if body.ConsultHours >= 0 {
+		me.ConsultHours = body.ConsultHours
+	}
+	if body.Background != "" {
+		me.Background = body.Background
+	}
+	if body.Expertise != "" {
+		me.Expertise = strings.Join(strings.FieldsFunc(body.Expertise, func(r rune) bool {
+			return r == ',' || r == '，' || r == ' '
+		}), ",")
+	}
+	me.UpdatedAt = now()
+	store.save()
+	sendOK(w, map[string]interface{}{"provider": decorateProvider(me)})
+}
+
 func hProviderOnline(w http.ResponseWriter, r *http.Request) {
 	uid, ok := requireUser(r)
 	if !ok {

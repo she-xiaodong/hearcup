@@ -37,8 +37,11 @@ router.beforeEach((to) => {
   const token = localStorage.getItem('admin_token')
   if (!token && to.path !== '/login') return '/login'
   if (token && to.path === '/login') return '/dashboard'
-  // 超管专属页面：非超管跳回看板
-  if (to.meta?.super && localStorage.getItem('admin_role') !== 'super') return '/dashboard'
+  // 超管专属页面：仅明确 operator/finance 拦截；角色缺失/旧会话放行，后端 requireSuper 兜底
+  if (to.meta?.super) {
+    const role = localStorage.getItem('admin_role')
+    if (role === 'operator' || role === 'finance') return '/dashboard'
+  }
   return true
 })
 

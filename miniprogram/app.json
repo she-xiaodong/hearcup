@@ -14,7 +14,8 @@
     "pages/listener/listener",
     "pages/listener-detail/index",
     "pages/income/index",
-    "pages/provider-calls/index"
+    "pages/provider-calls/index",
+    "pages/provider-edit/index"
   ],
   "window": {
     "navigationBarBackgroundColor": "#3A9E8F",

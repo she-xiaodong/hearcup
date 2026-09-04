@@ -61,6 +61,7 @@ var routes = []route{
 	{http.MethodPut, "/api/v1/provider/offline", hProviderOffline},
 	{http.MethodGet, "/api/v1/provider/earnings", hProviderEarnings},
 	{http.MethodGet, "/api/v1/provider/calls", hProviderCalls},
+	{http.MethodPut, "/api/v1/provider/profile", hProviderProfileUpdate},
 	{http.MethodPost, "/api/v1/provider/withdraw", hProviderWithdraw},
 	{http.MethodGet, "/api/v1/provider/transfers", hProviderTransfers},
 	{http.MethodPost, "/api/v1/provider/transfers/:id/claim", ph(hProviderTransferClaim)},

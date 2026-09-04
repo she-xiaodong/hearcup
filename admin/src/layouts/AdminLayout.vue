@@ -64,10 +64,11 @@ const route = useRoute()
 const router = useRouter()
 const active = computed(() => route.path)
 const title = computed(() => route.meta?.title || '管理后台')
-// 当前登录角色（登录时写入 localStorage；兼容旧会话：无角色按 super 放行，后端仍会校验）
+// 当前登录角色（登录时写入 localStorage；兼容旧会话：仅明确 operator/finance 隐藏入口，
+// 角色缺失/旧会话默认可见，越权由后端 requireSuper 兜底拦截）
 const isSuper = computed(() => {
   const role = localStorage.getItem('admin_role')
-  return role === null ? true : role === 'super'
+  return role !== 'operator' && role !== 'finance'
 })
 
 function logout() {

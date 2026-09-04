@@ -206,6 +206,29 @@ const api = {
     if (r._mock) return { code: 0, data: { is_online: 0 } }
     return r
   },
+  // 倾听者自助修改资料与档位价格（须已通过审核）
+  async updateProviderProfile(data) {
+    const r = await request('PUT', '/api/v1/provider/profile', data)
+    if (r._mock) {
+      // 演示模式：把可回显字段写回本地 provider me，便于表单回显
+      const me = store.getProviderMe()
+      if (me && data) {
+        if (data.intro) me.intro = data.intro
+        if (data.city) me.city = data.city
+        if (data.age) me.age = data.age
+        if (data.education) me.education = data.education
+        if (data.major) me.major = data.major
+        if (typeof data.years_of_exp === 'number') me.years_of_exp = data.years_of_exp
+        if (typeof data.consult_hours === 'number') me.consult_hours = data.consult_hours
+        if (data.background) me.background = data.background
+        if (data.expertise !== undefined) me.expertise = data.expertise
+        if (data.price_tiers) me.price_tiers = data.price_tiers
+      }
+      return { code: 0, data: { provider: me || {} } }
+    }
+    return r
+  },
+
   async getProviderEarnings() {
     const r = await request('GET', '/api/v1/provider/earnings')
     if (r._mock) return { code: 0, data: { today_income: 0, withdrawable: 0, total_earnings: 0, today_calls: 0, details: [], completed_income: 0, pending_income: 0 } }

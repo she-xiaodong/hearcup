@@ -1,0 +1,29 @@
+.topbar { display: block; }
+
+.f-card { margin: 0 32rpx 24rpx; }
+.f-title { font-size: 30rpx; font-weight: 800; margin-bottom: 8rpx; }
+.f-sub { font-size: 22rpx; margin: -4rpx 0 16rpx; }
+
+.f-row { display: flex; align-items: center; padding: 20rpx 0; border-bottom: 1rpx solid var(--line); }
+.f-row:last-child { border-bottom: none; }
+.f-row.f-col { flex-direction: column; align-items: flex-start; }
+.f-label { width: 190rpx; flex-shrink: 0; font-size: 27rpx; color: var(--text); font-weight: 600; }
+.f-col .f-label { width: auto; margin-bottom: 12rpx; }
+.f-input { flex: 1; font-size: 27rpx; text-align: right; }
+.f-area { width: 100%; height: 160rpx; font-size: 27rpx; background: #F7FAF9; border-radius: 14rpx; padding: 18rpx 20rpx; box-sizing: border-box; line-height: 1.5; }
+
+/* 擅长领域标签 */
+.f-tags { display: flex; flex-wrap: wrap; gap: 16rpx; }
+.f-tag { font-size: 24rpx; padding: 10rpx 26rpx; border-radius: 999rpx; background: #F1F5F4; color: #5C6B68; }
+.f-tag.on { background: #E6F4F0; color: #2E8578; font-weight: 600; }
+
+/* 档位价格 */
+.f-tiers { display: flex; flex-direction: column; gap: 16rpx; margin-top: 8rpx; }
+.f-tier { display: flex; align-items: center; gap: 16rpx; background: #F7FAF9; border-radius: 14rpx; padding: 16rpx 20rpx; }
+.f-tier-label { width: 150rpx; font-size: 27rpx; font-weight: 600; flex-shrink: 0; }
+.f-tier-input-wrap { flex: 1; display: flex; align-items: center; justify-content: flex-end; gap: 8rpx; }
+.f-tier-input { width: 150rpx; text-align: right; font-size: 28rpx; font-weight: 700; }
+.f-tier-unit { font-size: 24rpx; color: var(--text-sub); }
+.f-tier-coins { width: 150rpx; text-align: right; font-size: 24rpx; color: var(--primary-deep); font-weight: 600; flex-shrink: 0; }
+
+.f-save { margin: 0 32rpx 32rpx; }

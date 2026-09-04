@@ -42,6 +42,16 @@
         </view>
       </view>
 
+      <!-- 资料与价格设置入口 -->
+      <view class="card listener-card pv-edit-card" bindtap="goProviderEdit">
+        <view class="ico ico-gear ico-sm pv-edit-ico"></view>
+        <view class="row-main">
+          <view class="row-title">资料与价格设置</view>
+          <view class="muted">修改简介、擅长领域与各档位价格</view>
+        </view>
+        <text class="muted eni-arrow">›</text>
+      </view>
+
       <!-- 收益 -->
       <view class="card listener-card">
         <view class="earn-head">

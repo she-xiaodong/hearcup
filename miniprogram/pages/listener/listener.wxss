@@ -20,6 +20,10 @@
 .row-main { flex: 1; min-width: 0; margin-right: 16rpx; }
 .row-title { font-size: 30rpx; font-weight: 700; }
 
+/* 资料与价格入口 */
+.pv-edit-card { display: flex; align-items: center; gap: 18rpx; }
+.pv-edit-ico { flex-shrink: 0; }
+
 /* 收益 */
 .earn-head { display: flex; align-items: center; justify-content: space-between; }
 .earn-head-title { font-size: 30rpx; font-weight: 800; }
