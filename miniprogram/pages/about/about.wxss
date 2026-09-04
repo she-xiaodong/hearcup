@@ -1,5 +1,5 @@
 .about-hero { text-align: center; padding: 72rpx 32rpx 56rpx; background: linear-gradient(160deg, #E6F4F4, #D6ECEC); }
-.about-logo { font-size: 48rpx; font-weight: 800; color: var(--primary-deep, #007A7A); letter-spacing: 4rpx; }
+.about-logo { font-size: 48rpx; font-weight: 800; color: var(--primary-deep, #2E8578); letter-spacing: 4rpx; }
 .about-slogan { margin-top: 12rpx; font-size: 26rpx; color: var(--text-sub); }
 
 .about-body { margin: 24rpx 32rpx; padding: 32rpx; }

@@ -21,21 +21,48 @@
 
   <view class="card list">
     <view class="call" wx:for="{{records}}" wx:key="id">
-      <view class="call-avatar avatar" style="background:{{item.color}}"><view class="ico ico-{{item.roleIcon?'lotus-w':'leaf-w'}}" style="width:42rpx;height:42rpx;"></view></view>
+      <view class="call-avatar avatar" style="background:{{item.color}}"><view class="ico ico-leaf-w" style="width:42rpx;height:42rpx;"></view></view>
       <view class="call-mid">
         <view class="call-name">{{item.providerName}}
-          <text class="tag {{item.callType===2?'tag-lav':'tag'}}">{{item.callType===2?'视频':'语音'}}</text>
+          <text class="tag">语音</text>
         </view>
         <view class="muted call-sub">{{item.time}} · {{item.durationText}}</view>
       </view>
       <view class="call-right">
         <view class="call-amt">-{{item.coins}}</view>
         <view class="stars" wx:if="{{item.rating}}">★ {{item.rating}}</view>
-        <view class="muted todo" wx:else>待评价</view>
+        <view class="rate-btn" wx:else data-id="{{item.id}}" catchtap="openRate">待评价</view>
       </view>
     </view>
     <view wx:if="{{records.length===0}}" class="empty">还没有通话记录，去首页找个倾听者聊聊吧</view>
   </view>
 
   <view class="tab-foot"></view>
+
+  <!-- 评价弹层 -->
+  <view class="rate-mask" wx:if="{{showRate}}" catchtap="closeRate">
+    <view class="rate-sheet" catchtap="noop">
+      <view class="rate-title">评价 {{rateTarget.providerName}}</view>
+      <view class="rate-stars">
+        <text
+          wx:for="{{[1,2,3,4,5]}}"
+          wx:key="*this"
+          class="rate-star {{rateStars >= item ? 'on' : ''}}"
+          data-star="{{item}}"
+          catchtap="setStars"
+        >★</text>
+      </view>
+      <textarea
+        class="rate-textarea"
+        placeholder="说说这次聊得怎么样（选填）"
+        value="{{rateText}}"
+        maxlength="200"
+        bindinput="onRateInput"
+      />
+      <view class="rate-actions">
+        <button class="btn btn-ghost rate-cancel" catchtap="closeRate">取消</button>
+        <button class="btn btn-primary rate-confirm" catchtap="submitRate">提交评价</button>
+      </view>
+    </view>
+  </view>
 </view>

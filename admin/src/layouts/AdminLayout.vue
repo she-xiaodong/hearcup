@@ -89,7 +89,7 @@ const icons = {
 }
 .logo {
   padding: 24px 16px 20px; display: flex; align-items: center; gap: 8px;
-  color: #4FB8A8; font-size: 19px; font-weight: 700;
+  color: #3A9E8F; font-size: 19px; font-weight: 700;
 }
 .logo-ico { width: 22px; height: 22px; }
 .ico {
@@ -103,7 +103,7 @@ const icons = {
 }
 .sidebar :deep(.el-menu-item:hover),
 .sidebar :deep(.el-sub-menu__title:hover) { background: #f6faf8; }
-.sidebar :deep(.el-menu-item.is-active) { background: #4FB8A8; color: #fff; }
+.sidebar :deep(.el-menu-item.is-active) { background: #3A9E8F; color: #fff; }
 .sidebar :deep(.el-sub-menu .el-menu-item) { min-width: 0; }
 .logout {
   display: flex; align-items: center; padding: 14px 16px; margin: 12px 8px;

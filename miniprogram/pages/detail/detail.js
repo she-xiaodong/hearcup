@@ -8,12 +8,7 @@ const demoReviews = [
 ]
 
 Page({
-  data: { p: null, reviews: demoReviews, videoPrice: 0, voiceCoins: '', videoCoins: '' },
-
-  videoPriceOf(p) {
-    const rate = Number((getApp().globalData.config || {}).videoRate) || 1.5
-    return Math.round(p.price_per_minute * rate * 10) / 10
-  },
+  data: { p: null, reviews: demoReviews },
 
   // 价格统一以H币展示（内部仍按元计费，1元=10H币）
   coins(yuan) {
@@ -26,14 +21,14 @@ Page({
       const p = store.getProviders().find(x => x.id === id)
       if (!p) { wx.showToast({ title: '未找到服务者', icon: 'none' }); return }
       wx.setNavigationBarTitle({ title: p.nickName })
-      this.setData({ p, videoPrice: this.videoPriceOf(p), voiceCoins: this.coins(p.price_per_minute), videoCoins: this.coins(this.videoPriceOf(p)) })
+      this.setData({ p })
       return
     }
     const r = await api.getProvider(id)
     if (r.code === 0 && r.data && r.data.provider) {
       wx.setNavigationBarTitle({ title: r.data.provider.nickName })
       const p = r.data.provider
-      this.setData({ p, reviews: r.data.ratings || demoReviews, videoPrice: this.videoPriceOf(p), voiceCoins: this.coins(p.price_per_minute), videoCoins: this.coins(this.videoPriceOf(p)) })
+      this.setData({ p, reviews: r.data.ratings || demoReviews })
     } else {
       wx.showToast({ title: '未找到服务者', icon: 'none' })
     }

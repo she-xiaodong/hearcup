@@ -38,8 +38,7 @@
   </view>
 
   <view class="call-bar">
-    <button class="btn btn-peach call-btn" bindtap="onCall" data-type="1"><view class="call-btn-inner"><view class="ico ico-mic-w" style="width:32rpx;height:32rpx;"></view><view>语音呼叫<view class="call-price">{{voiceCoins}} H币/分钟</view></view></view></button>
-    <button class="btn btn-ghost call-btn" bindtap="onCall" data-type="2"><view class="call-btn-inner"><view class="ico ico-video" style="width:32rpx;height:32rpx;"></view><view>视频呼叫<view class="call-price">{{videoCoins}} H币/分钟</view></view></view></button>
+    <button class="btn btn-peach call-btn" bindtap="onCall"><view class="call-btn-inner"><view class="ico ico-mic-w" style="width:32rpx;height:32rpx;"></view><view>去咨询</view></view></button>
   </view>
   <view class="safe-bottom"></view>
 </view>

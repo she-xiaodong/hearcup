@@ -1014,7 +1014,8 @@ func hCallRecords(w http.ResponseWriter, r *http.Request) {
 		list = append(list, map[string]interface{}{
 			"id": c.ID, "room_id": c.RoomID, "call_type": c.CallType,
 			"duration": c.Duration, "amount": c.Amount, "status": c.Status,
-			"user_rating": c.UserRating, "provider_name": store.db.Providers[c.ProviderID].RealName,
+			"user_rating": c.UserRating, "user_comment": c.UserComment,
+			"provider_name": store.db.Providers[c.ProviderID].RealName,
 			"user_name": store.db.Users[c.UserID].Nickname, "created_at": c.CreatedAt,
 		})
 	}

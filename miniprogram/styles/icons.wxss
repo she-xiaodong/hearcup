@@ -1,5 +1,5 @@
 /* styles/icons.wxss —— 扁平 SVG 图标集（WXSS 背景图渲染真实 SVG，非 emoji） */
-/* 配色沿用后台治愈系：主色 #008C8C / 次要灰 #8A8FA3 */
+/* 配色沿用后台治愈系：主色 #3A9E8F / 次要灰 #8A8FA3 */
 
 .ico{display:block;background-repeat:no-repeat;background-position:center;background-size:contain;width:44rpx;height:44rpx;flex:none;}
 

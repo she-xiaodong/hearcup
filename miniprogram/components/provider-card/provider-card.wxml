@@ -20,10 +20,9 @@
   </view>
 
   <view class="pc-foot">
-    <view class="pc-price"><text class="pc-price-num">{{priceCoins}}</text><text class="muted"> H币/分钟</text></view>
+    <view class="pc-price"><text class="pc-price-num">{{priceCoins}}</text><text class="muted"> H币起</text></view>
     <view class="pc-actions">
-      <view class="pc-call pc-call-voice" catchtap="onCall" data-type="1">语音</view>
-      <view class="pc-call pc-call-video" catchtap="onCall" data-type="2">视频</view>
+      <view class="pc-call pc-call-voice" catchtap="onCall">去咨询</view>
     </view>
   </view>
 </view>

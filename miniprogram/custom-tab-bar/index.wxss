@@ -18,6 +18,6 @@
   color: #8A8FA3;
   transition: color .2s;
 }
-.tab-item.on { color: #008C8C; }
+.tab-item.on { color: #3A9E8F; }
 .tab-icon { width: 56rpx; height: 56rpx; }
 .tab-text { font-size: 24rpx; font-weight: 600; }

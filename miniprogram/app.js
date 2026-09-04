@@ -21,7 +21,6 @@ App({
       baseUrl: 'https://shanlianba.com',
       listenerPrice: 1.0,
       counselorPrice: 2.0,
-      videoRate: 1.5,
       coinRate: 10,      // 虚拟币比例：1元 = 10 H币
       coinName: 'H币',
       minBalance: 3.0,

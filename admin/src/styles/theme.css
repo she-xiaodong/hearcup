@@ -6,23 +6,23 @@
  */
 
 :root {
-  /* —— Element Plus 主色：默认蓝 #409EFF → 薄荷绿 #4FB8A8 —— */
-  --el-color-primary: #4FB8A8;
-  --el-color-primary-light-3: #6FC4B7;
-  --el-color-primary-light-5: #8FD4CA;
-  --el-color-primary-light-7: #AFE3DC;
-  --el-color-primary-light-8: #BFEAE4;
-  --el-color-primary-light-9: #DFF4F0;
-  --el-color-primary-dark-2: #3A9386;
+  /* —— Element Plus 主色：默认蓝 #409EFF → 主色 #3A9E8F —— */
+  --el-color-primary: #3A9E8F;
+  --el-color-primary-light-3: #61B1A5;
+  --el-color-primary-light-5: #84C2B9;
+  --el-color-primary-light-7: #A7D5CE;
+  --el-color-primary-light-8: #BADED8;
+  --el-color-primary-light-9: #D7EFEB;
+  --el-color-primary-dark-2: #2E8578;
 
   /* 圆角：Element Plus 默认 4px 偏方，旧版是 10px+ 圆角 */
   --el-border-radius-base: 8px;
   --el-border-radius-small: 6px;
   --el-border-radius-round: 999px;
 
-  /* 旧版品牌变量（供页面直接引用） */
-  --hc-mint: #4FB8A8;
-  --hc-mint-d: #3aa293;
+  /* 品牌变量（供页面直接引用） */
+  --hc-mint: #3A9E8F;
+  --hc-mint-d: #2E8578;
   --hc-orange: #FF9E80;
   --hc-lav: #B5A8E0;
   --hc-bg: #FBF7F2;

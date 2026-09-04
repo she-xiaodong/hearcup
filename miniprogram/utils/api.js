@@ -26,7 +26,7 @@ function mapProvider(p) {
     nickName: p.nickname || p.real_name || ('用户' + p.id),
     role: 1,
     avatar: p.avatar || '',
-    avatarColor: '#008C8C',
+    avatarColor: '#3A9E8F',
     levelText: (LEVEL_TEXT[p.level] || '') + '倾听者',
     rating: p.rating || 0,
     total_sessions: p.total_sessions || 0,
@@ -48,12 +48,14 @@ function mapRecord(r) {
   const p2 = n => String(n).padStart(2, '0')
   return {
     id: r.id,
+    roomId: r.room_id || r.id,
     providerName: r.provider_name || '',
     callType: r.call_type || 1,
     durationText: `${m}分${p2(s)}秒`,
     amount: r.amount || 0,
     time: `${p2(d.getMonth() + 1)}-${p2(d.getDate())} ${p2(d.getHours())}:${p2(d.getMinutes())}`,
-    rating: r.user_rating || 0
+    rating: r.user_rating || 0,
+    comment: r.user_comment || ''
   }
 }
 

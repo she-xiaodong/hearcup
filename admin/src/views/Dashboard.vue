@@ -17,9 +17,9 @@
       <div class="chart-title">近 7 日趋势（通话量 / 收入）</div>
       <svg viewBox="0 0 700 260" class="chart">
         <line v-for="i in 4" :key="i" :x1="40" :x2="680" :y1="20 + i * 50" :y2="20 + i * 50" stroke="#F0ECE6" />
-        <polyline :points="callPoints" fill="none" stroke="#4FB8A8" stroke-width="3" />
+        <polyline :points="callPoints" fill="none" stroke="#3A9E8F" stroke-width="3" />
         <polyline :points="incomePoints" fill="none" stroke="#FF9E80" stroke-width="3" />
-        <circle v-for="(p, i) in callDots" :key="'c'+i" :cx="p.x" :cy="p.y" r="4" fill="#4FB8A8" />
+        <circle v-for="(p, i) in callDots" :key="'c'+i" :cx="p.x" :cy="p.y" r="4" fill="#3A9E8F" />
         <circle v-for="(p, i) in incomeDots" :key="'i'+i" :cx="p.x" :cy="p.y" r="4" fill="#FF9E80" />
         <text v-for="(d, i) in trend" :key="'t'+i" :x="30 + i * 95" y="245" font-size="12" fill="#8A8FA3" text-anchor="middle">{{ d.date }}</text>
       </svg>
@@ -88,6 +88,6 @@ onMounted(async () => {
 .chart { width: 100%; height: auto; }
 .legend { display: flex; gap: 24px; margin-top: 8px; color: #8A8FA3; font-size: 13px; }
 .dot { display: inline-block; width: 10px; height: 10px; border-radius: 50%; margin-right: 6px; }
-.dot-call { background: #4FB8A8; }
+.dot-call { background: #3A9E8F; }
 .dot-income { background: #FF9E80; }
 </style>

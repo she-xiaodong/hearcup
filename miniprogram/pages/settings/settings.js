@@ -7,7 +7,7 @@ Page({
       title: '退出登录',
       content: '退出后需重新登录才能使用，确定退出吗？',
       confirmText: '退出',
-      confirmColor: '#008C8C',
+      confirmColor: '#3A9E8F',
       success: (r) => {
         if (!r.confirm) return
         try { wx.removeStorageSync('hearcup_token') } catch (e) {}

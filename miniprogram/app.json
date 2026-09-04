@@ -15,7 +15,7 @@
     "pages/listener-detail/index"
   ],
   "window": {
-    "navigationBarBackgroundColor": "#008C8C",
+    "navigationBarBackgroundColor": "#3A9E8F",
     "navigationBarTitleText": "HearCup",
     "navigationBarTextStyle": "white",
     "backgroundColor": "#FBF7F2",
@@ -24,7 +24,7 @@
   "tabBar": {
     "custom": true,
     "color": "#8A8FA3",
-    "selectedColor": "#008C8C",
+    "selectedColor": "#3A9E8F",
     "backgroundColor": "#FFFFFF",
     "list": [
       { "pagePath": "pages/index/index", "text": "首页" },

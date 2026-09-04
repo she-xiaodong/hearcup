@@ -38,7 +38,7 @@
             <view class="row-title">接听来电</view>
             <view class="muted">{{isOnline ? '已上线，等待来电' : '已下线'}}</view>
           </view>
-          <switch checked="{{isOnline}}" bindchange="toggleOnline" color="#008C8C" />
+          <switch checked="{{isOnline}}" bindchange="toggleOnline" color="#3A9E8F" />
         </view>
       </view>
 
@@ -90,7 +90,7 @@
             <view class="row-title" style="font-size: 28rpx;">后台音频保活</view>
             <view class="muted">播放极轻量静音，降低被系统回收概率</view>
           </view>
-          <switch checked="{{keepAlive}}" bindchange="toggleKeepAlive" color="#008C8C" />
+          <switch checked="{{keepAlive}}" bindchange="toggleKeepAlive" color="#3A9E8F" />
         </view>
         <view class="keep-guide" bindtap="showKeepGuide">
           <view class="kg-main">

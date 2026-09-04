@@ -6,8 +6,8 @@
 
 <style>
 :root {
-  --hc-primary: #4FB8A8;
-  --hc-primary-deep: #3A9E8F;
+  --hc-primary: #3A9E8F;
+  --hc-primary-deep: #2E8578;
   --hc-peach: #FF9E80;
   --hc-bg: #FBF7F2;
 }

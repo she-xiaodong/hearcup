@@ -56,5 +56,5 @@ async function onLogin() {
 .brand h1 { margin: 8px 0 4px; color: #3A9E8F; font-size: 28px; }
 .sub { color: #8A8FA3; font-size: 14px; margin: 0; }
 .login-btn { width: 100%; margin-top: 28px; height: 48px; border-radius: 999px;
-  background: linear-gradient(135deg, #4FB8A8, #3A9E8F); border: none; font-weight: 600; }
+  background: linear-gradient(135deg, #3A9E8F, #2E8578); border: none; font-weight: 600; }
 </style>

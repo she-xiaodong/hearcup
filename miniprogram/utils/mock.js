@@ -8,7 +8,7 @@ const tags = [
 
 const providers = [
   {
-    id: 1001, role: 2, nickName: '林清和', avatarColor: '#008C8C',
+    id: 1001, role: 2, nickName: '林清和', avatarColor: '#3A9E8F',
     level: 3, levelText: '资深倾听者', rating: 4.9, total_sessions: 1260,
     price_per_minute: 2.0, is_online: true,
     intro: '国家二级心理咨询师，8年临床陪伴经验。擅长用温暖而专业的方式，陪你梳理情绪、看见关系里的自己。',
@@ -17,21 +17,21 @@ const providers = [
     certificate_no: '18230000xxxx'
   },
   {
-    id: 1002, role: 1, nickName: '小满', avatarColor: '#008C8C',
+    id: 1002, role: 1, nickName: '小满', avatarColor: '#3A9E8F',
     level: 2, levelText: '认证倾听者', rating: 4.8, total_sessions: 540,
     price_per_minute: 1.0, is_online: true,
     intro: '在这里你可以什么都不说，也可以说很多。我愿意做那个安静接住你的人。',
     expertise: ['人际关系', '情绪压力', '自我成长']
   },
   {
-    id: 1003, role: 1, nickName: '阿树', avatarColor: '#00A8A8',
+    id: 1003, role: 1, nickName: '阿树', avatarColor: '#58B4A6',
     level: 2, levelText: '认证倾听者', rating: 4.7, total_sessions: 312,
     price_per_minute: 1.0, is_online: true,
     intro: '程序员转行的倾听者，懂熬夜、懂内耗、懂说不出口的累。慢慢来，不急。',
     expertise: ['职场', '情绪压力', '人际关系']
   },
   {
-    id: 1004, role: 2, nickName: '苏晚', avatarColor: '#008C8C',
+    id: 1004, role: 2, nickName: '苏晚', avatarColor: '#3A9E8F',
     level: 3, levelText: '资深倾听者', rating: 5.0, total_sessions: 2080,
     price_per_minute: 2.0, is_online: false,
     intro: '专注青年情绪与关系议题，用抱持性的空间陪你长出自己的力量。',
@@ -40,14 +40,14 @@ const providers = [
     certificate_no: '11230000xxxx'
   },
   {
-    id: 1005, role: 1, nickName: '糖豆', avatarColor: '#008C8C',
+    id: 1005, role: 1, nickName: '糖豆', avatarColor: '#3A9E8F',
     level: 1, levelText: '实习倾听者', rating: 4.6, total_sessions: 86,
     price_per_minute: 1.0, is_online: true,
     intro: '还在学习，但足够真诚。愿意陪你聊聊那些白天说不出的话。',
     expertise: ['校园', '人际关系', '情绪压力']
   },
   {
-    id: 1006, role: 1, nickName: '老周', avatarColor: '#008C8C',
+    id: 1006, role: 1, nickName: '老周', avatarColor: '#3A9E8F',
     level: 2, levelText: '认证倾听者', rating: 4.8, total_sessions: 720,
     price_per_minute: 1.0, is_online: false,
     intro: '中年大叔一枚，听过的故事比喝过的茶还多。生活的事，咱慢慢唠。',

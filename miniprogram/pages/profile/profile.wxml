@@ -36,7 +36,7 @@
   <view wx:elif="{{isProvider}}" class="provider">
     <view class="pv-top">
       <view class="pv-title">倾听者中心</view>
-      <switch checked="{{me.isOnline}}" bindchange="toggleOnline" color="#008C8C" />
+      <switch checked="{{me.isOnline}}" bindchange="toggleOnline" color="#3A9E8F" />
     </view>
     <view class="pv-grid">
       <view class="pv-cell"><view class="pv-num">¥{{me.pendingIncome}}</view><view class="pv-label">未完成收入</view></view>
