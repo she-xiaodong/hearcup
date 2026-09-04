@@ -15,7 +15,8 @@
     "pages/listener-detail/index",
     "pages/income/index",
     "pages/provider-calls/index",
-    "pages/provider-edit/index"
+    "pages/provider-edit/index",
+    "pages/withdraw-records/index"
   ],
   "window": {
     "navigationBarBackgroundColor": "#3A9E8F",

@@ -1271,7 +1271,69 @@ func hProviderEarnings(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
-// hProviderCalls：倾听者本人的「接听记录」（来电列表），含每次通话的时长/收益/评价
+// hProviderWithdrawals：倾听者本人的「提现申请单」列表（含打款后关联的领取状态）
+// Withdraw.status: 0待审核 1审核通过 2已打款 3拒绝；打款后生成 Transfer（微信商家转账，可能需手动领取）
+func hProviderWithdrawals(w http.ResponseWriter, r *http.Request) {
+	uid, ok := requireUser(r)
+	if !ok {
+		fail(w, "未登录")
+		return
+	}
+	store.mu.Lock()
+	defer store.mu.Unlock()
+	var me *Provider
+	for _, p := range store.db.Providers {
+		if p.UserID == uid {
+			me = p
+			break
+		}
+	}
+	if me == nil {
+		fail(w, "尚未入驻")
+		return
+	}
+	// 按 withdraw_id 建转账索引
+	transferOf := map[int64]*TransferRecord{}
+	for _, tr := range store.db.Transfers {
+		transferOf[tr.WithdrawID] = tr
+	}
+	list := []map[string]interface{}{}
+	for _, wd := range store.db.Withdraws {
+		if wd.ProviderID != me.ID {
+			continue
+		}
+		item := map[string]interface{}{
+			"id":             wd.ID,
+			"amount":         wd.Amount,
+			"fee":            wd.Fee,
+			"status":         wd.Status, // 0待审核 1已通过 2已打款 3拒绝
+			"remark":         wd.Remark,
+			"created_at":     wd.CreatedAt,
+			"approved_at":    wd.ApprovedAt,
+			"transfer_state": "",
+			"transfer_id":    0,
+			"can_claim":      false,
+			"transfer_fail":  "",
+		}
+		if tr, ok2 := transferOf[wd.ID]; ok2 {
+			item["transfer_id"] = tr.ID
+			item["transfer_state"] = tr.State
+			item["transfer_fail"] = tr.FailReason
+			// 可领取：微信转账发起后处于待领取/处理中；FINISHED/FAIL/CANCELLED 无需再领
+			claimable := map[string]bool{
+				"ACCEPTED": true, "PROCESSING": true, "WAIT_USER_CONFIRM": true, "TRANSFERING": true,
+			}
+			item["can_claim"] = claimable[tr.State] && tr.Status == 0
+		}
+		list = append(list, item)
+	}
+	sort.Slice(list, func(i, j int) bool {
+		return list[i]["created_at"].(int64) > list[j]["created_at"].(int64)
+	})
+	sendOK(w, map[string]interface{}{"total": len(list), "list": list})
+}
+
+// hProviderCalls：倾听者本人的「服务订单」（来电服务记录）列表，含每次服务的时长/收益/评价
 func hProviderCalls(w http.ResponseWriter, r *http.Request) {
 	uid, ok := requireUser(r)
 	if !ok {

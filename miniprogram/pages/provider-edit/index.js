@@ -41,7 +41,8 @@ Page({
     try {
       const r = await api.getProviderStatus()
       const p = (r && r.code === 0 && r.data) || {}
-      if (typeof p.status === 'number' && p.status !== 1) {
+      // 真实环境：仅已通过入驻审核的倾听者可编辑；演示模式直接展示表单
+      if (!getApp().globalData.config.useMock && typeof p.status === 'number' && p.status !== 1) {
         wx.showToast({ title: '需先通过入驻审核', icon: 'none' })
         setTimeout(() => wx.navigateBack(), 1200)
         return

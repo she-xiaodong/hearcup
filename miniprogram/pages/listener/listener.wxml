@@ -74,38 +74,30 @@
         </view>
         <view class="earn-total muted">累计收入 ¥{{earnings.total_earnings}}</view>
 
-        <!-- 收益明细 / 接听记录 入口 -->
+        <!-- 入口：收益明细 / 服务订单 / 提现记录 -->
         <view class="earn-nav">
           <view class="earn-nav-item" bindtap="goIncome">
             <view class="eni-main">
               <view class="eni-title">收益明细</view>
-              <view class="muted eni-sub">每笔通话收入与提现记录</view>
+              <view class="muted eni-sub">每笔通话收入</view>
             </view>
             <text class="muted eni-arrow">›</text>
           </view>
           <view class="earn-nav-item" bindtap="goProviderCalls">
             <view class="eni-main">
-              <view class="eni-title">接听记录</view>
-              <view class="muted eni-sub">来电时长、收入与评价</view>
+              <view class="eni-title">服务订单</view>
+              <view class="muted eni-sub">来电服务、时长与评价</view>
+            </view>
+            <text class="muted eni-arrow">›</text>
+          </view>
+          <view class="earn-nav-item" bindtap="goWithdrawRecords">
+            <view class="eni-main">
+              <view class="eni-title">提现记录</view>
+              <view class="muted eni-sub">提现进度与到账领取</view>
             </view>
             <text class="muted eni-arrow">›</text>
           </view>
         </view>
-      </view>
-
-      <!-- 提现记录（商家转账到零钱：发起后须手动领取） -->
-      <view class="card listener-card">
-        <view class="section-title" style="margin: 0 0 12rpx;">提现记录</view>
-        <view wx:if="{{transfers.length === 0}}" class="muted tf-empty">暂无提现记录，可提现余额满后点「申请提现」</view>
-        <view wx:for="{{transfers}}" wx:key="id" class="transfer-item">
-          <view class="row-main">
-            <view class="row-title">¥{{item.amount}} <text class="muted" style="font-weight:400;font-size:22rpx;margin-left:8rpx;">{{item.stateText}}</text></view>
-            <view class="muted" style="font-size:22rpx;">{{item.timeText}}</view>
-          </view>
-          <button wx:if="{{item.canClaim}}" class="btn btn-primary btn-sm" data-id="{{item.id}}" bindtap="onClaim" style="margin:0;">去领取</button>
-          <text wx:else class="muted" style="font-size:24rpx;">{{item.stateText}}</text>
-        </view>
-        <view wx:if="{{transfers.length > 0}}" class="muted claim-tip">微信转账需在微信中手动领取才会到账，待领取的记录点「去领取」按提示操作。</view>
       </view>
     </block>
   </block>

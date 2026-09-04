@@ -1,0 +1,24 @@
+.topbar { display: block; }
+.list-card { margin: 0 32rpx 24rpx; padding: 8rpx 28rpx; }
+.list-empty { font-size: 24rpx; padding: 60rpx 0; text-align: center; line-height: 1.9; }
+
+.wd-item { border-bottom: 1rpx solid var(--line); }
+.wd-item:last-child { border-bottom: none; }
+.wd-row { display: flex; align-items: center; justify-content: space-between; padding: 26rpx 0; }
+.wd-main { flex: 1; min-width: 0; }
+.wd-amt { font-size: 32rpx; font-weight: 800; }
+.wd-sub { font-size: 22rpx; margin-top: 4rpx; }
+.wd-right { display: flex; align-items: center; gap: 12rpx; flex-shrink: 0; }
+.wd-badge { font-size: 22rpx; padding: 4rpx 16rpx; border-radius: 999rpx; background: #F1F3F5; color: #6B7280; }
+.wd-badge.warn { background: #FFF3D6; color: #B8860B; font-weight: 600; }
+.wd-arrow { font-size: 30rpx; transition: transform .2s; }
+.wd-arrow.up { transform: rotate(90deg); }
+
+.wd-detail { background: #F7FAF9; border-radius: 14rpx; padding: 20rpx 24rpx; margin-bottom: 22rpx; }
+.wd-detail-row { display: flex; justify-content: space-between; font-size: 25rpx; padding: 8rpx 0; }
+.wd-state { color: var(--primary-deep); font-weight: 600; text-align: right; }
+.wd-claim { width: 100%; margin-top: 12rpx !important; }
+.wd-tip { font-size: 22rpx; margin-top: 10rpx; }
+.warn-tip { color: #E2544A; }
+
+.wd-foot-tip { margin: 0 48rpx 20rpx; text-align: center; font-size: 22rpx; line-height: 1.7; }

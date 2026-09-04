@@ -1,0 +1,54 @@
+<view class="page-bg">
+  <view class="topbar">
+    <view class="section-title" style="margin:0;">提现记录</view>
+    <view class="muted">申请进度 · 打款到账 · 微信领取</view>
+  </view>
+
+  <view wx:if="{{loading}}" class="empty">加载中…</view>
+
+  <block wx:else>
+    <view class="card list-card">
+      <view wx:if="{{list.length === 0}}" class="muted list-empty">
+        暂无提现记录<br />可提现余额满后，在平台点「申请提现」
+      </view>
+
+      <view wx:for="{{list}}" wx:key="id" class="wd-item">
+        <!-- 行：金额 + 状态徽标 -->
+        <view class="wd-row" data-id="{{item.id}}" bindtap="toggle">
+          <view class="wd-main">
+            <view class="wd-amt">提现 ¥{{item.amount}}</view>
+            <view class="muted wd-sub">{{item.timeText}}</view>
+          </view>
+          <view class="wd-right">
+            <text class="wd-badge {{item.canClaim ? 'warn' : ''}}">{{item.badge}}</text>
+            <text class="muted wd-arrow {{expandedId === item.id ? 'up' : ''}}">›</text>
+          </view>
+        </view>
+
+        <!-- 展开详情 -->
+        <view wx:if="{{expandedId === item.id}}" class="wd-detail">
+          <view class="wd-detail-row"><text class="muted">申请单号</text><text>#{{item.id}}</text></view>
+          <view class="wd-detail-row"><text class="muted">申请时间</text><text>{{item.timeText}}</text></view>
+          <view wx:if="{{item.approvedText}}" class="wd-detail-row"><text class="muted">打款时间</text><text>{{item.approvedText}}</text></view>
+          <view wx:if="{{item.stateLine}}" class="wd-detail-row"><text class="muted">进度</text><text class="wd-state">{{item.stateLine}}</text></view>
+          <view wx:if="{{item.fee}}" class="wd-detail-row"><text class="muted">手续费</text><text>¥{{item.fee}}</text></view>
+          <button
+            wx:if="{{item.canClaim}}"
+            class="btn btn-primary btn-sm wd-claim"
+            data-id="{{item.id}}"
+            data-transfer="{{item.transferId}}"
+            bindtap="onClaim"
+            loading="{{claimingId === item.id}}"
+            style="margin:0;"
+          >去微信领取</button>
+          <view wx:if="{{item.transferState === 'FINISHED' || item.transferState === 'SUCCESS'}}" class="muted wd-tip">已到账微信零钱，请留意微信支付到账通知</view>
+          <view wx:if="{{item.transferState === 'FAIL'}}" class="muted wd-tip warn-tip">打款失败，请联系客服处理</view>
+        </view>
+      </view>
+    </view>
+
+    <view class="muted wd-foot-tip">提现打款采用微信「商家转账到零钱」，部分转账需在微信中手动点击领取才会到账。</view>
+  </block>
+
+  <view class="safe-bottom"></view>
+</view>

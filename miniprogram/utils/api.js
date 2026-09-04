@@ -234,10 +234,28 @@ const api = {
     if (r._mock) return { code: 0, data: { today_income: 0, withdrawable: 0, total_earnings: 0, today_calls: 0, details: [], completed_income: 0, pending_income: 0 } }
     return r
   },
-  // 倾听者本人「接听记录」：含时长/收益/评价
+  // 倾听者本人「服务订单」（来电服务记录）：含时长/收益/评价
   async getProviderCalls() {
     const r = await request('GET', '/api/v1/provider/calls')
     if (r._mock) return { code: 0, data: [] }
+    return r
+  },
+  // 倾听者本人「提现申请单」：状态/打款关联/是否可微信领取
+  async getProviderWithdrawals() {
+    const r = await request('GET', '/api/v1/provider/withdrawals')
+    if (r._mock) {
+      const t = Math.floor(Date.now() / 1000)
+      return {
+        code: 0,
+        data: {
+          total: 2,
+          list: [
+            { id: 1001, amount: 100, fee: 0, status: 2, remark: '', created_at: t - 86400, approved_at: t - 43200, transfer_state: 'FINISHED', transfer_id: 9001, can_claim: false, transfer_fail: '' },
+            { id: 1002, amount: 80, fee: 0, status: 0, remark: '', created_at: t - 3600, approved_at: 0, transfer_state: '', transfer_id: 0, can_claim: false, transfer_fail: '' }
+          ]
+        }
+      }
+    }
     return r
   },
   async applyProvider(form) {
