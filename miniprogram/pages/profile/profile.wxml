@@ -4,9 +4,9 @@
       <image class="head-avatar-img" src="{{user.avatar || '/images/default_avatar.png'}}" mode="aspectFill" />
     </button>
     <view class="head-info">
-      <input class="head-name-input" type="nickname" placeholder="点击设置昵称" value="{{user.nickName}}" bindblur="onNicknameBlur" />
+      <input class="head-name-input" type="nickname" placeholder="点击设置昵称" value="{{user.nickName}}" bindblur="onNicknameBlur" bindconfirm="onNicknameBlur" confirm-type="done" />
       <view class="h-no">H号：{{user.h_no}}</view>
-      <view class="muted head-phone">{{user.phone || '微信授权用户'}}</view>
+      <view class="muted head-phone" wx:if="{{user.phone}}">{{user.phone}}</view>
     </view>
   </view>
 
@@ -42,10 +42,10 @@
 
   <!-- 已通过：入口横幅（倾听者中心已整体并入「倾听者平台」页） -->
   <view wx:elif="{{isProvider}}" class="pv-entry" bindtap="goListener">
-    <view class="pv-e-ico ico ico-mic-w"></view>
+    <view class="ico ico-ear-w pv-e-ico"></view>
     <view class="pv-e-main">
       <view class="pv-e-title">倾听者平台</view>
-      <view class="pv-e-sub muted">上线接单 · 收益明细 · 提现 · 接叫记录</view>
+      <view class="pv-e-sub muted">上线接单 · 收益明细 · 提现 · 接听记录</view>
     </view>
     <text class="muted pv-e-arrow">›</text>
   </view>

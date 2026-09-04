@@ -1108,11 +1108,13 @@ func hProviderEarnings(w http.ResponseWriter, r *http.Request) {
 	}
 	today := startOfToday()
 	todayIncome := 0.0
+	todayCalls := 0
 	details := []map[string]interface{}{}
 	for _, c := range store.db.Calls {
 		if c.ProviderID == me.ID && c.Status == 1 {
 			if c.EndTime >= today {
 				todayIncome += c.ProviderIncome
+				todayCalls++
 			}
 			details = append(details, map[string]interface{}{
 				"created_at": c.CreatedAt, "duration": c.Duration, "income": c.ProviderIncome,
@@ -1131,11 +1133,11 @@ func hProviderEarnings(w http.ResponseWriter, r *http.Request) {
 		"pending_income":   round2(me.Withdrawable), // 未完成收入（可提现余额）
 		"completed_income": round2(completedIncome), // 已完成收入（已打款）
 		"withdrawable":     me.Withdrawable, "total_earnings": me.TotalEarnings,
-		"today_income": todayIncome, "details": details,
+		"today_income": todayIncome, "today_calls": todayCalls, "details": details,
 	})
 }
 
-// hProviderCalls：倾听者本人的「接叫记录」（来电列表），含每次通话的时长/收益/评价
+// hProviderCalls：倾听者本人的「接听记录」（来电列表），含每次通话的时长/收益/评价
 func hProviderCalls(w http.ResponseWriter, r *http.Request) {
 	uid, ok := requireUser(r)
 	if !ok {

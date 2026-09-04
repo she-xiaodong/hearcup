@@ -50,7 +50,7 @@
         </view>
         <view class="muted tf-state {{item.canClaim ? 'tf-pending' : ''}}">{{item.stateText}}</view>
       </view>
-      <view wx:if="{{transfers.length > 0}}" class="muted claim-tip">微信转账需在微信中手动领取才会到账，可回到平台「分佣领取」处理。</view>
+      <view wx:if="{{transfers.length > 0}}" class="muted claim-tip">微信转账需在微信中手动领取才会到账，可回到平台「提现记录」处理。</view>
     </view>
   </block>
 

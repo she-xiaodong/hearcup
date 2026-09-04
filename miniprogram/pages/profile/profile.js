@@ -1,5 +1,5 @@
 // pages/profile/profile —— 「我的」：资料 + H号 + 余额 + 入驻状态/平台入口 + 菜单
-// 说明：倾听者侧功能（在线开关/收益/提现/接叫记录）已整体并入「倾听者平台」页 pages/listener，
+// 说明：倾听者侧功能（在线开关/收益/提现/接听记录）已整体并入「倾听者平台」页 pages/listener，
 //       本页只保留入口与通用菜单。
 const store = require('../../utils/store.js')
 const { callRecords } = require('../../utils/mock.js')
@@ -76,19 +76,26 @@ Page({
     })
   },
 
-  // —— 昵称：type=nickname 获取微信昵称 ——
+  // —— 昵称：type=nickname 获取微信昵称（失焦/回车都触发保存，带锁防重）——
   async onNicknameBlur(e) {
+    if (this._nickSaving) return
     const name = (e.detail.value || '').trim()
     if (!name || name === this.data.user.nickName) return
-    this.setData({ 'user.nickName': name })
-    getApp().globalData.userInfo.nickName = name
-    if (!getApp().globalData.config.useMock) {
-      const r = await api.updateProfile(name, '')
-      if (r.code === 0 && r.data) {
-        getApp().globalData.userInfo = Object.assign({}, getApp().globalData.userInfo, r.data)
-      } else {
-        wx.showToast({ title: (r.msg || '昵称保存失败'), icon: 'none' })
+    this._nickSaving = true
+    try {
+      this.setData({ 'user.nickName': name })
+      getApp().globalData.userInfo.nickName = name
+      if (!getApp().globalData.config.useMock) {
+        const r = await api.updateProfile(name, '')
+        if (r.code === 0 && r.data) {
+          getApp().globalData.userInfo = Object.assign({}, getApp().globalData.userInfo, r.data)
+          wx.showToast({ title: '昵称已保存', icon: 'none' })
+        } else {
+          wx.showToast({ title: (r.msg || '昵称保存失败'), icon: 'none' })
+        }
       }
+    } finally {
+      this._nickSaving = false
     }
   },
 

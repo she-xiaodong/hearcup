@@ -211,7 +211,7 @@ const api = {
     if (r._mock) return { code: 0, data: { today_income: 0, withdrawable: 0, total_earnings: 0, today_calls: 0, details: [], completed_income: 0, pending_income: 0 } }
     return r
   },
-  // 倾听者本人「接叫记录」：含时长/收益/评价
+  // 倾听者本人「接听记录」：含时长/收益/评价
   async getProviderCalls() {
     const r = await request('GET', '/api/v1/provider/calls')
     if (r._mock) return { code: 0, data: [] }
@@ -265,7 +265,7 @@ const api = {
     return r
   },
 
-  // ===== 分佣领取（商家转账到零钱：发起后须倾听者手动领取）=====
+  // ===== 提现打款记录（商家转账到零钱：发起后须倾听者手动领取）=====
   // 查看本人名下分佣转账记录（含待领取标记）
   async getProviderTransfers() {
     const r = await request('GET', '/api/v1/provider/transfers')

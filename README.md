@@ -24,7 +24,7 @@ Hearcup_new/
 │   ├── custom-tab-bar/     # 自定义 tabBar（首页/通话/我的）
 │   ├── pages/              # index 首页 · calls 通话记录 · profile 我的 · listener 倾听者平台
 │   │                       # · listener-detail 详情(选时长) · calling-phone 拨号页 · income 收益明细
-│   │                       # · provider-calls 接叫记录 · recharge/apply/about/feedback/settings/devcheck …
+│   │                       # · provider-calls 接听记录 · recharge/apply/about/feedback/settings/devcheck …
 │   └── utils/              # api.js(接口层) · store.js · mock.js(演示) · fmt.js(收益/通话格式化)
 ├── server/                 # Go 后端（标准库 + go-sql-driver/mysql），端口 8099
 │   ├── main.go             # 路由 + 静态托管后台 + 启动
@@ -45,7 +45,7 @@ Hearcup_new/
 ## 核心业务流
 
 1. **用户端**：首页卡片展示倾听师（性别小图标 / 等级 / 在线离线 / 「15 分钟档 H币起」/ H号）→ 详情页（头像、性别、等级、从业年限、擅长领域、H号；**时长下拉**选档）→ 下单（默认扣 **H币余额**，不足引导充值）→ 支付成功返回对方手机号 → 系统电话拨打 → 通话中自助「结束通话」按实际分钟结算（超出套餐补差）→ 通话记录可**评价**（星级+文字，回写并重算倾听师均分）。
-2. **倾听者端（倾听者平台页，入口在「我的」）**：上下线开关 → 收益卡（今日/可提现/累计 + 申请提现，走**微信商家转账到零钱**、需手动领取）→ 收益明细 / 接叫记录 → 分佣领取 → 入驻状态管理。
+2. **倾听者端（倾听者平台页，入口在「我的」）**：上下线开关 → 收益卡（今日/可提现/累计 + 申请提现，走**微信商家转账到零钱**、需手动领取）→ 收益明细 / 接听记录 → 提现记录 → 入驻状态管理。
 
 ---
 

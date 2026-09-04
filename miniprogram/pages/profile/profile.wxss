@@ -1,12 +1,12 @@
-.profile-head { display: flex; align-items: flex-start; justify-content: flex-start; gap: 24rpx; margin: 24rpx 32rpx; text-align: left; }
-.avatar-btn { padding: 0; margin: 0; background: transparent; line-height: normal; border: none; width: 120rpx; height: 120rpx; min-width: 120rpx; display: block; flex-shrink: 0; }
+.profile-head { display: flex; align-items: flex-start; justify-content: flex-start; gap: 20rpx; margin: 24rpx 32rpx; text-align: left; }
+.avatar-btn { padding: 0; margin: 0; background: transparent; line-height: normal; border: none; width: 116rpx; height: 116rpx; min-width: 116rpx; display: block; flex-shrink: 0; }
 .avatar-btn::after { border: none; }
-.head-avatar { width: 120rpx; height: 120rpx; font-size: 52rpx; border-radius: 50%; overflow: hidden; }
-.head-avatar-img { width: 120rpx; height: 120rpx; border-radius: 50%; display: block; }
-.head-info { flex: 1; min-width: 0; display: flex; flex-direction: column; align-items: flex-start; justify-content: flex-start; text-align: left; padding-top: 6rpx; }
-.head-name { font-size: 36rpx; font-weight: 800; }
-.head-name-input { font-size: 36rpx; font-weight: 800; height: 56rpx; line-height: 56rpx; width: 100%; text-align: left; padding: 0; }
-.h-no { margin-top: 6rpx; font-size: 24rpx; font-weight: 700; color: var(--primary-deep, #2E8578); letter-spacing: 1rpx; text-align: left; }
+.head-avatar { width: 116rpx; height: 116rpx; font-size: 52rpx; border-radius: 50%; overflow: hidden; }
+.head-avatar-img { width: 116rpx; height: 116rpx; border-radius: 50%; display: block; }
+.head-info { flex: 1; min-width: 0; display: flex; flex-direction: column; align-items: flex-start; justify-content: flex-start; text-align: left; }
+.head-name { font-size: 38rpx; font-weight: 800; }
+.head-name-input { font-size: 38rpx; font-weight: 800; height: 64rpx; line-height: 64rpx; width: 100%; text-align: left; padding: 0; }
+.h-no { margin-top: 6rpx; font-size: 26rpx; font-weight: 700; color: var(--primary-deep, #2E8578); letter-spacing: 1rpx; text-align: left; }
 .head-phone { font-size: 24rpx; margin-top: 4rpx; text-align: left; }
 
 .balance-row { display: flex; align-items: center; justify-content: space-between; margin: 0 32rpx 24rpx; }
@@ -29,16 +29,15 @@
 
 /* 倾听者平台入口横幅（原「倾听者中心」功能已并入平台页） */
 .pv-entry {
-  display: flex; align-items: center; gap: 20rpx;
+  display: flex; align-items: center; gap: 24rpx;
   margin: 0 32rpx 24rpx;
   background: linear-gradient(135deg, #3A9E8F, #2E8578);
   border-radius: var(--radius);
-  padding: 26rpx 32rpx;
+  padding: 30rpx 32rpx;
   box-shadow: var(--shadow);
 }
 .pv-e-ico {
-  width: 68rpx; height: 68rpx; border-radius: 50%;
-  background-color: rgba(255, 255, 255, 0.2);
+  width: 60rpx; height: 60rpx;
   flex-shrink: 0;
 }
 .pv-e-main { flex: 1; min-width: 0; }

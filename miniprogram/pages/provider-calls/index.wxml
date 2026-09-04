@@ -1,6 +1,6 @@
 <view class="page-bg">
   <view class="topbar">
-    <view class="section-title" style="margin:0;">接叫记录</view>
+    <view class="section-title" style="margin:0;">接听记录</view>
     <view class="muted">来电时长、收入与评价</view>
   </view>
 

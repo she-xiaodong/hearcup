@@ -1,7 +1,7 @@
 // pages/listener/listener —— 倾听者平台
 //
 // 倾听者侧的核心页面：查看入驻状态、开关接单、查看收益/申请提现、
-// 收益明细、接叫记录与分佣领取。
+// 收益明细、接听记录与提现记录。
 //
 // 说明：来电已改为「电话拨号」（用户下单后直接拨打系统电话），
 // 与小程序前后台无关，故 v2.0 TUICallKit 时代的保活/订阅消息已全部移除。
@@ -32,8 +32,12 @@ Page({
       this.setData({ applyStatus: st, isOnline: d.is_online === 1 })
       if (st === 1) {
         const er = await api.getProviderEarnings()
-        if (er && er.code === 0 && er.data) this.setData({ earnings: er.data })
-        // 分佣领取记录（倾听者发起转账后需手动领取）
+        if (er && er.code === 0 && er.data) {
+          // 合并默认值，防止后端缺字段时显示空白
+          const e = Object.assign({ today_income: 0, withdrawable: 0, total_earnings: 0, today_calls: 0 }, er.data || {})
+          this.setData({ earnings: e })
+        }
+        // 提现打款记录（倾听者发起转账后需手动领取）
         const tr = await api.getProviderTransfers()
         if (tr && tr.code === 0) this.setData({ transfers: this.mapTransfers(tr.data || []) })
       } else {
@@ -70,7 +74,7 @@ Page({
     wx.navigateTo({ url: '/pages/apply/apply' })
   },
 
-  // —— 收益明细 / 接叫记录 ——
+  // —— 收益明细 / 接听记录 ——
   goIncome() {
     wx.navigateTo({ url: '/pages/income/index' })
   },
@@ -106,8 +110,8 @@ Page({
     }
   },
 
-  // —— 分佣领取 ——
-  // 把后端分佣记录映射为前端展示结构（含状态文案、时间、领取凭证）
+  // —— 提现记录（转账打款） ——
+  // 把后端转账记录映射为展示结构（含状态文案、时间、领取凭证）
   mapTransfers(list) {
     const self = this
     return (list || []).map(t => {
