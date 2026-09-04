@@ -1,6 +1,6 @@
 // pages/provider-calls/index —— 倾听者「接听记录」（来电列表）
-const api = require('../../../utils/api.js')
-const { fmtTime, durText, dateKey, todayKey } = require('../../../utils/fmt.js')
+const api = require('../../utils/api.js')
+const { fmtTime, durText, dateKey, todayKey } = require('../../utils/fmt.js')
 
 Page({
   data: {

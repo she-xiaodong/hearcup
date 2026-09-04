@@ -1,8 +1,8 @@
 // pages/provider-edit/index —— 倾听者「资料与价格设置」
 // 修改：头像/昵称（即时保存，同步用户资料）＋ 简介/城市/年龄/学历/专业/从业年限/咨询时长/背景/擅长领域
 // ＋ 各时长档位价格(元，展示层×10=H币)
-const api = require('../../../utils/api.js')
-const store = require('../../../utils/store.js')
+const api = require('../../utils/api.js')
+const store = require('../../utils/store.js')
 
 // 与 api.js TAGS / 后端 seed 保持一致
 const TAG_NAMES = ['恋爱', '婚姻', '家庭', '职场', '校园', '亲子', '情绪压力', '自我成长', '人际关系']

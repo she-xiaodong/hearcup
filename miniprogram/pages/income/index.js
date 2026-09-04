@@ -1,7 +1,7 @@
 // pages/income/index —— 倾听者「收益明细」
 // 通话收入流水（来自 earnings.details）+ 提现记录（来自 provider/transfers）
-const api = require('../../../utils/api.js')
-const { fmtTime, durText, mapTransferItem } = require('../../../utils/fmt.js')
+const api = require('../../utils/api.js')
+const { fmtTime, durText, mapTransferItem } = require('../../utils/fmt.js')
 
 Page({
   data: {
