@@ -840,21 +840,17 @@ func hCallRating(w http.ResponseWriter, r *http.Request) {
 }
 
 func hCallRecords(w http.ResponseWriter, r *http.Request) {
-	_, ok := requireUser(r)
+	uid, ok := requireUser(r)
 	if !ok {
 		fail(w, "未登录")
 		return
 	}
-	uidStr := r.URL.Query().Get("user_id")
-	pidStr := r.URL.Query().Get("provider_id")
 	store.mu.Lock()
 	defer store.mu.Unlock()
+	// 安全：通话记录只返回「当前登录用户」本人的（全局记录走后台订单接口）
 	list := []map[string]interface{}{}
 	for _, c := range store.db.Calls {
-		if uidStr != "" && strconv.FormatInt(c.UserID, 10) != uidStr {
-			continue
-		}
-		if pidStr != "" && strconv.FormatInt(c.ProviderID, 10) != pidStr {
+		if c.UserID != uid {
 			continue
 		}
 		list = append(list, map[string]interface{}{
@@ -865,6 +861,10 @@ func hCallRecords(w http.ResponseWriter, r *http.Request) {
 			"user_name":     store.db.Users[c.UserID].Nickname, "created_at": c.CreatedAt,
 		})
 	}
+	// 按时间倒序（新到旧）
+	sort.Slice(list, func(i, j int) bool {
+		return list[i]["created_at"].(int64) > list[j]["created_at"].(int64)
+	})
 	sendOK(w, list)
 }
 

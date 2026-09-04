@@ -32,7 +32,7 @@ Page({
       return
     }
     // 真实后端
-    const [bal, st] = await Promise.all([api.getBalance(), api.getProviderStatus()])
+    const [bal, st, cr] = await Promise.all([api.getBalance(), api.getProviderStatus(), api.getCallRecords()])
     const balance = bal.code === 0 && bal.data ? bal.data.balance : user.balance
     if (bal.code === 0 && bal.data) store.setBalance(balance)
     // 未申请(-1)→null 显示「申请入驻」；0待审/1通过/2被拒保留状态
@@ -44,7 +44,7 @@ Page({
     this.setData({
       user, balance: getApp().toCoins(balance), apply,
       isProvider: !!(apply && apply.status === 1),
-      callCount: callRecords.length
+      callCount: (cr.code === 0 && Array.isArray(cr.data)) ? cr.data.length : 0
     })
   },
 
