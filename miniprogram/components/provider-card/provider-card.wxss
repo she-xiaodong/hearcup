@@ -6,18 +6,41 @@
   margin-bottom: 24rpx;
 }
 .pc-head { display: flex; align-items: center; gap: 20rpx; }
+.pc-av { position: relative; flex-shrink: 0; width: 96rpx; height: 96rpx; }
 .pc-avatar-img { width: 96rpx; height: 96rpx; border-radius: 50%; flex-shrink: 0; }
+/* 性别小图标（头像右下角徽标） */
+.pc-gen-badge {
+  position: absolute; right: -2rpx; bottom: -2rpx;
+  width: 34rpx; height: 34rpx; border-radius: 50%;
+  background: #fff;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 20rpx; font-weight: 700; line-height: 1;
+  box-sizing: border-box;
+}
+.pc-gen-badge.gen-m { color: #5B9BD5; }
+.pc-gen-badge.gen-f { color: #E56B9F; }
 .pc-info { flex: 1; min-width: 0; }
-.pc-name-row { display: flex; align-items: center; gap: 12rpx; }
-.pc-name { font-size: 32rpx; font-weight: 700; }
+.pc-name-row { display: flex; align-items: center; justify-content: space-between; gap: 12rpx; }
+.pc-nl { display: flex; align-items: center; gap: 10rpx; min-width: 0; flex: 1; }
+.pc-name { font-size: 32rpx; font-weight: 700; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 220rpx; }
+/* 等级徽标（名称后） */
+.pc-level {
+  font-size: 20rpx; font-weight: 600;
+  padding: 3rpx 14rpx; border-radius: 999rpx;
+  background: var(--primary-soft); color: var(--primary-deep);
+  flex-shrink: 0;
+}
 .st-tag { font-size: 22rpx; font-weight: 600; padding: 2rpx 14rpx; border-radius: 999rpx; flex-shrink: 0; }
 .st-on { background: #E6F7EE; color: #16A34A; }
 .st-off { background: #F1F3F5; color: #9AA0A6; }
-.pc-meta { display: flex; align-items: center; gap: 10rpx; margin-top: 6rpx; font-size: 24rpx; }
-.pc-sessions { margin-left: 4rpx; }
+.pc-meta { display: flex; align-items: center; gap: 10rpx; margin-top: 10rpx; font-size: 24rpx; }
+.pc-hno { font-size: 22rpx; }
 .pc-tags { margin: 20rpx 0 8rpx; min-height: 40rpx; }
-.pc-foot { display: flex; align-items: center; justify-content: space-between; margin-top: 8rpx; }
-.pc-price-num { font-size: 36rpx; font-weight: 800; color: var(--peach); }
+.pc-foot { display: flex; align-items: flex-end; justify-content: space-between; margin-top: 12rpx; }
+.pc-price { display: flex; flex-direction: column; }
+.pc-price-main { display: flex; align-items: baseline; }
+.pc-price-num { font-size: 40rpx; font-weight: 800; color: var(--peach); }
+.pc-price-sub { font-size: 20rpx; color: var(--text-sub); margin-top: 2rpx; }
 .pc-actions { display: flex; gap: 16rpx; }
 .pc-call {
   font-size: 26rpx; font-weight: 600;

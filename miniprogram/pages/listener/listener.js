@@ -1,4 +1,4 @@
-// pages/listener/listener —— 倾听者工作台
+// pages/listener/listener —— 倾听者平台
 //
 // 倾听者侧的核心页面：查看入驻状态、开关接单、查看收益，以及完成保活设置。
 //
@@ -180,6 +180,42 @@ Page({
 
   goApply() {
     wx.navigateTo({ url: '/pages/apply/apply' })
+  },
+
+  // —— 收益明细 / 接叫记录 ——
+  goIncome() {
+    wx.navigateTo({ url: '/pages/income/index' })
+  },
+  goProviderCalls() {
+    wx.navigateTo({ url: '/pages/provider-calls/index' })
+  },
+
+  // —— 申请提现（余额实时计算，微信商家转账到零钱）——
+  async goWithdraw() {
+    const wd = Number(this.data.earnings.withdrawable) || 0
+    if (wd <= 0) { wx.showToast({ title: '暂无可提现余额', icon: 'none' }); return }
+    const res = await new Promise((resolve) => {
+      wx.showModal({
+        title: '申请提现（单笔最高 ¥200）',
+        editable: true,
+        placeholderText: `请输入提现金额（元，可提现 ¥${wd}）`,
+        success: resolve
+      })
+    })
+    if (!res.confirm) return
+    const amount = Number(res.content)
+    if (!amount || amount <= 0) { wx.showToast({ title: '金额无效', icon: 'none' }); return }
+    if (amount > 200) { wx.showToast({ title: '单笔提现不能超过 200 元', icon: 'none' }); return }
+    if (amount > wd) { wx.showToast({ title: '超出可提现余额', icon: 'none' }); return }
+    wx.showLoading({ title: '提交中…', mask: true })
+    const r = await api.withdraw(amount)
+    wx.hideLoading()
+    if (r && r.code === 0) {
+      wx.showToast({ title: (r.data && r.data.msg) || '提现申请已提交', icon: 'none' })
+      this.refresh()
+    } else {
+      wx.showToast({ title: (r && r.msg) || '提现失败', icon: 'none' })
+    }
   },
 
   // —— 分佣领取 ——

@@ -1,0 +1,26 @@
+.topbar { display: block; }
+
+/* 汇总 */
+.sum-card { margin: 0 32rpx 24rpx; }
+.sum-grid { display: flex; }
+.sum-cell { flex: 1; text-align: center; position: relative; }
+.sum-cell::after { content: ''; position: absolute; right: 0; top: 10rpx; bottom: 10rpx; width: 1rpx; background: var(--line); }
+.sum-cell:last-child::after { display: none; }
+.sum-num { font-size: 36rpx; font-weight: 800; color: var(--primary-deep); }
+.sum-cell .muted { font-size: 22rpx; margin-top: 6rpx; }
+.sum-foot { text-align: center; font-size: 22rpx; margin-top: 20rpx; }
+
+/* 列表卡片 */
+.list-card { margin: 0 32rpx 24rpx; padding: 28rpx 32rpx; }
+.list-title { font-size: 30rpx; font-weight: 800; margin-bottom: 8rpx; }
+.list-empty { font-size: 24rpx; padding: 32rpx 0; text-align: center; }
+.inc-item { display: flex; align-items: center; justify-content: space-between; padding: 24rpx 0; border-bottom: 1rpx solid var(--line); }
+.inc-item:last-child { border-bottom: none; }
+.inc-main { flex: 1; min-width: 0; margin-right: 16rpx; }
+.inc-name { font-size: 28rpx; font-weight: 700; display: flex; align-items: center; gap: 12rpx; }
+.inc-sub { font-size: 22rpx; margin-top: 4rpx; }
+.inc-amt { font-size: 30rpx; font-weight: 800; color: var(--primary-deep); }
+.tf-state { font-size: 24rpx; flex-shrink: 0; }
+.tf-pending { color: #B8860B; font-weight: 600; }
+.tag-warn { background: #FFF3D6; color: #B8860B; }
+.claim-tip { font-size: 22rpx; line-height: 1.6; margin-top: 12rpx; }

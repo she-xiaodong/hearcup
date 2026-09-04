@@ -1,0 +1,58 @@
+<view class="page-bg">
+  <view class="topbar">
+    <view class="section-title" style="margin:0;">收益明细</view>
+    <view class="muted">通话收入与提现记录</view>
+  </view>
+
+  <view wx:if="{{loading}}" class="empty">加载中…</view>
+
+  <block wx:else>
+    <!-- 汇总 -->
+    <view class="card sum-card">
+      <view class="sum-grid">
+        <view class="sum-cell">
+          <view class="sum-num">¥{{summary.withdrawable}}</view>
+          <view class="muted">可提现</view>
+        </view>
+        <view class="sum-cell">
+          <view class="sum-num">¥{{summary.today}}</view>
+          <view class="muted">今日收入</view>
+        </view>
+        <view class="sum-cell">
+          <view class="sum-num">¥{{summary.total}}</view>
+          <view class="muted">累计收入</view>
+        </view>
+      </view>
+      <view class="muted sum-foot">已提现到账 ¥{{summary.completed}}</view>
+    </view>
+
+    <!-- 通话收入流水 -->
+    <view class="card list-card">
+      <view class="list-title">通话收入</view>
+      <view wx:if="{{income.length === 0}}" class="muted list-empty">还没有通话收入，上线接单后这里会显示每笔收益</view>
+      <view wx:for="{{income}}" wx:key="index" class="inc-item">
+        <view class="inc-main">
+          <view class="inc-name">{{item.name}}</view>
+          <view class="muted inc-sub">{{item.time}} · {{item.dur}}</view>
+        </view>
+        <view class="inc-amt">+¥{{item.income}}</view>
+      </view>
+    </view>
+
+    <!-- 提现记录 -->
+    <view class="card list-card">
+      <view class="list-title">提现记录</view>
+      <view wx:if="{{transfers.length === 0}}" class="muted list-empty">暂无提现记录</view>
+      <view wx:for="{{transfers}}" wx:key="id" class="inc-item">
+        <view class="inc-main">
+          <view class="inc-name">提现 ¥{{item.amount}}</view>
+          <view class="muted inc-sub">{{item.timeText}}</view>
+        </view>
+        <view class="muted tf-state {{item.canClaim ? 'tf-pending' : ''}}">{{item.stateText}}</view>
+      </view>
+      <view wx:if="{{transfers.length > 0}}" class="muted claim-tip">微信转账需在微信中手动领取才会到账，可回到平台「分佣领取」处理。</view>
+    </view>
+  </block>
+
+  <view class="safe-bottom"></view>
+</view>

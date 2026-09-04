@@ -1,7 +1,7 @@
 <view class="page-bg">
   <!-- 顶栏 -->
   <view class="topbar">
-    <view class="listener-title">倾听者工作台</view>
+    <view class="listener-title">倾听者平台</view>
   </view>
 
   <view wx:if="{{loading}}" class="empty">加载中…</view>
@@ -44,7 +44,10 @@
 
       <!-- 收益 -->
       <view class="card listener-card">
-        <view class="section-title" style="margin: 0;">今日收益</view>
+        <view class="earn-head">
+          <view class="earn-head-title">今日收益</view>
+          <button wx:if="{{earnings.withdrawable > 0}}" class="btn btn-primary btn-sm earn-withdraw" bindtap="goWithdraw" style="margin:0;">申请提现</button>
+        </view>
         <view class="earn-grid">
           <view class="earn-cell">
             <view class="earn-num">¥{{earnings.today_income}}</view>
@@ -60,6 +63,24 @@
           </view>
         </view>
         <view class="earn-total muted">累计收入 ¥{{earnings.total_earnings}}</view>
+
+        <!-- 收益明细 / 接叫记录 入口 -->
+        <view class="earn-nav">
+          <view class="earn-nav-item" bindtap="goIncome">
+            <view class="eni-main">
+              <view class="eni-title">收益明细</view>
+              <view class="muted eni-sub">每笔通话收入与提现记录</view>
+            </view>
+            <text class="muted eni-arrow">›</text>
+          </view>
+          <view class="earn-nav-item" bindtap="goProviderCalls">
+            <view class="eni-main">
+              <view class="eni-title">接叫记录</view>
+              <view class="muted eni-sub">来电时长、收入与评价</view>
+            </view>
+            <text class="muted eni-arrow">›</text>
+          </view>
+        </view>
       </view>
 
       <!-- 分佣领取（商家转账到零钱：发起后须手动领取） -->

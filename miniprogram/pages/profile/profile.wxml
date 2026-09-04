@@ -6,7 +6,7 @@
     <view class="head-info">
       <input class="head-name-input" type="nickname" placeholder="点击设置昵称" value="{{user.nickName}}" bindblur="onNicknameBlur" />
       <view class="h-no">H号：{{user.h_no}}</view>
-      <view class="muted">{{user.phone}}</view>
+      <view class="muted head-phone">{{user.phone || '微信授权用户'}}</view>
     </view>
   </view>
 
@@ -32,24 +32,26 @@
     <view class="muted" style="margin-top:8rpx;">你申请成为「倾听者」，预计 1-3 个工作日出结果。</view>
   </view>
 
-  <!-- 已通过：倾听者中心 -->
-  <view wx:elif="{{isProvider}}" class="provider">
-    <view class="pv-top">
-      <view class="pv-title">倾听者中心</view>
-      <switch checked="{{me.isOnline}}" bindchange="toggleOnline" color="#3A9E8F" />
+  <!-- 被拒 -->
+  <view wx:elif="{{apply.status===2}}" class="pending">
+    <view class="pending-icon ico ico-check"></view>
+    <view class="pending-title">入驻申请未通过</view>
+    <view class="muted" style="margin-top:8rpx;">可补充材料后重新申请。</view>
+    <button class="btn btn-ghost" style="margin-top:24rpx;" bindtap="goApply">重新申请</button>
+  </view>
+
+  <!-- 已通过：入口横幅（倾听者中心已整体并入「倾听者平台」页） -->
+  <view wx:elif="{{isProvider}}" class="pv-entry" bindtap="goListener">
+    <view class="pv-e-ico ico ico-mic-w"></view>
+    <view class="pv-e-main">
+      <view class="pv-e-title">倾听者平台</view>
+      <view class="pv-e-sub muted">上线接单 · 收益明细 · 提现 · 接叫记录</view>
     </view>
-    <view class="pv-grid">
-      <view class="pv-cell"><view class="pv-num">¥{{me.pendingIncome}}</view><view class="pv-label">未完成收入</view></view>
-      <view class="pv-cell"><view class="pv-num">¥{{me.completedIncome}}</view><view class="pv-label">已完成收入</view></view>
-    </view>
-    <view class="pv-actions">
-      <button class="btn btn-ghost" bindtap="goEarnings">收益明细</button>
-      <button class="btn btn-primary" bindtap="goWithdraw">申请提现</button>
-    </view>
+    <text class="muted pv-e-arrow">›</text>
   </view>
 
   <view class="card menu">
-    <view class="menu-item" bindtap="goListener"><view class="mi-left"><view class="ico ico-mic ico-sm"></view><text>倾听者工作台</text></view><text class="muted">›</text></view>
+    <view wx:if="{{!isProvider}}" class="menu-item" bindtap="goListener"><view class="mi-left"><view class="ico ico-mic ico-sm"></view><text>倾听者平台</text></view><text class="muted">›</text></view>
     <view class="menu-item" bindtap="goCalls"><view class="mi-left"><view class="ico ico-phone ico-sm"></view><text>通话记录</text></view><text class="menu-badge">{{callCount}} 条 ›</text></view>
     <view class="menu-item" bindtap="goRecharge"><view class="mi-left"><view class="ico ico-wallet ico-sm"></view><text>余额与充值</text></view><text class="muted">›</text></view>
     <view class="menu-item" bindtap="goAbout"><view class="mi-left"><view class="ico ico-leaf ico-sm"></view><text>关于我们</text></view><text class="muted">›</text></view>

@@ -1,5 +1,5 @@
 .container {
-  padding-bottom: 120rpx;
+  padding-bottom: 160rpx;
 }
 
 /* 头部信息 */
@@ -13,43 +13,104 @@
 .avatar {
   width: 120rpx;
   height: 120rpx;
-  border-radius: 60rpx;
+  border-radius: 50%;
   margin-right: 24rpx;
+  flex-shrink: 0;
 }
 
 .info {
   flex: 1;
+  min-width: 0;
   display: flex;
   flex-direction: column;
   justify-content: center;
 }
 
+/* 第一行：名称 + 性别 + 等级 …… 在线/离线靠右 */
+.name-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12rpx;
+}
+.nl {
+  display: flex;
+  align-items: center;
+  gap: 12rpx;
+  min-width: 0;
+  flex: 1;
+}
 .name {
   font-size: 36rpx;
   font-weight: bold;
-  margin-bottom: 12rpx;
   color: #333;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 300rpx;
 }
-
-.tags {
-  font-size: 24rpx;
-  color: #666;
-  margin-bottom: 16rpx;
+/* 性别小图标 */
+.gen {
+  width: 36rpx;
+  height: 36rpx;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 22rpx;
+  font-weight: 700;
+  line-height: 1;
+  flex-shrink: 0;
 }
+.gen-m { background: #E8F1FC; color: #5B9BD5; }
+.gen-f { background: #FDEAF1; color: #E56B9F; }
+/* 等级徽标 */
+.lv {
+  font-size: 20rpx;
+  font-weight: 600;
+  padding: 4rpx 14rpx;
+  border-radius: 999rpx;
+  background: #E6F4F0;
+  color: #2E8578;
+  flex-shrink: 0;
+}
+/* 在线/离线 */
+.st {
+  font-size: 22rpx;
+  font-weight: 600;
+  padding: 2rpx 14rpx;
+  border-radius: 999rpx;
+  flex-shrink: 0;
+}
+.st-on { background: #E6F7EE; color: #16A34A; }
+.st-off { background: #F1F3F5; color: #9AA0A6; }
 
+/* 第二行：评分 · 次咨询 · 从业年限 */
 .stats {
   display: flex;
-  gap: 20rpx;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6rpx;
+  margin-top: 12rpx;
 }
+.rating { font-size: 24rpx; color: #FF9500; font-weight: 600; }
+.sessions { font-size: 24rpx; color: #999; }
+.dot { font-size: 24rpx; color: #ddd; margin: 0 6rpx; }
 
-.rating {
-  font-size: 24rpx;
-  color: #ff9500;
-}
-
-.sessions {
-  font-size: 24rpx;
+/* 第三行：城市 + H号 */
+.sub {
+  display: flex;
+  align-items: center;
+  gap: 16rpx;
+  margin-top: 8rpx;
+  font-size: 22rpx;
   color: #999;
+}
+.sub-hno {
+  font-size: 22rpx;
+  font-weight: 600;
+  color: #2E8578;
+  letter-spacing: 1rpx;
 }
 
 /* 详情卡片 */
@@ -107,49 +168,30 @@
 
 .tag {
   padding: 10rpx 24rpx;
-  background: #f5f5f5;
+  background: #E6F4F0;
   border-radius: 30rpx;
   font-size: 24rpx;
-  color: #666;
+  color: #2E8578;
 }
 
-/* 价格档位 */
-.tiers {
-  display: grid;
-  grid-template-columns: repeat(2, 1fr);
-  gap: 20rpx;
+/* 时长下拉 */
+.tier-select {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 26rpx 30rpx;
+  background: #F7FAF9;
+  border: 2rpx solid #E0EDEA;
+  border-radius: 16rpx;
 }
-
-.tier-item {
-  padding: 24rpx;
-  border: 2rpx solid #e0e0e0;
-  border-radius: 12rpx;
-  text-align: center;
-  transition: all 0.3s;
+.ts-main {
+  display: flex;
+  align-items: baseline;
+  gap: 24rpx;
 }
-
-.tier-item.active {
-  border-color: #07c160;
-  background: #f0f9f4;
-}
-
-.tier-label {
-  display: block;
-  font-size: 28rpx;
-  color: #666;
-  margin-bottom: 8rpx;
-}
-
-.tier-price {
-  display: block;
-  font-size: 32rpx;
-  font-weight: bold;
-  color: #07c160;
-}
-
-.tier-item.active .tier-price {
-  color: #07c160;
-}
+.ts-label { font-size: 30rpx; font-weight: 700; color: #333; }
+.ts-price { font-size: 32rpx; font-weight: 800; color: #3A9E8F; }
+.ts-arrow { font-size: 28rpx; color: #999; }
 
 /* 余额提示 */
 .balance-tip {
@@ -175,7 +217,10 @@
   right: 0;
   display: flex;
   align-items: center;
+  justify-content: center;
+  gap: 20rpx;
   padding: 20rpx 30rpx;
+  padding-bottom: calc(20rpx + env(safe-area-inset-bottom));
   background: #fff;
   box-shadow: 0 -2rpx 10rpx rgba(0, 0, 0, 0.05);
 }
@@ -194,19 +239,26 @@
 .total-price {
   font-size: 40rpx;
   font-weight: bold;
-  color: #07c160;
+  color: #3A9E8F;
 }
 
 .order-btn {
-  width: 200rpx;
-  height: 80rpx;
-  line-height: 80rpx;
-  background: #07c160;
+  width: 240rpx;
+  height: 88rpx;
+  line-height: 88rpx;
+  background: linear-gradient(135deg, #3A9E8F, #2E8578);
   color: #fff;
   border: none;
-  border-radius: 40rpx;
+  border-radius: 44rpx;
   font-size: 32rpx;
   font-weight: bold;
+  padding: 0;
+  margin: 0;
+}
+.order-btn::after { border: none; }
+.order-btn-full {
+  width: 100%;
+  background: linear-gradient(135deg, #3A9E8F, #2E8578);
 }
 
 .loading {

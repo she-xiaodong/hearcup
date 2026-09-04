@@ -9,8 +9,12 @@ Page({
   data: {
     id: 0,
     listener: null,
+    listenerLevelText: '',
     expertiseList: [],
     priceTiers: [],
+    tierOptions: [],     // 下拉选项文案（picker）
+    tierIndex: 0,
+    selectedLabel: '',
     selectedMinutes: 15,
     selectedPrice: 0,
     selectedCoins: 0,
@@ -51,6 +55,8 @@ Page({
         .split(',')
         .map(s => s.trim())
         .filter(Boolean)
+      const LEVEL_TEXT = { 1: '实习', 2: '认证', 3: '资深' }
+      const listenerLevelText = LEVEL_TEXT[p.level] || ''
 
       // H币口径：后端同时下发 price_tiers（元）与 price_tiers_coins（H币）
       const coinName = r.data.coin_name || 'H币'
@@ -84,17 +90,24 @@ Page({
       }
       const list = tiers.length ? tiers : fallback
 
+      // picker 下拉选项文案（如「15分钟 · 150 H币」）
+      const tierOptions = list.map(t => `${t.minutes}分钟 · ${t.coins} ${coinName}`)
+
       this.setData({
         listener: p,
+        listenerLevelText,
         expertiseList,
         priceTiers: list,
+        tierOptions,
+        tierIndex: 0,
+        selectedLabel: list[0].label,
         selectedMinutes: list[0].minutes,
         selectedPrice: list[0].price,
         selectedCoins: list[0].coins,
         coinName, coinRate,
         loading: false
       })
-      wx.setNavigationBarTitle({ title: p.real_name || p.nickname || '倾听师' })
+      wx.setNavigationBarTitle({ title: p.real_name || p.nickname || p.nickName || '倾听师' })
 
       // 拉一次余额（H币），下单前就能判断够不够
       this.loadBalance(toCoins)
@@ -134,6 +147,26 @@ Page({
       selectedCoins: coins,
       enough: balanceYuan >= price
     })
+  },
+
+  // picker 下拉选择时长档位
+  onTierChange(e) {
+    const idx = Number(e.detail.value)
+    const t = (this.data.priceTiers || [])[idx]
+    if (!t) return
+    const balanceYuan = Number(this.data.balanceCoins) / (this.data.coinRate || 10)
+    this.setData({
+      tierIndex: idx,
+      selectedLabel: t.label,
+      selectedMinutes: t.minutes,
+      selectedPrice: t.price,
+      selectedCoins: t.coins,
+      enough: balanceYuan >= t.price
+    })
+  },
+
+  goRecharge() {
+    wx.navigateTo({ url: '/pages/recharge/recharge' })
   },
 
   // 元 → H币

@@ -1,0 +1,22 @@
+.topbar { display: block; }
+
+.sum-card { margin: 0 32rpx 24rpx; }
+.sum-grid { display: flex; }
+.sum-cell { flex: 1; text-align: center; position: relative; }
+.sum-cell::after { content: ''; position: absolute; right: 0; top: 10rpx; bottom: 10rpx; width: 1rpx; background: var(--line); }
+.sum-cell:last-child::after { display: none; }
+.sum-num { font-size: 36rpx; font-weight: 800; color: var(--primary-deep); }
+.sum-cell .muted { font-size: 22rpx; margin-top: 6rpx; }
+
+.list-card { margin: 0 32rpx 24rpx; padding: 16rpx 28rpx; }
+.list-empty { font-size: 24rpx; padding: 48rpx 0; text-align: center; }
+
+.call-item { display: flex; align-items: center; padding: 24rpx 0; border-bottom: 1rpx solid var(--line); }
+.call-item:last-child { border-bottom: none; }
+.call-avatar { width: 80rpx; height: 80rpx; flex-shrink: 0; margin-right: 20rpx; }
+.call-main { flex: 1; min-width: 0; margin-right: 16rpx; }
+.call-name { font-size: 28rpx; font-weight: 700; display: flex; align-items: center; gap: 12rpx; }
+.call-sub { font-size: 22rpx; margin-top: 4rpx; }
+.call-rate { font-size: 22rpx; color: var(--gold); margin-top: 4rpx; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.call-right { flex-shrink: 0; }
+.call-inc { font-size: 28rpx; font-weight: 800; color: var(--primary-deep); }

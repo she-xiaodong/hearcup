@@ -1,7 +1,7 @@
 <view class="call-page">
   <!-- 顶部：对方信息（对齐微信通话界面布局） -->
   <view class="top">
-    <image class="avatar" src="{{callee_avatar || '/images/default-avatar.png'}}" mode="aspectFill"></image>
+    <image class="avatar" src="{{callee_avatar || '/images/default_avatar.png'}}" mode="aspectFill"></image>
     <text class="nickname">{{callee_nickname || '倾听师'}}</text>
     <text class="status-text">{{statusText}}</text>
     <text class="timer" wx:if="{{status === 'connected'}}">{{timerText}}</text>

@@ -28,9 +28,13 @@ function mapProvider(p) {
     avatar: p.avatar || '',
     avatarColor: '#3A9E8F',
     levelText: (LEVEL_TEXT[p.level] || '') + '倾听者',
+    level: p.level || 1,
+    gender: p.gender === 1 ? 1 : 0, // 0女 1男
+    h_no: p.h_no || '',
     rating: p.rating || 0,
     total_sessions: p.total_sessions || 0,
     price_per_minute: p.price_per_minute || 1,
+    tier15: p.tier15 || 0, // 15分钟档价格（元），后端已下发，前端×10 即 H币
     is_online: p.is_online === 1,
     intro: p.intro || '',
     expertise: expertise.length ? expertise : (p.expertise || []),
@@ -221,7 +225,13 @@ const api = {
   },
   async getProviderEarnings() {
     const r = await request('GET', '/api/v1/provider/earnings')
-    if (r._mock) return { code: 0, data: { today_income: 0, withdrawable: 0, total_earnings: 0, today_calls: 0 } }
+    if (r._mock) return { code: 0, data: { today_income: 0, withdrawable: 0, total_earnings: 0, today_calls: 0, details: [], completed_income: 0, pending_income: 0 } }
+    return r
+  },
+  // 倾听者本人「接叫记录」：含时长/收益/评价
+  async getProviderCalls() {
+    const r = await request('GET', '/api/v1/provider/calls')
+    if (r._mock) return { code: 0, data: [] }
     return r
   },
   async applyProvider(form) {

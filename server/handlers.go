@@ -135,8 +135,38 @@ func decorateProvider(p *Provider) *Provider {
 	if u, ok := store.db.Users[p.UserID]; ok {
 		cp.Nickname = u.Nickname
 		cp.Avatar = u.Avatar
+		cp.HNo = u.HNo
 	}
+	// 15分钟档起价（元）：优先取配置档位里最小的分钟数，缺失则按单价×15 兜底。
+	// 用户端「XX H币起」统一以此口径换算，避免列表价与详情首档不一致。
+	cp.Tier15 = tier15Price(p)
 	return &cp
+}
+
+// tier15Price 取 15 分钟档（或配置里最小的档位）价格（元）
+func tier15Price(p *Provider) float64 {
+	if p.PriceTiers != "" {
+		m := map[string]float64{}
+		if err := json.Unmarshal([]byte(p.PriceTiers), &m); err == nil && len(m) > 0 {
+			var bestMin int64 = 1 << 40
+			var best float64
+			for k, v := range m {
+				mi, err := strconv.ParseInt(k, 10, 64)
+				if err != nil || mi <= 0 {
+					continue
+				}
+				if mi < bestMin {
+					bestMin = mi
+					best = v
+				}
+			}
+			if bestMin != 1<<40 {
+				return round2(best)
+			}
+		}
+	}
+	// 无档位配置：按单价 × 15 分钟
+	return round2(p.PricePerMinute * 15)
 }
 
 // ---------- 认证 ----------
@@ -398,13 +428,13 @@ func hProviderDetail(w http.ResponseWriter, r *http.Request, params map[string]s
 		tiersCoins[k] = round2(v * coinRate())
 	}
 	sendOK(w, map[string]interface{}{
-		"provider": dp,
-		"price_tiers": priceTiers,
-		"price_tiers_coins": tiersCoins,
+		"provider":               dp,
+		"price_tiers":            priceTiers,
+		"price_tiers_coins":      tiersCoins,
 		"price_per_minute_coins": round2(p.PricePerMinute * coinRate()),
-		"coin_rate": coinRate(),
-		"coin_name": coinName(),
-		"ratings": ratings,
+		"coin_rate":              coinRate(),
+		"coin_name":              coinName(),
+		"ratings":                ratings,
 	})
 }
 
@@ -538,12 +568,12 @@ func hCallPay(w http.ResponseWriter, r *http.Request) {
 			sendOK(w, map[string]interface{}{
 				"paid": false, "need_recharge": true,
 				"amount": rec.Amount, "balance": u.Balance,
-				"amount_coins":     round2(rec.Amount * coinRate()),
-				"balance_coins":    round2(u.Balance * coinRate()),
-				"lack":             lack,
-				"lack_coins":       round2(lack * coinRate()),
-				"coin_rate":        coinRate(),
-				"coin_name":        coinName(),
+				"amount_coins":  round2(rec.Amount * coinRate()),
+				"balance_coins": round2(u.Balance * coinRate()),
+				"lack":          lack,
+				"lack_coins":    round2(lack * coinRate()),
+				"coin_rate":     coinRate(),
+				"coin_name":     coinName(),
 				"msg": fmt.Sprintf("余额不足，需 %s %s，当前 %s %s",
 					fmtCoins(rec.Amount*coinRate()), coinName(),
 					fmtCoins(u.Balance*coinRate()), coinName()),
@@ -634,24 +664,24 @@ func hCallConfirmPay(w http.ResponseWriter, r *http.Request) {
 
 	store.save()
 	sendOK(w, map[string]interface{}{
-		"room_id": rec.RoomID,
-		"call_id": rec.ID,
-		"caller_phone":  u.Phone,
-		"callee_phone":  p.Phone,
+		"room_id":             rec.RoomID,
+		"call_id":             rec.ID,
+		"caller_phone":        u.Phone,
+		"callee_phone":        p.Phone,
 		"caller_phone_masked": callerPhone,
-		"callee_phone_masked":  calleePhone,
-		"caller_nickname": u.Nickname,
-		"callee_nickname": p.RealName,
-		"caller_avatar":   u.Avatar,
-		"callee_avatar":   p.Avatar,
-		"minutes": rec.PackageMinutes,
-		"amount": rec.Amount,
+		"callee_phone_masked": calleePhone,
+		"caller_nickname":     u.Nickname,
+		"callee_nickname":     p.RealName,
+		"caller_avatar":       u.Avatar,
+		"callee_avatar":       p.Avatar,
+		"minutes":             rec.PackageMinutes,
+		"amount":              rec.Amount,
 		// H币口径
 		"amount_coins":     round2(rec.Amount * coinRate()),
 		"unit_price_coins": round2(rec.UnitPrice * coinRate()),
 		"coin_rate":        coinRate(),
 		"coin_name":        coinName(),
-		"unit_price": rec.UnitPrice,
+		"unit_price":       rec.UnitPrice,
 	})
 }
 
@@ -858,8 +888,8 @@ func hCallEndWithMinutes(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	var body struct {
-		RoomID string `json:"room_id"`
-		CallID int64  `json:"call_id"`
+		RoomID  string `json:"room_id"`
+		CallID  int64  `json:"call_id"`
 		Minutes int    `json:"minutes"` // 前端上报的时长（分钟）
 	}
 	readJSON(r, &body)
@@ -953,11 +983,11 @@ func hCallEndWithMinutes(w http.ResponseWriter, r *http.Request) {
 		"extra": extra, "package_minutes": packMinutes,
 		"provider_income": providerIncome, "platform_fee": platformFee, "balance": u.Balance,
 		// H币口径（内部按元结算，对外统一 H币）
-		"amount_coins":    round2(amount * coinRate()),
-		"extra_coins":     round2(extra * coinRate()),
-		"balance_coins":   round2(u.Balance * coinRate()),
-		"coin_rate":       coinRate(),
-		"coin_name":       coinName(),
+		"amount_coins":  round2(amount * coinRate()),
+		"extra_coins":   round2(extra * coinRate()),
+		"balance_coins": round2(u.Balance * coinRate()),
+		"coin_rate":     coinRate(),
+		"coin_name":     coinName(),
 	})
 }
 
@@ -1016,7 +1046,7 @@ func hCallRecords(w http.ResponseWriter, r *http.Request) {
 			"duration": c.Duration, "amount": c.Amount, "status": c.Status,
 			"user_rating": c.UserRating, "user_comment": c.UserComment,
 			"provider_name": store.db.Providers[c.ProviderID].RealName,
-			"user_name": store.db.Users[c.UserID].Nickname, "created_at": c.CreatedAt,
+			"user_name":     store.db.Users[c.UserID].Nickname, "created_at": c.CreatedAt,
 		})
 	}
 	sendOK(w, list)
@@ -1122,25 +1152,25 @@ func hProviderApply(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	var body struct {
-		RealName        string  `json:"real_name"`
-		Gender          int     `json:"gender"`
-		Age             int     `json:"age"`
-		City            string  `json:"city"`
-		Education       string  `json:"education"`
-		Major           string  `json:"major"`
-		IDCard          string  `json:"id_card"`
-		Phone           string  `json:"phone"`
-		Intro           string  `json:"intro"`
-		Expertise       string  `json:"expertise"`
-		Certificates    string  `json:"certificates"`
-		TrainingProof   string  `json:"training_proof"`
-		CertificateNo   string  `json:"certificate_no"`
+		RealName         string `json:"real_name"`
+		Gender           int    `json:"gender"`
+		Age              int    `json:"age"`
+		City             string `json:"city"`
+		Education        string `json:"education"`
+		Major            string `json:"major"`
+		IDCard           string `json:"id_card"`
+		Phone            string `json:"phone"`
+		Intro            string `json:"intro"`
+		Expertise        string `json:"expertise"`
+		Certificates     string `json:"certificates"`
+		TrainingProof    string `json:"training_proof"`
+		CertificateNo    string `json:"certificate_no"`
 		CertificateImage string `json:"certificate_image"`
-		EducationImage  string  `json:"education_image"`
-		CounselorImage  string  `json:"counselor_image"`
-		YearsOfExp      int     `json:"years_of_exp"`
-		ConsultHours    int     `json:"consult_hours"`
-		Background      string  `json:"background"`
+		EducationImage   string `json:"education_image"`
+		CounselorImage   string `json:"counselor_image"`
+		YearsOfExp       int    `json:"years_of_exp"`
+		ConsultHours     int    `json:"consult_hours"`
+		Background       string `json:"background"`
 	}
 	readJSON(r, &body)
 	if body.RealName == "" || body.Phone == "" || body.IDCard == "" || body.Intro == "" || body.Expertise == "" {
@@ -1180,7 +1210,7 @@ func hProviderApply(w http.ResponseWriter, r *http.Request) {
 		CertificateNo: body.CertificateNo, CertificateImage: body.CertificateImage,
 		EducationImage: body.EducationImage, CounselorImage: body.CounselorImage,
 		YearsOfExp: body.YearsOfExp, ConsultHours: body.ConsultHours,
-		Background: body.Background,
+		Background:     body.Background,
 		PricePerMinute: pricePerMinute, PriceTiers: string(priceTiersJSON),
 		Level: 1, IsOnline: 0, IsBusy: 0, Rating: 0,
 		TotalSessions: 0, TotalEarnings: 0, Withdrawable: 0, DailyLimit: 10,
@@ -1299,6 +1329,53 @@ func hProviderEarnings(w http.ResponseWriter, r *http.Request) {
 		"withdrawable":     me.Withdrawable, "total_earnings": me.TotalEarnings,
 		"today_income": todayIncome, "details": details,
 	})
+}
+
+// hProviderCalls：倾听者本人的「接叫记录」（来电列表），含每次通话的时长/收益/评价
+func hProviderCalls(w http.ResponseWriter, r *http.Request) {
+	uid, ok := requireUser(r)
+	if !ok {
+		fail(w, "未登录")
+		return
+	}
+	store.mu.Lock()
+	defer store.mu.Unlock()
+	var me *Provider
+	for _, p := range store.db.Providers {
+		if p.UserID == uid {
+			me = p
+			break
+		}
+	}
+	if me == nil {
+		fail(w, "尚未入驻")
+		return
+	}
+	list := []map[string]interface{}{}
+	for _, c := range store.db.Calls {
+		if c.ProviderID != me.ID {
+			continue
+		}
+		list = append(list, map[string]interface{}{
+			"id":         c.ID,
+			"room_id":    c.RoomID,
+			"call_type":  c.CallType,
+			"user_name":  store.db.Users[c.UserID].Nickname,
+			"duration":   c.Duration, // 秒
+			"minutes":    c.PackageMinutes,
+			"amount":     c.Amount,         // 用户实付（元）
+			"income":     c.ProviderIncome, // 本人收益（元）
+			"fee":        c.PlatformFee,    // 平台服务费（元）
+			"rating":     c.UserRating,
+			"comment":    c.UserComment,
+			"status":     c.Status,
+			"created_at": c.CreatedAt,
+		})
+	}
+	sort.Slice(list, func(i, j int) bool {
+		return list[i]["created_at"].(int64) > list[j]["created_at"].(int64)
+	})
+	sendOK(w, list)
 }
 
 func hProviderWithdraw(w http.ResponseWriter, r *http.Request) {
@@ -1677,7 +1754,7 @@ func hAdminCalls(w http.ResponseWriter, r *http.Request) {
 		list = append(list, map[string]interface{}{
 			"id": c.ID, "user_name": un,
 			"provider_name": pn,
-			"call_type":       c.CallType, "duration": c.Duration, "amount": c.Amount,
+			"call_type":     c.CallType, "duration": c.Duration, "amount": c.Amount,
 			"provider_income": c.ProviderIncome, "platform_fee": c.PlatformFee,
 			"status": c.Status, "created_at": c.CreatedAt,
 		})
@@ -2021,7 +2098,7 @@ func hProviderTransfers(w http.ResponseWriter, r *http.Request) {
 		fail(w, "尚未入驻")
 		return
 	}
-		list := []map[string]interface{}{}
+	list := []map[string]interface{}{}
 	for _, tr := range store.db.Transfers {
 		if tr.ProviderID != me.ID {
 			continue

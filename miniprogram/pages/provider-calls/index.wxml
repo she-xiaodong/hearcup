@@ -1,0 +1,46 @@
+<view class="page-bg">
+  <view class="topbar">
+    <view class="section-title" style="margin:0;">接叫记录</view>
+    <view class="muted">来电时长、收入与评价</view>
+  </view>
+
+  <view wx:if="{{loading}}" class="empty">加载中…</view>
+
+  <block wx:else>
+    <!-- 汇总 -->
+    <view class="card sum-card">
+      <view class="sum-grid">
+        <view class="sum-cell">
+          <view class="sum-num">{{totalCalls}}</view>
+          <view class="muted">累计接听</view>
+        </view>
+        <view class="sum-cell">
+          <view class="sum-num">{{todayCalls}}</view>
+          <view class="muted">今日接听</view>
+        </view>
+        <view class="sum-cell">
+          <view class="sum-num">¥{{totalIncome}}</view>
+          <view class="muted">累计收益</view>
+        </view>
+      </view>
+    </view>
+
+    <!-- 接听列表 -->
+    <view class="card list-card">
+      <view wx:if="{{list.length === 0}}" class="muted list-empty">还没有接听记录</view>
+      <view wx:for="{{list}}" wx:key="id" class="call-item">
+        <view class="call-avatar avatar" style="background-color:#3A9E8F;"><view class="ico ico-phone-white" style="width:38rpx;height:38rpx;"></view></view>
+        <view class="call-main">
+          <view class="call-name">{{item.name}}<text class="tag">语音</text></view>
+          <view class="muted call-sub">{{item.time}} · {{item.dur}}</view>
+          <view class="call-rate" wx:if="{{item.rating}}">★ {{item.rating}}<text class="muted" wx:if="{{item.comment}}"> · {{item.comment}}</text></view>
+        </view>
+        <view class="call-right">
+          <view class="call-inc">+¥{{item.income}}</view>
+        </view>
+      </view>
+    </view>
+  </block>
+
+  <view class="safe-bottom"></view>
+</view>

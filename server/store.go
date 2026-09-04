@@ -34,11 +34,11 @@ type Provider struct {
 	UserID           int64   `json:"user_id"`
 	Role             int     `json:"role"` // 统一「倾听者」（历史字段，恒为 1）
 	RealName         string  `json:"real_name"`
-	Gender           int     `json:"gender"`           // 性别：0女 1男
-	Age              int     `json:"age"`              // 年龄
-	City             string  `json:"city"`             // 城市
-	Education        string  `json:"education"`        // 学历
-	Major            string  `json:"major"`            // 专业背景
+	Gender           int     `json:"gender"`    // 性别：0女 1男
+	Age              int     `json:"age"`       // 年龄
+	City             string  `json:"city"`      // 城市
+	Education        string  `json:"education"` // 学历
+	Major            string  `json:"major"`     // 专业背景
 	IDCard           string  `json:"id_card"`
 	Phone            string  `json:"phone"`
 	Intro            string  `json:"intro"`
@@ -47,14 +47,14 @@ type Provider struct {
 	TrainingProof    string  `json:"training_proof"`
 	CertificateNo    string  `json:"certificate_no"`
 	CertificateImage string  `json:"certificate_image"`
-	EducationImage   string  `json:"education_image"`   // 学历证书图片
-	CounselorImage   string  `json:"counselor_image"`   // 咨询师证书图片
+	EducationImage   string  `json:"education_image"` // 学历证书图片
+	CounselorImage   string  `json:"counselor_image"` // 咨询师证书图片
 	YearsOfExp       int     `json:"years_of_exp"`
-	ConsultHours     int     `json:"consult_hours"`     // 咨询时长（小时）
+	ConsultHours     int     `json:"consult_hours"` // 咨询时长（小时）
 	Background       string  `json:"background"`
 	PricePerMinute   float64 `json:"price_per_minute"`
-	PriceTiers       string  `json:"price_tiers"`       // JSON字符串：{"15":15.0,"30":28.5,"45":40.5,"60":54.0,"75":67.5,"90":81.0,"105":94.5,"120":108.0}
-	Level            int     `json:"level"` // 1实习 2认证 3资深
+	PriceTiers       string  `json:"price_tiers"` // JSON字符串：{"15":15.0,"30":28.5,"45":40.5,"60":54.0,"75":67.5,"90":81.0,"105":94.5,"120":108.0}
+	Level            int     `json:"level"`       // 1实习 2认证 3资深
 	IsOnline         int     `json:"is_online"`
 	IsBusy           int     `json:"is_busy"`
 	Rating           float64 `json:"rating"`
@@ -68,9 +68,11 @@ type Provider struct {
 	ApprovedAt       int64   `json:"approved_at"`
 	CreatedAt        int64   `json:"created_at"`
 	UpdatedAt        int64   `json:"updated_at"`
-	// 关联字段（不持久化）
-	Nickname string `json:"nickname"`
-	Avatar   string `json:"avatar"`
+	// 关联/派生字段（不持久化，decorateProvider 填充）
+	Nickname string  `json:"nickname"`
+	Avatar   string  `json:"avatar"`
+	HNo      string  `json:"h_no"`   // 关联用户 H号（首页/详情展示）
+	Tier15   float64 `json:"tier15"` // 15分钟档价格（元）——列表「XX H币起」的起价口径
 }
 
 type RechargeOrder struct {
@@ -102,12 +104,12 @@ type CallRecord struct {
 	UserRating     int     `json:"user_rating"`
 	UserComment    string  `json:"user_comment"`
 	// —— 套餐预付制（先下单支付，再拨号）新增字段 ——
-	OrderNo        string  `json:"order_no"`        // 订单号，CO 前缀，微信支付回调据此匹配
-	PayStatus      int     `json:"pay_status"`      // 0待支付 1已支付 2已退款
-	PackageMinutes int     `json:"package_minutes"` // 套餐时长：15/30/45/60/75/90/105/120
-	PayTime        int64   `json:"pay_time"`
-	CreatedAt      int64   `json:"created_at"`
-	UpdatedAt      int64   `json:"updated_at"`
+	OrderNo        string `json:"order_no"`        // 订单号，CO 前缀，微信支付回调据此匹配
+	PayStatus      int    `json:"pay_status"`      // 0待支付 1已支付 2已退款
+	PackageMinutes int    `json:"package_minutes"` // 套餐时长：15/30/45/60/75/90/105/120
+	PayTime        int64  `json:"pay_time"`
+	CreatedAt      int64  `json:"created_at"`
+	UpdatedAt      int64  `json:"updated_at"`
 	// 关联字段
 	ProviderName string `json:"provider_name"`
 	UserName     string `json:"user_name"`
@@ -123,12 +125,12 @@ type WithdrawRecord struct {
 	Status     int     `json:"status"` // 0待审核 1审核通过 2已打款 3拒绝
 	Remark     string  `json:"remark"`
 	// 微信转账关联（打款后回填）
-	TransferNo   string `json:"transfer_no"`   // 商户转账单号 out_bill_no
+	TransferNo    string `json:"transfer_no"`    // 商户转账单号 out_bill_no
 	TransferState string `json:"transfer_state"` // 微信侧状态 ACCEPTED/PROCESSING/FINISHED/FAIL
-	ApprovedAt int64   `json:"approved_at"`
-	PaidAt     int64   `json:"paid_at"`
-	CreatedAt  int64   `json:"created_at"`
-	UpdatedAt  int64   `json:"updated_at"`
+	ApprovedAt    int64  `json:"approved_at"`
+	PaidAt        int64  `json:"paid_at"`
+	CreatedAt     int64  `json:"created_at"`
+	UpdatedAt     int64  `json:"updated_at"`
 }
 
 // TransferRecord 商家转账到零钱（分佣打款）记录：每次打款/重试一笔，与提现单 withdraw_id 关联。
@@ -138,14 +140,14 @@ type TransferRecord struct {
 	ProviderID   int64   `json:"provider_id"`
 	ProviderName string  `json:"provider_name"`
 	Openid       string  `json:"openid"`
-	Amount       float64 `json:"amount"`       // 打款金额（元）
-	OutBillNo    string  `json:"out_bill_no"`  // 商户单号
-	WxBillNo     string  `json:"wx_bill_no"`   // 微信转账单号
-	State        string  `json:"state"`        // 微信侧状态
-	Status       int     `json:"status"`       // 0受理中 1成功 2失败
+	Amount       float64 `json:"amount"`      // 打款金额（元）
+	OutBillNo    string  `json:"out_bill_no"` // 商户单号
+	WxBillNo     string  `json:"wx_bill_no"`  // 微信转账单号
+	State        string  `json:"state"`       // 微信侧状态
+	Status       int     `json:"status"`      // 0受理中 1成功 2失败
 	FailReason   string  `json:"fail_reason"`
 	Remark       string  `json:"remark"`
-	PackageInfo  string  `json:"package_info"`  // 微信领取凭证（base64）：新版「商家转账到零钱」发起后须倾听者手动领取
+	PackageInfo  string  `json:"package_info"` // 微信领取凭证（base64）：新版「商家转账到零钱」发起后须倾听者手动领取
 	CreatedAt    int64   `json:"created_at"`
 	UpdatedAt    int64   `json:"updated_at"`
 }
@@ -185,9 +187,9 @@ type Config struct {
 	CoinRate       float64 `json:"coin_rate"`       // 虚拟币换算比例：1元 = coin_rate 个 H币（默认10）
 	CoinName       string  `json:"coin_name"`       // 虚拟币名称（默认「H币」）
 	PlatformRate   float64 `json:"platform_rate"`   // 平台抽成 0.2
-	MinBalance     float64 `json:"min_balance"`      // 起呼最低余额 3元
-	Overdraft      float64 `json:"overdraft"`        // 透支额度 2元
-	MinWithdraw    float64 `json:"min_withdraw"`     // 最低提现 100元
+	MinBalance     float64 `json:"min_balance"`     // 起呼最低余额 3元
+	Overdraft      float64 `json:"overdraft"`       // 透支额度 2元
+	MinWithdraw    float64 `json:"min_withdraw"`    // 最低提现 100元
 }
 
 // ============ 持久化存储 ============
@@ -197,35 +199,35 @@ type Notification struct {
 	ID          int64  `json:"id"`
 	Title       string `json:"title"`
 	Content     string `json:"content"`
-	Target      string `json:"target"`       // all=全部用户 provider=仅服务者 user=仅普通用户
-	Status      int    `json:"status"`       // 0草稿 1已发布
+	Target      string `json:"target"` // all=全部用户 provider=仅服务者 user=仅普通用户
+	Status      int    `json:"status"` // 0草稿 1已发布
 	CreatedAt   int64  `json:"created_at"`
 	UpdatedAt   int64  `json:"updated_at"`
 	PublishedAt int64  `json:"published_at"`
 }
 
 type DB struct {
-	Users     map[int64]*User          `json:"users"`
-	Providers map[int64]*Provider      `json:"providers"`
-	Recharges map[int64]*RechargeOrder `json:"recharges"`
-	Calls     map[int64]*CallRecord    `json:"calls"`
-	Withdraws map[int64]*WithdrawRecord `json:"withdraws"`
-	Transfers map[int64]*TransferRecord `json:"transfers"`
-	Tags      map[int64]*Tag           `json:"tags"`
-	Admins    map[int64]*Admin         `json:"admins"`
-	Feedbacks map[int64]*Feedback      `json:"feedbacks"`
-	Notifications map[int64]*Notification `json:"notifications"`
-	SeqNotification int64 `json:"seq_notification"`
-	SeqUser     int64 `json:"seq_user"`
-	SeqProvider int64 `json:"seq_provider"`
-	SeqRecharge int64 `json:"seq_recharge"`
-	SeqCall     int64 `json:"seq_call"`
-	SeqWithdraw int64 `json:"seq_withdraw"`
-	SeqTransfer int64 `json:"seq_transfer"`
-	SeqTag      int64 `json:"seq_tag"`
-	SeqAdmin    int64 `json:"seq_admin"`
-	SeqFeedback int64 `json:"seq_feedback"`
-	Config     Config `json:"config"`
+	Users           map[int64]*User           `json:"users"`
+	Providers       map[int64]*Provider       `json:"providers"`
+	Recharges       map[int64]*RechargeOrder  `json:"recharges"`
+	Calls           map[int64]*CallRecord     `json:"calls"`
+	Withdraws       map[int64]*WithdrawRecord `json:"withdraws"`
+	Transfers       map[int64]*TransferRecord `json:"transfers"`
+	Tags            map[int64]*Tag            `json:"tags"`
+	Admins          map[int64]*Admin          `json:"admins"`
+	Feedbacks       map[int64]*Feedback       `json:"feedbacks"`
+	Notifications   map[int64]*Notification   `json:"notifications"`
+	SeqNotification int64                     `json:"seq_notification"`
+	SeqUser         int64                     `json:"seq_user"`
+	SeqProvider     int64                     `json:"seq_provider"`
+	SeqRecharge     int64                     `json:"seq_recharge"`
+	SeqCall         int64                     `json:"seq_call"`
+	SeqWithdraw     int64                     `json:"seq_withdraw"`
+	SeqTransfer     int64                     `json:"seq_transfer"`
+	SeqTag          int64                     `json:"seq_tag"`
+	SeqAdmin        int64                     `json:"seq_admin"`
+	SeqFeedback     int64                     `json:"seq_feedback"`
+	Config          Config                    `json:"config"`
 }
 
 type Store struct {

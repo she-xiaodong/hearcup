@@ -4,9 +4,11 @@ Component({
       type: Object,
       value: {},
       observer(v) {
-        // 单价以H币展示（内部按元，1元=10H币）
-        if (v && typeof v.price_per_minute === 'number') {
-          this.setData({ priceCoins: getApp().toCoins(v.price_per_minute) })
+        // 「H币起」= 15 分钟档价格（H币）：优先用后端 tier15（元），缺失按单价×15 兜底。
+        if (v && typeof v.tier15 === 'number' && v.tier15 > 0) {
+          this.setData({ priceCoins: getApp().toCoins(v.tier15) })
+        } else if (v && typeof v.price_per_minute === 'number') {
+          this.setData({ priceCoins: getApp().toCoins(v.price_per_minute * 15) })
         }
       }
     }

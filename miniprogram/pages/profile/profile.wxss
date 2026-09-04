@@ -1,12 +1,13 @@
-.profile-head { display: flex; align-items: center; justify-content: flex-start; gap: 20rpx; margin: 24rpx 32rpx; text-align: left; }
-.avatar-btn { padding: 0; margin: 0; background: transparent; line-height: normal; border: none; width: 110rpx; height: 110rpx; min-width: 110rpx; display: block; flex-shrink: 0; }
+.profile-head { display: flex; align-items: flex-start; justify-content: flex-start; gap: 24rpx; margin: 24rpx 32rpx; text-align: left; }
+.avatar-btn { padding: 0; margin: 0; background: transparent; line-height: normal; border: none; width: 120rpx; height: 120rpx; min-width: 120rpx; display: block; flex-shrink: 0; }
 .avatar-btn::after { border: none; }
-.head-avatar { width: 110rpx; height: 110rpx; font-size: 52rpx; border-radius: 50%; overflow: hidden; }
-.head-avatar-img { width: 110rpx; height: 110rpx; border-radius: 50%; display: block; }
-.head-info { flex: 1; min-width: 0; display: flex; flex-direction: column; align-items: flex-start; justify-content: center; text-align: left; }
+.head-avatar { width: 120rpx; height: 120rpx; font-size: 52rpx; border-radius: 50%; overflow: hidden; }
+.head-avatar-img { width: 120rpx; height: 120rpx; border-radius: 50%; display: block; }
+.head-info { flex: 1; min-width: 0; display: flex; flex-direction: column; align-items: flex-start; justify-content: flex-start; text-align: left; padding-top: 6rpx; }
 .head-name { font-size: 36rpx; font-weight: 800; }
-.head-name-input { font-size: 36rpx; font-weight: 800; height: 52rpx; line-height: 52rpx; width: 100%; text-align: left; padding: 0; }
-.h-no { margin-top: 4rpx; font-size: 24rpx; font-weight: 700; color: var(--primary-deep, #2E8578); letter-spacing: 1rpx; text-align: left; }
+.head-name-input { font-size: 36rpx; font-weight: 800; height: 56rpx; line-height: 56rpx; width: 100%; text-align: left; padding: 0; }
+.h-no { margin-top: 6rpx; font-size: 24rpx; font-weight: 700; color: var(--primary-deep, #2E8578); letter-spacing: 1rpx; text-align: left; }
+.head-phone { font-size: 24rpx; margin-top: 4rpx; text-align: left; }
 
 .balance-row { display: flex; align-items: center; justify-content: space-between; margin: 0 32rpx 24rpx; }
 .balance-num { font-size: 48rpx; font-weight: 800; color: var(--peach); margin-top: 6rpx; }
@@ -26,18 +27,24 @@
 .pending-icon { width: 72rpx; height: 72rpx; margin: 0 auto; }
 .pending-title { font-size: 30rpx; font-weight: 700; margin-top: 8rpx; }
 
-/* 服务者中心 */
-.provider { margin: 0 32rpx 24rpx; background: var(--card); border-radius: var(--radius); padding: 32rpx; box-shadow: var(--shadow-sm); }
-.pv-top { display: flex; align-items: center; justify-content: space-between; }
-.pv-title { font-size: 30rpx; font-weight: 800; }
-.pv-grid { display: flex; margin-top: 24rpx; }
-.pv-cell { flex: 1; text-align: center; position: relative; }
-.pv-cell::after { content: ''; position: absolute; right: 0; top: 10rpx; bottom: 10rpx; width: 1rpx; background: var(--line); }
-.pv-cell:last-child::after { display: none; }
-.pv-num { font-size: 34rpx; font-weight: 800; color: var(--primary-deep); }
-.pv-label { font-size: 22rpx; margin-top: 6rpx; }
-.pv-actions { display: flex; gap: 16rpx; margin-top: 24rpx; }
-.pv-actions .btn { flex: 1; line-height: 76rpx; height: 76rpx; font-size: 26rpx; }
+/* 倾听者平台入口横幅（原「倾听者中心」功能已并入平台页） */
+.pv-entry {
+  display: flex; align-items: center; gap: 20rpx;
+  margin: 0 32rpx 24rpx;
+  background: linear-gradient(135deg, #3A9E8F, #2E8578);
+  border-radius: var(--radius);
+  padding: 26rpx 32rpx;
+  box-shadow: var(--shadow);
+}
+.pv-e-ico {
+  width: 68rpx; height: 68rpx; border-radius: 50%;
+  background-color: rgba(255, 255, 255, 0.2);
+  flex-shrink: 0;
+}
+.pv-e-main { flex: 1; min-width: 0; }
+.pv-e-title { font-size: 32rpx; font-weight: 800; color: #fff; }
+.pv-e-sub { font-size: 22rpx; color: rgba(255, 255, 255, 0.85); margin-top: 4rpx; }
+.pv-e-arrow { color: rgba(255, 255, 255, 0.9); font-size: 40rpx; }
 
 .menu { margin: 0 32rpx; }
 .mi-left { display: flex; align-items: center; gap: 16rpx; }

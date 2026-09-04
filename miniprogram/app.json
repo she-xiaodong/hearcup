@@ -12,7 +12,9 @@
     "pages/settings/settings",
     "pages/devcheck/devcheck",
     "pages/listener/listener",
-    "pages/listener-detail/index"
+    "pages/listener-detail/index",
+    "pages/income/index",
+    "pages/provider-calls/index"
   ],
   "window": {
     "navigationBarBackgroundColor": "#3A9E8F",
@@ -27,9 +29,18 @@
     "selectedColor": "#3A9E8F",
     "backgroundColor": "#FFFFFF",
     "list": [
-      { "pagePath": "pages/index/index", "text": "首页" },
-      { "pagePath": "pages/calls/calls", "text": "通话" },
-      { "pagePath": "pages/profile/profile", "text": "我的" }
+      {
+        "pagePath": "pages/index/index",
+        "text": "首页"
+      },
+      {
+        "pagePath": "pages/calls/calls",
+        "text": "通话"
+      },
+      {
+        "pagePath": "pages/profile/profile",
+        "text": "我的"
+      }
     ]
   },
   "style": "v2",

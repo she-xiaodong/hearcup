@@ -1,30 +1,38 @@
 <view class="container" wx:if="{{!loading && listener}}">
   <!-- 头像和基本信息 -->
   <view class="header">
-    <image class="avatar" src="{{listener.avatar || '/images/default-avatar.png'}}" mode="aspectFill" />
+    <image class="avatar" src="{{listener.avatar || '/images/default_avatar.png'}}" mode="aspectFill" />
     <view class="info">
-      <text class="name">{{listener.real_name}}</text>
-      <text class="tags">{{listener.city}} · 从业{{listener.years_of_exp || 0}}年</text>
+      <!-- 名称 + 性别小图标(右上) + 等级；在线/离线靠右 -->
+      <view class="name-row">
+        <view class="nl">
+          <text class="name">{{listener.real_name || listener.nickname || listener.nickName}}</text>
+          <text class="gen {{listener.gender === 1 ? 'gen-m' : 'gen-f'}}">{{listener.gender === 1 ? '♂' : '♀'}}</text>
+          <text class="lv" wx:if="{{listenerLevelText}}">{{listenerLevelText}}倾听者</text>
+        </view>
+        <text class="st {{listener.is_online === 1 ? 'st-on' : 'st-off'}}">{{listener.is_online === 1 ? '在线' : '离线'}}</text>
+      </view>
+      <!-- 评分 · 次咨询 · 从业年限 -->
       <view class="stats">
-        <text class="rating">⭐ {{listener.rating || '5.0'}}</text>
+        <text class="rating">★ {{listener.rating || '5.0'}}</text>
+        <text class="dot">·</text>
         <text class="sessions">{{listener.total_sessions || 0}}次咨询</text>
+        <text class="dot">·</text>
+        <text class="sessions" wx:if="{{listener.years_of_exp}}">从业{{listener.years_of_exp}}年</text>
+      </view>
+      <!-- 城市 + H号 -->
+      <view class="sub" wx:if="{{listener.city || listener.h_no}}">
+        <text class="sub-city" wx:if="{{listener.city}}">{{listener.city}}</text>
+        <text class="sub-hno" wx:if="{{listener.h_no}}">H号 {{listener.h_no}}</text>
       </view>
     </view>
   </view>
 
   <!-- 详细信息 -->
-  <view class="detail-card">
-    <view class="detail-item" wx:if="{{listener.gender !== undefined}}">
-      <text class="label">性别</text>
-      <text class="value">{{listener.gender === 0 ? '女' : '男'}}</text>
-    </view>
+  <view class="detail-card" wx:if="{{listener.age || listener.education || listener.major || listener.consult_hours}}">
     <view class="detail-item" wx:if="{{listener.age}}">
       <text class="label">年龄</text>
       <text class="value">{{listener.age}}岁</text>
-    </view>
-    <view class="detail-item" wx:if="{{listener.city}}">
-      <text class="label">城市</text>
-      <text class="value">{{listener.city}}</text>
     </view>
     <view class="detail-item" wx:if="{{listener.education}}">
       <text class="label">学历</text>
@@ -34,10 +42,6 @@
       <text class="label">专业</text>
       <text class="value">{{listener.major}}</text>
     </view>
-    <view class="detail-item" wx:if="{{listener.years_of_exp}}">
-      <text class="label">从业年限</text>
-      <text class="value">{{listener.years_of_exp}}年</text>
-    </view>
     <view class="detail-item" wx:if="{{listener.consult_hours}}">
       <text class="label">咨询时长</text>
       <text class="value">{{listener.consult_hours}}小时</text>
@@ -45,49 +49,47 @@
   </view>
 
   <!-- 个人介绍 -->
-  <view class="intro-card">
+  <view class="intro-card" wx:if="{{listener.intro}}">
     <text class="section-title">个人介绍</text>
     <text class="intro-text">{{listener.intro}}</text>
   </view>
 
   <!-- 擅长领域 -->
-  <view class="expertise-card" wx:if="{{listener.expertise}}">
+  <view class="expertise-card" wx:if="{{expertiseList.length > 0}}">
     <text class="section-title">擅长领域</text>
     <view class="tags-container">
-      <text class="tag" wx:for="{{listener.expertise.split(',')}}" wx:key="index">{{item}}</text>
+      <text class="tag" wx:for="{{expertiseList}}" wx:key="*this">{{item}}</text>
     </view>
   </view>
 
-  <!-- 时长选择（价格统一以 H币 展示） -->
+  <!-- 时长选择（下拉，价格统一以 H币 展示） -->
   <view class="price-card">
     <text class="section-title">选择时长</text>
-    <view class="tiers">
-      <view
-        class="tier-item {{selectedMinutes === item.minutes ? 'active' : ''}}"
-        wx:for="{{priceTiers}}"
-        wx:key="minutes"
-        data-minutes="{{item.minutes}}"
-        data-price="{{item.price}}"
-        data-coins="{{item.coins}}"
-        bindtap="selectTier"
-      >
-        <text class="tier-label">{{item.label}}</text>
-        <text class="tier-price">{{item.coins}} {{coinName}}</text>
+    <picker mode="selector" range="{{tierOptions}}" value="{{tierIndex}}" bindchange="onTierChange">
+      <view class="tier-select">
+        <view class="ts-main">
+          <text class="ts-label">{{selectedLabel}}</text>
+          <text class="ts-price">{{selectedCoins}} {{coinName}}</text>
+        </view>
+        <text class="ts-arrow">▾</text>
       </view>
-    </view>
+    </picker>
     <view class="balance-tip">
       <text>当前余额 {{balanceCoins}} {{coinName}}</text>
       <text class="tip-lack" wx:if="{{!enough}}">余额不足，请先充值</text>
     </view>
   </view>
 
-  <!-- 底部下单按钮 -->
-  <view class="footer">
+  <!-- 底部下单按钮：余额足够→合计+立即下单；不足→全宽居中「去充值」 -->
+  <view class="footer" wx:if="{{enough}}">
     <view class="total">
       <text class="total-label">合计：</text>
       <text class="total-price">{{selectedCoins}} {{coinName}}</text>
     </view>
-    <button class="order-btn" bindtap="handleOrder">{{enough ? '立即下单' : '去充值'}}</button>
+    <button class="order-btn" bindtap="handleOrder">立即下单</button>
+  </view>
+  <view class="footer footer-full" wx:else>
+    <button class="order-btn order-btn-full" bindtap="goRecharge">去充值</button>
   </view>
 </view>
 
