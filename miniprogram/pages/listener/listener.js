@@ -1,25 +1,13 @@
 // pages/listener/listener —— 倾听者平台
 //
-// 倾听者侧的核心页面：查看入驻状态、开关接单、查看收益，以及完成保活设置。
+// 倾听者侧的核心页面：查看入驻状态、开关接单、查看收益/申请提现、
+// 收益明细、接叫记录与分佣领取。
 //
-// 为什么要有「保活」：小程序被微信回收后就收不到来电，只能靠离线通知触达。
-// 本页提供三种保活手段（效果由强到弱）：
-//   1) iOS「显示在聊天顶部」/ Android 多任务锁定 —— 用户手动设置，效果最好
-//   2) 静音后台音频 —— 降低被系统回收的概率，属辅助手段
-//   3) 离线通知兜底 —— 已被回收时的最后一道防线（需腾讯云 IM 推送配置）
+// 说明：来电已改为「电话拨号」（用户下单后直接拨打系统电话），
+// 与小程序前后台无关，故 v2.0 TUICallKit 时代的保活/订阅消息已全部移除。
 
 const api = require('../../utils/api.js')
 const store = require('../../utils/store.js')
-
-// 静音音频：1 秒无声循环，用户完全无感知，用于降低小程序被系统回收的概率
-const SILENCE_SRC = '/static/silence.wav'
-
-// 订阅消息模板 ID（「通话邀请通知」）：小程序被回收时的离线触达兜底。
-// 需在微信公众平台申请模板后填入，与后端 HEARCUP_SUBSCRIBE_TPL_ID 保持一致。
-// 为空时跳过授权请求（不影响上线）。
-const SUBSCRIBE_TMPL_ID = ''
-
-let audioCtx = null
 
 Page({
   data: {
@@ -28,50 +16,11 @@ Page({
     applyStatus: -1,
     isOnline: false,
     earnings: { today_income: 0, withdrawable: 0, total_earnings: 0, today_calls: 0 },
-    transfers: [],       // 分佣转账记录（含待领取）
-    platform: '',        // android / ios / devtools
-    sysVersion: '',
-    lowAndroid: false,   // Android 10 以下：系统层面不支持锁屏来电弹窗
-    keepAlive: false,    // 静音音频保活开关
-  },
-
-  onLoad() {
-    this.detectPlatform()
-    try {
-      this.setData({ keepAlive: wx.getStorageSync('hearcup_keepalive') === '1' })
-    } catch (e) {}
+    transfers: []       // 分佣转账记录（含待领取）
   },
 
   async onShow() {
     await this.refresh()
-    // 回到前台时，若用户此前开启了音频保活则确保仍在播放（切后台可能被系统暂停）
-    if (this.data.keepAlive && this.data.applyStatus === 1) this.startAudio()
-  },
-
-  onHide() {
-    // 注意：不在这里停止音频。保活的目的正是让小程序在后台也尽量存活。
-  },
-
-  onUnload() {
-    this.stopAudio()
-  },
-
-  // 识别系统，给出对应的保活引导与低版本提示
-  detectPlatform() {
-    let info = {}
-    try {
-      info = (wx.getDeviceInfo && wx.getDeviceInfo())
-        || wx.getSystemInfoSync() || {}
-    } catch (e) { info = {} }
-    const platform = String(info.platform || '').toLowerCase()
-    const sysVersion = String(info.system || '')
-    let lowAndroid = false
-    if (platform === 'android') {
-      const m = sysVersion.match(/(\d+)/)
-      // Android 10 以下不支持锁屏状态下的来电弹窗，需提前告知用户，避免预期落差
-      if (m && Number(m[1]) < 10) lowAndroid = true
-    }
-    this.setData({ platform, sysVersion, lowAndroid })
   },
 
   async refresh() {
@@ -111,71 +60,10 @@ Page({
     if (r && r.code === 0) {
       this.setData({ isOnline: on })
       wx.showToast({ title: on ? '已上线，可接听来电' : '已下线', icon: 'none' })
-      // 上线即开启音频保活；下线时停止，避免无谓耗电
-      if (on) {
-        if (this.data.keepAlive) this.startAudio()
-        this.requestSubscribe()
-      } else {
-        this.stopAudio()
-      }
     } else {
       this.setData({ isOnline: !on })
       wx.showToast({ title: (r && r.msg) || '操作失败', icon: 'none' })
     }
-  },
-
-  // 订阅消息授权：在「上线接单」这一关键动作时才弹，不在首次进入一次性申请（微信会拦截）
-  requestSubscribe() {
-    if (!SUBSCRIBE_TMPL_ID) return
-    wx.requestSubscribeMessage({
-      tmplIds: [SUBSCRIBE_TMPL_ID],
-      success: (res) => {
-        // res[SUBSCRIBE_TMPL_ID] === 'accept' 授权成功；'reject' 或 undefined 未授权
-        // 用户拒绝后再次调用可能不再弹窗，需引导其手动进「设置 → 订阅消息」开启（见配置清单避坑点）
-      },
-      fail: () => {}
-    })
-  },
-
-  // 静音音频保活开关
-  toggleKeepAlive(e) {
-    const on = e.detail.value
-    this.setData({ keepAlive: on })
-    try { wx.setStorageSync('hearcup_keepalive', on ? '1' : '0') } catch (err) {}
-    if (on && this.data.isOnline) this.startAudio()
-    else this.stopAudio()
-  },
-
-  startAudio() {
-    try {
-      if (!audioCtx) {
-        audioCtx = wx.createInnerAudioContext()
-        audioCtx.src = SILENCE_SRC
-        audioCtx.loop = true
-        audioCtx.volume = 0                 // 静音，用户无感知
-        audioCtx.obeyMuteSwitch = false     // iOS 静音键不影响播放
-        audioCtx.onError(() => {})          // 播放失败不影响其它功能
-      }
-      audioCtx.play()
-    } catch (e) {}
-  },
-
-  stopAudio() {
-    try { if (audioCtx) audioCtx.stop() } catch (e) {}
-  },
-
-  // 保活引导：按系统给出不同的操作步骤
-  showKeepGuide() {
-    const isIOS = this.data.platform === 'ios'
-    const content = isIOS
-      ? '点击小程序右上角「…」→ 选择「显示在聊天顶部」，小程序会以悬浮窗常驻微信顶部，来电能第一时间弹出。'
-      : '打开小程序后，进入手机多任务界面，找到小程序并下拉锁定（或长按选择「锁定」），可避免微信清理后台时被关闭。'
-    wx.showModal({
-      title: '如何保持在线',
-      content,
-      showCancel: false,
-      confirmText: '知道了',
-    })
   },
 
   goApply() {
@@ -266,7 +154,6 @@ Page({
       return
     }
     // 调起微信「领取分佣」页（商家转账到零钱：用户须手动点击领取才到账）
-    // 注意：小程序端 API 为 wx.requestMerchantTransfer，需传 mchId/appId/package
     wx.requestMerchantTransfer({
       mchId: (r.data && r.data.mch_id) || item.mch_id || '',
       appId: (r.data && r.data.app_id) || item.app_id || '',
@@ -280,5 +167,5 @@ Page({
         wx.showToast({ title: '唤起领取失败，请重试', icon: 'none' })
       }
     })
-  },
+  }
 })

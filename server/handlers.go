@@ -1,9 +1,6 @@
 package main
 
 import (
-	"bytes"
-	"compress/zlib"
-	"encoding/base64"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -16,7 +13,7 @@ import (
 	"time"
 )
 
-// TRTC / 微信 等外部依赖配置统一走 config.go 的 appCfg（环境变量注入）。
+// 微信 等外部依赖配置统一走 config.go 的 appCfg（环境变量注入）。
 
 // ---------- 基础工具 ----------
 
@@ -218,9 +215,6 @@ func hAuthLogin(w http.ResponseWriter, r *http.Request) {
 	store.save()
 	// 提前解锁：IM 账号开通涉及网络 IO，绝不能放在锁内（会阻塞所有请求）
 	store.mu.Unlock()
-
-	// 锁外：确保该用户在腾讯云 IM 中有可用账号，并同步昵称/头像（失败不阻断登录）
-	imEnsureAccount(uid, userCopy.Nickname, userCopy.Avatar)
 
 	sendOK(w, map[string]interface{}{
 		"token": tok, "user": userCopy,
@@ -685,202 +679,12 @@ func hCallConfirmPay(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
-// ---------- 呼叫结果回调（接听 / 拒接 / 取消 / 超时未接）----------
-
-// hCallResult 统一处理呼叫终态：释放被叫忙碌态、未接通时解冻主叫余额。
-// 由前端在 TUICallKit 回调（onCallEnd / onCallNotConnected / 超时）时上报。
-func hCallResult(w http.ResponseWriter, r *http.Request, kind string) {
-	uid, ok := requireUser(r)
-	if !ok {
-		fail(w, "未登录")
-		return
-	}
-	var b struct {
-		RoomID string `json:"room_id"`
-		CallID int64  `json:"call_id"`
-	}
-	readJSON(r, &b)
-
-	nickname := ""
-	store.mu.Lock()
-	var rec *CallRecord
-	if b.CallID > 0 {
-		rec = store.db.Calls[b.CallID]
-	}
-	if rec == nil && b.RoomID != "" {
-		for _, c := range store.db.Calls {
-			if c.RoomID == b.RoomID {
-				rec = c
-				break
-			}
-		}
-	}
-	if rec == nil {
-		store.mu.Unlock()
-		fail(w, "通话不存在")
-		return
-	}
-	// 仅主叫或被叫本人可上报结果
-	if rec.UserID != uid && !userOwnsProvider(uid, rec.ProviderID) {
-		store.mu.Unlock()
-		fail(w, "无权操作")
-		return
-	}
-
-	// 未被接听的终态：解冻主叫余额 + 释放被叫忙碌（免费模式无冻结，跳过解冻）
-	if kind == "reject" || kind == "cancel" || kind == "miss" {
-		if rec.Status == 0 {
-			u := store.db.Users[rec.UserID]
-			if u != nil && !appCfg.FreeCall && u.Frozen >= store.db.Config.MinBalance {
-				u.Frozen -= store.db.Config.MinBalance
-				u.Balance += store.db.Config.MinBalance
-			}
-			rec.Status = 2 // 2=未接通
-		}
-		if p := store.db.Providers[rec.ProviderID]; p != nil {
-			p.IsBusy = 0
-		}
-		nickname = store.db.Users[rec.UserID].Nickname
-	}
-	rec.UpdatedAt = now()
-	store.save()
-	store.mu.Unlock()
-
-	// 超时未接：给倾听者补发通知，避免其完全无感知（网络 IO，放在锁外）
-	// 双通道：IM 离线推送（实时）+ 订阅消息（小程序被回收时的兜底）
-	if kind == "miss" {
-		if p := getProviderNoLock(rec.ProviderID); p != nil {
-			imSendMissedCall(p.UserID, nickname, rec.CallType)
-			sendMissedCallSubscribe(p.UserID, nickname, rec.CallType, rec.RoomID)
-		}
-	}
-	sendOK(w, map[string]interface{}{"result": kind, "room_id": rec.RoomID})
-}
-
-func hCallAccept(w http.ResponseWriter, r *http.Request) { hCallResult(w, r, "accept") }
-func hCallReject(w http.ResponseWriter, r *http.Request) { hCallResult(w, r, "reject") }
-func hCallCancel(w http.ResponseWriter, r *http.Request) { hCallResult(w, r, "cancel") }
-func hCallMiss(w http.ResponseWriter, r *http.Request)   { hCallResult(w, r, "miss") }
-
 // userOwnsProvider 判断该用户是否是此服务者账号的持有者
 func userOwnsProvider(uid, providerID int64) bool {
 	p, ok := store.db.Providers[providerID]
 	return ok && p.UserID == uid
 }
 
-// getProviderNoLock 在不持锁的场景下安全读取 provider 快照（仅用于触发外部 IO）
-func getProviderNoLock(providerID int64) *Provider {
-	store.mu.Lock()
-	defer store.mu.Unlock()
-	if p, ok := store.db.Providers[providerID]; ok {
-		cp := *p
-		return &cp
-	}
-	return nil
-}
-
-func hCallStatus(w http.ResponseWriter, r *http.Request, params map[string]string) {
-	roomID := params["roomId"]
-	store.mu.Lock()
-	defer store.mu.Unlock()
-	for _, c := range store.db.Calls {
-		if c.RoomID == roomID {
-			sendOK(w, map[string]interface{}{"status": c.Status, "amount": c.Amount, "duration": c.Duration})
-			return
-		}
-	}
-	fail(w, "通话不存在")
-}
-
-// 计费核心：向上取整分钟、单价、平台抽成、冻结结算、透支保护
-func hCallEnd(w http.ResponseWriter, r *http.Request) {
-	_, ok := requireUser(r)
-	if !ok {
-		fail(w, "未登录")
-		return
-	}
-	var body struct {
-		RoomID string `json:"room_id"`
-	}
-	readJSON(r, &body)
-	store.mu.Lock()
-	defer store.mu.Unlock()
-	var rec *CallRecord
-	for _, c := range store.db.Calls {
-		if c.RoomID == body.RoomID {
-			rec = c
-			break
-		}
-	}
-	if rec == nil {
-		fail(w, "通话不存在")
-		return
-	}
-	if rec.Status == 1 {
-		sendOK(w, map[string]interface{}{"amount": rec.Amount})
-		return
-	}
-	u := store.db.Users[rec.UserID]
-	p := store.db.Providers[rec.ProviderID]
-	endT := now()
-	duration := int(endT - rec.StartTime)
-	if duration < 0 {
-		duration = 0
-	}
-	minutes := duration / 60
-	if duration%60 > 0 {
-		minutes++ // 向上取整
-	}
-	if minutes < 1 && duration > 0 {
-		minutes = 1
-	}
-	amount := float64(minutes) * rec.UnitPrice
-	platformFee := amount * store.db.Config.PlatformRate
-	providerIncome := amount - platformFee
-
-	if appCfg.FreeCall {
-		// 免费通话模式：不扣费、不动余额，金额记 0（支付被限制时先跑通通话）
-		amount = 0
-		platformFee = 0
-		providerIncome = 0
-	} else {
-		// 结算冻结余额
-		frozenUsed := store.db.Config.MinBalance
-		if amount <= frozenUsed {
-			// 退回冻结差额
-			u.Frozen -= frozenUsed
-			u.Balance += (frozenUsed - amount)
-		} else {
-			u.Frozen -= frozenUsed
-			diff := amount - frozenUsed
-			u.Balance -= diff
-			if u.Balance < -store.db.Config.Overdraft {
-				u.Balance = -store.db.Config.Overdraft // 透支保护
-			}
-		}
-	}
-	// 服务者收益
-	p.Withdrawable += providerIncome
-	p.TotalEarnings += providerIncome
-	p.TotalSessions++
-	p.IsBusy = 0
-	p.TodaySessions++
-
-	rec.EndTime = endT
-	rec.Duration = duration
-	rec.Amount = amount
-	rec.ProviderIncome = providerIncome
-	rec.PlatformFee = platformFee
-	rec.Status = 1
-	rec.UpdatedAt = endT
-	store.save()
-	sendOK(w, map[string]interface{}{
-		"duration": duration, "minutes": minutes, "amount": amount,
-		"provider_income": providerIncome, "platform_fee": platformFee, "balance": u.Balance,
-	})
-}
-
-// 电话拨号方案：前端上报通话时长并结算（避免依赖 TUICallKit）
 func hCallEndWithMinutes(w http.ResponseWriter, r *http.Request) {
 	uid, ok := requireUser(r)
 	if !ok {
@@ -2384,52 +2188,6 @@ func startOfToday() int64 {
 	return d.Unix()
 }
 
-// 生成 TRTC UserSig（腾讯 TLSSigAPIv2 算法；SDKAppID=0 时返回占位签名）
-func generateUserSig(userID string) string {
-	if appCfg.TRTCAppID == 0 {
-		return "MOCKSIG_" + userID
-	}
-	expire := 86400
-	return generateUserSigAt(userID, now(), expire)
-}
-
-// generateUserSigAt 允许注入固定时间戳，便于与腾讯官方 SDK 做逐字符交叉验证（见 im_probe_test.go）。
-func generateUserSigAt(userID string, ts int64, expire int) string {
-	if appCfg.TRTCAppID == 0 {
-		return "MOCKSIG_" + userID
-	}
-	// ① 待签名串：腾讯官方 TLSSigAPIv2 固定格式，字段名/顺序/换行不可变。
-	//    注意：userbuf（payload 的 base64）仅在需要房间级权限时参与签名，普通 UserSig 不含该行。
-	content := fmt.Sprintf("TLS.identifier:%s\nTLS.sdkappid:%d\nTLS.time:%d\nTLS.expire:%d\n",
-		userID, appCfg.TRTCAppID, ts, expire)
-	sig := base64.StdEncoding.EncodeToString(hmacSHA256(appCfg.TRTCSecret, content))
-
-	// ② payload JSON：字段顺序与官方 SDK 保持一致（zlib 对字节序敏感，对齐后可与官方实现逐字符比对）。
-	//    带 userbuf 时需额外追加 "TLS.userbuf" 字段，此处不涉房权限，故省略。
-	doc := fmt.Sprintf(
-		`{"TLS.ver":"2.0","TLS.identifier":"%s","TLS.sdkappid":%d,"TLS.time":%d,"TLS.expire":%d,"TLS.sig":"%s"}`,
-		userID, appCfg.TRTCAppID, ts, expire, sig)
-
-	// ③ 官方规范：JSON → zlib deflate → base64 → 腾讯私有 URL-safe 转义。
-	//    历史上曾误用「明文 JSON 直接 base64」，服务端按压缩格式解压失败，返回 70003 UserSig 非法。
-	var buf bytes.Buffer
-	zw := zlib.NewWriter(&buf)
-	_, _ = zw.Write([]byte(doc))
-	_ = zw.Close()
-	return tencentBase64URLEscape(base64.StdEncoding.EncodeToString(buf.Bytes()))
-}
-
-// tencentBase64URLEscape 腾讯私有 base64url 变体：+ → *、/ → -、= → _。
-// 与官方 tls-sig-api-v2（node/go）实现保持一致，注意它并非标准 RFC4648 base64url。
-func tencentBase64URLEscape(s string) string {
-	s = strings.ReplaceAll(s, "+", "*")
-	s = strings.ReplaceAll(s, "/", "-")
-	s = strings.ReplaceAll(s, "=", "_")
-	return s
-}
-
-// ---------- 运维观测（真机联调用） ----------
-
 // mask 只保留末尾 4 位，避免泄露完整凭据
 func mask(s string) string {
 	if s == "" {
@@ -2449,11 +2207,6 @@ func hDebugEnv(w http.ResponseWriter, r *http.Request) {
 		"mysql": map[string]interface{}{
 			"enabled": mysqlOK,
 			"dsn":     boolText(mysqlOK),
-		},
-		"trtc": map[string]interface{}{
-			"enabled":  appCfg.TRTCAppID != 0 && appCfg.TRTCSecret != "",
-			"sdkappid": appCfg.TRTCAppID,
-			"secret":   boolText(appCfg.TRTCSecret != ""),
 		},
 		"wechat_login": map[string]interface{}{
 			"enabled": appCfg.WXAppID != "" && appCfg.WXSecret != "",

@@ -58,7 +58,7 @@ const providers = [
 // 当前用户的通话记录（演示）
 const callRecords = [
   { id: 9001, providerName: '小满', callType: 1, durationText: '12分30秒', amount: 13.0, time: '08-26 21:14', rating: 5 },
-  { id: 9002, providerName: '林清和', callType: 2, durationText: '08分05秒', amount: 18.0, time: '08-24 20:02', rating: 5 },
+  { id: 9002, providerName: '林清和', callType: 1, durationText: '08分05秒', amount: 18.0, time: '08-24 20:02', rating: 5 },
   { id: 9003, providerName: '阿树', callType: 1, durationText: '21分10秒', amount: 22.0, time: '08-21 23:40', rating: 4 }
 ]
 

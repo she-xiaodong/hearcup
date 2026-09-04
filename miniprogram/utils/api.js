@@ -152,24 +152,7 @@ const api = {
     if (r._mock) return { code: 0, data: { call_id: callId, minutes: 15, callee_phone: '', callee_phone_masked: '' } }
     return r
   },
-  // 兼容旧调用：保留 invite 但对齐新参数（分钟制套餐）
-  async invite(pid, minutes) {
-    const r = await request('POST', '/api/v1/call/invite', { provider_id: pid, minutes: minutes || 15 })
-    if (r._mock) return { code: 0, data: { call_id: 1, order_no: 'MOCK', amount: 0, minutes: minutes || 15 } }
-    return r
-  },
-  async endCall(roomId) {
-    const r = await request('POST', '/api/v1/call/end', { room_id: roomId })
-    if (r._mock) return { code: 0, data: { amount: 0 } }
-    return r
-  },
-  // —— 呼叫终态上报：由 TUICallKit 状态回调驱动，后端据此结算或解冻 ——
-  // kind: accept(接听) / reject(拒接) / cancel(主叫取消) / miss(超时未接)
-  async reportCallResult(kind, roomId, callId) {
-    if (useMock()) return { code: 0, data: { result: kind } }
-    return request('POST', '/api/v1/call/' + kind, { room_id: roomId, call_id: callId || 0 })
-  },
-  // —— 电话拨号方案：上报通话时长并结算 ——
+  // —— 电话拨号方案：前端上报通话时长并结算 ——
   async reportCallResultWithMinutes(kind, roomId, callId, minutes) {
     if (useMock()) return { code: 0, data: { result: kind, minutes } }
     return request('POST', '/api/v1/call/' + kind + '/minutes', {

@@ -9,8 +9,7 @@ Page({
     env: null,
     me: null,
     payResult: '',
-    callResult: ''
-  },
+      },
 
   onLoad() {
     const cfg = getApp().globalData.config
@@ -33,7 +32,7 @@ Page({
   },
 
   async runAll() {
-    this.setData({ steps: [], env: null, me: null, payResult: '', callResult: '' })
+    this.setData({ steps: [], env: null, me: null, payResult: '' })
     const base = this.data.baseUrl.replace(/\/$/, '')
 
     // 1) 后端健康
@@ -51,7 +50,6 @@ Page({
       this.setData({ env: r.data })
       const e = r.data
       this.push('MySQL 持久化', e.mysql.enabled, e.mysql.enabled ? '已连接' : '回退 JSON 文件')
-      this.push('腾讯 TRTC', e.trtc.enabled, e.trtc.enabled ? 'AppID ' + e.trtc.sdkappid : '未配置')
       this.push('微信登录', e.wechat_login.enabled, e.wechat_login.enabled ? e.wechat_login.appid : '未配置')
       this.push('微信支付', e.wechat_pay.enabled, e.wechat_pay.enabled ? '商户号 ' + e.wechat_pay.mchid : '未配置')
     } catch (err) {
@@ -135,34 +133,6 @@ Page({
     }
   },
 
-  // 呼叫测试：验证能否取到真实 TRTC UserSig
-  async testCall() {
-    this.setData({ callResult: '正在发起…' })
-    try {
-      if (!this.providers || !this.providers.length) {
-        const r = await api.getOnlineProviders(0)
-        this.providers = (r.data && r.data.list) || []
-      }
-      if (!this.providers.length) {
-        this.setData({ callResult: '没有在线服务者，无法测试' })
-        return
-      }
-      const p = this.providers[0]
-      const r = await api.invite(p.id, 1)
-      if (r.code !== 0) {
-        this.setData({ callResult: '呼叫失败：' + (r.msg || '') })
-        return
-      }
-      const d = r.data
-      const isMock = String(d.user_sig || '').indexOf('MOCKSIG') === 0
-      this.setData({
-        callResult: '房间号 ' + d.room_id + '\nSDKAppID ' + d.sdk_app_id +
-          '\nUserSig ' + (isMock ? 'MOCK（未配 TRTC 密钥）' : '真实签名 ' + String(d.user_sig).slice(0, 32) + '…')
-      })
-    } catch (e) {
-      this.setData({ callResult: '异常：' + String(e.msg || e.errMsg || e) })
-    }
-  },
 
   wxLogin() {
     return new Promise((resolve, reject) => {

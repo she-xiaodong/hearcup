@@ -274,12 +274,12 @@ func createWxTransferToBalance(openid, outBillNo string, amount float64, remark 
 		return nil, fmt.Errorf("打款金额无效")
 	}
 	body := map[string]interface{}{
-		"appid":                     appCfg.WXAppID,
-		"out_bill_no":               outBillNo,
-		"transfer_scene_id":         sceneID,
-		"openid":                    openid,
-		"transfer_amount":           total,
-		"transfer_remark":           remark,
+		"appid":                       appCfg.WXAppID,
+		"out_bill_no":                 outBillNo,
+		"transfer_scene_id":           sceneID,
+		"openid":                      openid,
+		"transfer_amount":             total,
+		"transfer_remark":             remark,
 		"transfer_scene_report_infos": wxTransferSceneInfos(),
 	}
 	if n := appCfg.WXPayTransferNotifyURL; n != "" {

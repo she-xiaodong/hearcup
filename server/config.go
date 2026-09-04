@@ -6,13 +6,11 @@ import (
 	"strings"
 )
 
-// AppConfig 汇总所有外部依赖的配置（腾讯云 TRTC / 微信登录 / 微信支付 / MySQL / JWT）。
+// AppConfig 汇总所有外部依赖的配置（微信登录 / 微信支付 / 商家转账 / MySQL / JWT）。
 // 全部通过环境变量注入；任何一项缺失时，代码自动回退到 MVP 占位逻辑，
 // 保证「无真实凭据也能跑通、能测试」（e2e 15/15 不破）。
 type AppConfig struct {
 	MySQLDSN        string // 例: root:pass@tcp(127.0.0.1:3306)/hearcup?charset=utf8mb4&parseTime=true
-	TRTCAppID       int64  // 腾讯云 TRTC SDKAppID
-	TRTCSecret      string // 腾讯云 TRTC 密钥（用于生成真实 UserSig）
 	WXAppID         string // 微信小程序 appid
 	WXSecret        string // 微信小程序 secret（code→openid 用）
 	WXPayMchID      string // 微信支付 商户号
@@ -24,9 +22,8 @@ type AppConfig struct {
 	WXPayTransferSceneID    string // 转账场景ID（须在商户平台-商家转账开通，如 1001 分销佣金）
 	WXPayTransferSceneInfos string // transfer_scene_report_infos 的 JSON 字符串（按场景报备，如 岗位类型/报酬说明）
 	WXPayTransferNotifyURL  string // 转账结果异步回调地址（可选，公网 HTTPS）
-	SubscribeTplID  string // 微信订阅消息模板 ID（通话邀请通知，未接来电兜底）
-	FreeCall        bool   // 免费通话模式：跳过余额校验/冻结/扣费（支付被限制时用于先跑通通话）
-	JWTSecret       string
+	FreeCall                bool   // 免费通话模式：跳过余额校验/冻结/扣费（支付被限制时用于先跑通通话）
+	JWTSecret               string
 }
 
 var appCfg AppConfig
@@ -34,22 +31,19 @@ var appCfg AppConfig
 func loadConfig() {
 	loadDotEnv(".env")
 	appCfg = AppConfig{
-		MySQLDSN:        os.Getenv("HEARCUP_MYSQL_DSN"),
-		TRTCAppID:       atoi64(os.Getenv("HEARCUP_TRTC_APPID")),
-		TRTCSecret:      os.Getenv("HEARCUP_TRTC_SECRET"),
-		WXAppID:         os.Getenv("HEARCUP_WX_APPID"),
-		WXSecret:        os.Getenv("HEARCUP_WX_SECRET"),
-		WXPayMchID:      os.Getenv("HEARCUP_WXPAY_MCHID"),
-		WXPaySerial:     os.Getenv("HEARCUP_WXPAY_SERIAL"),
-		WXPayAPIv3Key:   os.Getenv("HEARCUP_WXPAY_APIV3_KEY"),
-		WXPayPrivateKey: os.Getenv("HEARCUP_WXPAY_PRIVATE_KEY"),
-		WXPayNotifyURL:  os.Getenv("HEARCUP_WXPAY_NOTIFY_URL"),
+		MySQLDSN:                os.Getenv("HEARCUP_MYSQL_DSN"),
+		WXAppID:                 os.Getenv("HEARCUP_WX_APPID"),
+		WXSecret:                os.Getenv("HEARCUP_WX_SECRET"),
+		WXPayMchID:              os.Getenv("HEARCUP_WXPAY_MCHID"),
+		WXPaySerial:             os.Getenv("HEARCUP_WXPAY_SERIAL"),
+		WXPayAPIv3Key:           os.Getenv("HEARCUP_WXPAY_APIV3_KEY"),
+		WXPayPrivateKey:         os.Getenv("HEARCUP_WXPAY_PRIVATE_KEY"),
+		WXPayNotifyURL:          os.Getenv("HEARCUP_WXPAY_NOTIFY_URL"),
 		WXPayTransferSceneID:    os.Getenv("HEARCUP_WXPAY_TRANSFER_SCENE_ID"),
 		WXPayTransferSceneInfos: os.Getenv("HEARCUP_WXPAY_TRANSFER_SCENE_INFOS"),
 		WXPayTransferNotifyURL:  os.Getenv("HEARCUP_WXPAY_TRANSFER_NOTIFY_URL"),
-		SubscribeTplID:  os.Getenv("HEARCUP_SUBSCRIBE_TPL_ID"),
-		FreeCall:        envBool(os.Getenv("HEARCUP_FREE_CALL")),
-		JWTSecret:       os.Getenv("HEARCUP_JWT_SECRET"),
+		FreeCall:                envBool(os.Getenv("HEARCUP_FREE_CALL")),
+		JWTSecret:               os.Getenv("HEARCUP_JWT_SECRET"),
 	}
 	if appCfg.JWTSecret == "" {
 		appCfg.JWTSecret = "hearcup_dev_secret_change_me"

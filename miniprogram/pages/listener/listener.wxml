@@ -29,7 +29,7 @@
       <button class="btn btn-ghost btn-block" style="margin-top: 24rpx;" bindtap="goApply">重新申请</button>
     </view>
 
-    <!-- 已通过：工作台 -->
+    <!-- 已通过：平台 -->
     <block wx:else>
       <!-- 在线开关 -->
       <view class="card listener-card">
@@ -95,31 +95,6 @@
           <text wx:else class="muted" style="font-size:24rpx;">{{item.stateText}}</text>
         </view>
         <view class="muted claim-tip">微信转账需手动领取才会到账，点击「去领取」按提示操作。</view>
-      </view>
-
-      <!-- 低版本 Android 提示 -->
-      <view wx:if="{{lowAndroid}}" class="card listener-card warn">
-        <view class="warn-title">⚠️ 你的系统版本较低</view>
-        <view class="muted">Android 10 以下不支持锁屏来电弹窗，来电会以微信通知提醒，请尽量保持微信在前台运行。</view>
-      </view>
-
-      <!-- 保活设置 -->
-      <view class="card listener-card">
-        <view class="section-title" style="margin: 0;">保持在线</view>
-        <view class="row" style="margin-top: 8rpx;">
-          <view class="row-main">
-            <view class="row-title" style="font-size: 28rpx;">后台音频保活</view>
-            <view class="muted">播放极轻量静音，降低被系统回收概率</view>
-          </view>
-          <switch checked="{{keepAlive}}" bindchange="toggleKeepAlive" color="#3A9E8F" />
-        </view>
-        <view class="keep-guide" bindtap="showKeepGuide">
-          <view class="kg-main">
-            <view class="kg-title">{{platform === 'ios' ? '显示在聊天顶部（推荐）' : '多任务界面锁定（推荐）'}}</view>
-            <view class="muted">点击查看具体操作步骤</view>
-          </view>
-          <text class="muted">›</text>
-        </view>
       </view>
     </block>
   </block>
