@@ -5,8 +5,8 @@ Page({
   data: {
     balanceCoins: '0',
     coinName: 'H币',
-    tiers: [10, 30, 50, 100, 200],
-    selected: 30, custom: '', customMode: false, payAmount: 30, payCoins: 300,
+    tiers: [50, 100, 200, 500, 1000],
+    selected: 30, custom: '', customMode: false, customTip: '', payAmount: 0, payCoins: 0,
     records: [
       { id: 1, amount: 30, coins: 300, time: '08-25 19:30' },
       { id: 2, amount: 50, coins: 500, time: '08-20 12:08' }
@@ -32,19 +32,30 @@ Page({
 
   selectTier(e) {
     const v = Number(e.currentTarget.dataset.v)
-    this.setData({ selected: v, customMode: false, custom: '', payAmount: v, payCoins: this.coinsOf(v) })
+    this.setData({ selected: v, customMode: false, custom: '', customTip: '', payAmount: v, payCoins: this.coinsOf(v) })
+  },
+
+  // 「其它金额」：点开才出现自定义输入框
+  openCustom() {
+    this.setData({ customMode: true, selected: 0, custom: '', customTip: '', payAmount: 0, payCoins: 0 })
   },
 
   onCustom(e) {
     const v = e.detail.value
     const n = v ? Number(v) : 0
-    this.setData({ custom: v, customMode: true, selected: 0, payAmount: n, payCoins: this.coinsOf(n) })
+    let tip = ''
+    if (n && (n < 50 || n > 10000)) tip = n < 50 ? '最低充值 50 元' : '单次最高可充 10000 元'
+    this.setData({ custom: v, customMode: true, selected: 0, customTip: tip, payAmount: n, payCoins: this.coinsOf(n) })
   },
 
   async pay() {
     const amount = this.data.payAmount
-    if (!amount || amount < 10) {
-      wx.showToast({ title: '充值金额需≥10元', icon: 'none' });
+    if (!amount || amount < 50) {
+      wx.showToast({ title: '充值金额需≥50元', icon: 'none' })
+      return
+    }
+    if (amount > 10000) {
+      wx.showToast({ title: '单次最高可充 10000 元', icon: 'none' })
       return
     }
     const coins = this.coinsOf(amount)

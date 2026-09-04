@@ -8,23 +8,45 @@
   background: #fff; border-radius: var(--radius-sm);
   box-shadow: var(--shadow-sm);
   display: flex; flex-wrap: wrap; align-items: baseline; justify-content: center; gap: 4rpx;
-  padding: 36rpx 0 20rpx; border: 3rpx solid transparent;
+  padding: 28rpx 0 16rpx; border: 3rpx solid transparent;
 }
-.tier-num { font-size: 44rpx; font-weight: 800; color: var(--text); }
+.tier-num { font-size: 40rpx; font-weight: 800; color: var(--text); line-height: 1; }
+.tier-other-ico { font-size: 40rpx; }
 .tier-unit { font-size: 24rpx; color: var(--text-sub); }
 .tier-coins { width: 100%; text-align: center; font-size: 22rpx; color: var(--text-sub); margin-top: 6rpx; }
 .tier-on { border-color: var(--primary); background: var(--primary-soft); }
 .tier-on .tier-num { color: var(--primary-deep); }
 .tier-on .tier-coins { color: var(--primary-deep); font-weight: 600; }
 
-.custom { margin: 24rpx 32rpx; }
+/* 自定义金额（点「其它金额」后展开） */
+.custom { margin: 24rpx 32rpx; padding: 24rpx 28rpx; }
+.custom-label { font-size: 22rpx; margin-bottom: 14rpx; }
 .custom-input-row { display: flex; align-items: center; gap: 12rpx; border-bottom: 2rpx solid var(--line); padding-bottom: 12rpx; }
-.custom-yen { font-size: 40rpx; font-weight: 700; color: var(--text); }
-.custom-input { flex: 1; font-size: 40rpx; font-weight: 700; }
+.custom-yen { font-size: 38rpx; font-weight: 700; color: var(--text); }
+.custom-input { flex: 1; font-size: 38rpx; font-weight: 700; }
+.custom-coin { font-size: 26rpx; font-weight: 600; color: var(--primary-deep); white-space: nowrap; }
+.custom-tip { color: var(--danger); font-size: 22rpx; margin-top: 10rpx; }
 
-.pay-bar { position: fixed; left: 0; right: 0; bottom: 0; padding: 20rpx 32rpx; background: rgba(255,255,255,0.95); backdrop-filter: blur(10rpx); }
+/* 底部支付栏：紧凑，不遮挡内容 */
+.pay-bar {
+  position: fixed; left: 0; right: 0; bottom: 0;
+  padding: 14rpx 28rpx;
+  padding-bottom: calc(14rpx + env(safe-area-inset-bottom));
+  background: rgba(255,255,255,0.96);
+  backdrop-filter: blur(10rpx);
+  border-top: 1rpx solid var(--line);
+}
+.pay-btn {
+  display: flex; align-items: center; justify-content: center; gap: 16rpx;
+  height: 76rpx; line-height: 76rpx;
+  font-size: 28rpx; font-weight: 700;
+  border-radius: 999rpx;
+}
+.pay-btn::after { border: none; }
+.pay-btn-main { font-size: 28rpx; font-weight: 700; }
+.pay-btn-sub { font-size: 22rpx; font-weight: 400; opacity: 0.9; }
 
-.records { margin: 24rpx 32rpx calc(180rpx + env(safe-area-inset-bottom)); }
+.records { margin: 24rpx 32rpx calc(170rpx + env(safe-area-inset-bottom)); }
 .rec { display: flex; align-items: center; justify-content: space-between; padding: 20rpx 0; border-top: 1rpx solid var(--line); }
 .rec-title { font-size: 28rpx; font-weight: 600; }
 .rec-time { font-size: 22rpx; margin-top: 4rpx; }

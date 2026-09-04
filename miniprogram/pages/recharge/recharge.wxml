@@ -4,35 +4,46 @@
     <view class="balance-num">{{balanceCoins}}</view>
   </view>
 
-  <view class="section-title" style="padding: 8rpx 32rpx;">选择充值金额（1元 = 10{{coinName}}）</view>
+  <view class="section-title" style="padding: 8rpx 32rpx;">选择充值金额（1元 = 10 {{coinName}}）</view>
   <view class="tiers">
     <view wx:for="{{tiers}}" wx:key="*this"
           class="tier {{selected===item && !customMode?'tier-on':''}}"
           bindtap="selectTier" data-v="{{item}}">
       <text class="tier-num">{{item}}</text>
       <text class="tier-unit">元</text>
-      <text class="tier-coins">得 {{item*10}}</text>
+      <text class="tier-coins">{{item*10}} {{coinName}}</text>
+    </view>
+    <!-- 其它金额：点击后展开自定义输入 -->
+    <view class="tier {{customMode?'tier-on':''}}" bindtap="openCustom">
+      <text class="tier-num tier-other-ico">…</text>
+      <text class="tier-unit">其它金额</text>
+      <text class="tier-coins">≥50 元</text>
     </view>
   </view>
 
-  <view class="card custom">
-    <view class="muted" style="margin-bottom:12rpx;">自定义金额（≥10元，1元=10{{coinName}}）</view>
+  <!-- 自定义金额（点击「其它金额」后展开） -->
+  <view wx:if="{{customMode}}" class="card custom">
+    <view class="muted custom-label">自定义金额（最低 50 元，最高 10000 元，1元 = 10 {{coinName}}）</view>
     <view class="custom-input-row">
       <text class="custom-yen">¥</text>
-      <input class="custom-input" type="digit" placeholder="输入金额" value="{{custom}}" bindinput="onCustom" />
+      <input class="custom-input" type="digit" placeholder="输入金额" value="{{custom}}" maxlength="5" bindinput="onCustom" focus />
+      <text class="custom-coin">{{payCoins || ''}} {{coinName}}</text>
     </view>
+    <view wx:if="{{customTip}}" class="custom-tip">{{customTip}}</view>
   </view>
 
   <view class="pay-bar">
-    <button class="btn btn-primary btn-block" bindtap="pay">微信支付 ¥{{payAmount}} · 得{{payCoins}}{{coinName}}</button>
-    <view class="safe-bottom"></view>
+    <button class="btn btn-primary pay-btn" bindtap="pay">
+      <text class="pay-btn-main">微信支付 ¥{{payAmount}}</text>
+      <text class="pay-btn-sub" wx:if="{{payAmount}}">到账 {{payCoins}} {{coinName}}</text>
+    </button>
   </view>
 
   <view class="card records">
     <view class="section-title">充值记录</view>
     <view class="rec" wx:for="{{records}}" wx:key="id">
       <view>
-        <view class="rec-title">充值 ¥{{item.amount}} · +{{item.coins}}{{coinName}}</view>
+        <view class="rec-title">充值 ¥{{item.amount}} · +{{item.coins}} {{coinName}}</view>
         <view class="muted rec-time">{{item.time}}</view>
       </view>
       <text class="rec-status">已到账</text>

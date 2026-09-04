@@ -104,7 +104,6 @@ Page({
   goCalls() { wx.switchTab({ url: '/pages/calls/calls' }) },
   goRecharge() { wx.navigateTo({ url: '/pages/recharge/recharge' }) },
   goSettings() { wx.navigateTo({ url: '/pages/settings/settings' }) },
-  goDevcheck() { wx.navigateTo({ url: '/pages/devcheck/devcheck' }) },
   goAbout() { wx.navigateTo({ url: '/pages/about/about' }) },
   goFeedback() { wx.navigateTo({ url: '/pages/feedback/feedback' }) }
 })
