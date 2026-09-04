@@ -7,6 +7,28 @@
   <view wx:if="{{loading}}" class="empty">加载中…</view>
 
   <block wx:elif="{{ok}}">
+    <!-- 头像与昵称（即时保存，同步首页/详情/我的） -->
+    <view class="card f-card user-edit">
+      <view class="f-title">头像与昵称</view>
+      <view class="ue-row">
+        <button class="ue-avatar-btn" open-type="chooseAvatar" bind:chooseavatar="onChooseAvatar">
+          <image class="ue-avatar" src="{{user.avatar || '/images/default_avatar.png'}}" mode="aspectFill" />
+        </button>
+        <view class="ue-main">
+          <input
+            class="ue-name-input"
+            type="nickname"
+            placeholder="点击设置昵称"
+            value="{{user.nickName}}"
+            bindblur="onNicknameBlur"
+            bindconfirm="onNicknameBlur"
+            confirm-type="done"
+          />
+          <view class="muted ue-tip">点头像换图、点昵称直接改，失焦即自动保存</view>
+        </view>
+      </view>
+    </view>
+
     <!-- 基本资料 -->
     <view class="card f-card">
       <view class="f-title">基本资料</view>

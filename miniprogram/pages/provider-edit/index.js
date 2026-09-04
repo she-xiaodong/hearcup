@@ -1,6 +1,8 @@
 // pages/provider-edit/index —— 倾听者「资料与价格设置」
-// 修改：简介/城市/年龄/学历/专业/从业年限/咨询时长/背景/擅长领域 + 各时长档位价格(元，展示层×10=H币)
+// 修改：头像/昵称（即时保存，同步用户资料）＋ 简介/城市/年龄/学历/专业/从业年限/咨询时长/背景/擅长领域
+// ＋ 各时长档位价格(元，展示层×10=H币)
 const api = require('../../../utils/api.js')
+const store = require('../../../utils/store.js')
 
 // 与 api.js TAGS / 后端 seed 保持一致
 const TAG_NAMES = ['恋爱', '婚姻', '家庭', '职场', '校园', '亲子', '情绪压力', '自我成长', '人际关系']
@@ -10,6 +12,7 @@ Page({
   data: {
     loading: true,
     saving: false,
+    user: {},
     tags: TAG_NAMES.map(n => ({ name: n, on: false })),
     expertiseNames: [],
     form: {
@@ -68,7 +71,10 @@ Page({
         .split(',')
         .map(x => x.trim())
         .filter(Boolean)
+      // 头像/昵称来自当前登录用户（服务者展示即用户头像昵称）
+      const u = store.getUser() || {}
       this.setData({
+        user: { avatar: u.avatar || '', nickName: u.nickName || u.nickname || '' },
         'form.intro': p.intro || '',
         'form.city': p.city || '',
         'form.age': p.age ? String(p.age) : '',
@@ -92,6 +98,54 @@ Page({
     const f = e.currentTarget.dataset.f
     this.setData({ ['form.' + f]: e.detail.value })
   },
+
+  // ===== 头像 / 昵称（即时保存，同「我的」页逻辑）=====
+  readAsBase64(filePath) {
+    return new Promise((resolve) => {
+      wx.getFileSystemManager().readFile({
+        filePath, encoding: 'base64',
+        success: (res) => resolve('data:image/jpeg;base64,' + res.data),
+        fail: () => resolve('')
+      })
+    })
+  },
+  async onChooseAvatar(e) {
+    const url = e.detail.avatarUrl
+    if (!url) return
+    const dataUri = await this.readAsBase64(url)
+    if (!dataUri) return
+    this.setData({ 'user.avatar': dataUri })
+    wx.showLoading({ title: '保存中…', mask: true })
+    const r = await api.updateProfile('', dataUri)
+    wx.hideLoading()
+    if (r && r.code === 0) {
+      if (r.data) getApp().globalData.userInfo = Object.assign({}, getApp().globalData.userInfo, r.data)
+      wx.showToast({ title: '头像已更新', icon: 'none' })
+    } else {
+      this.setData({ 'user.avatar': store.getUser().avatar || '' })
+      wx.showToast({ title: (r && r.msg) || '头像保存失败', icon: 'none' })
+    }
+  },
+  async onNicknameBlur(e) {
+    if (this._nickSaving) return
+    const name = (e.detail.value || '').trim()
+    if (!name || name === this.data.user.nickName) return
+    this._nickSaving = true
+    try {
+      this.setData({ 'user.nickName': name })
+      getApp().globalData.userInfo.nickName = name
+      const r = await api.updateProfile(name, '')
+      if (r && r.code === 0 && r.data) {
+        getApp().globalData.userInfo = Object.assign({}, getApp().globalData.userInfo, r.data)
+        wx.showToast({ title: '昵称已保存', icon: 'none' })
+      } else {
+        wx.showToast({ title: (r && r.msg) || '昵称保存失败', icon: 'none' })
+      }
+    } finally {
+      this._nickSaving = false
+    }
+  },
+
   onTierInput(e) {
     const idx = Number(e.currentTarget.dataset.idx)
     const yuan = e.detail.value

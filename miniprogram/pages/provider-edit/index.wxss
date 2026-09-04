@@ -1,6 +1,15 @@
 .topbar { display: block; }
 
 .f-card { margin: 0 32rpx 24rpx; }
+
+/* 头像与昵称 */
+.user-edit .ue-row { display: flex; align-items: center; gap: 24rpx; margin-top: 12rpx; }
+.ue-avatar-btn { padding: 0; margin: 0; width: 112rpx; height: 112rpx; min-width: 112rpx; background: transparent; border: none; line-height: normal; flex-shrink: 0; }
+.ue-avatar-btn::after { border: none; }
+.ue-avatar { width: 112rpx; height: 112rpx; border-radius: 50%; display: block; }
+.ue-main { flex: 1; min-width: 0; }
+.ue-name-input { font-size: 34rpx; font-weight: 800; height: 64rpx; line-height: 64rpx; text-align: left; }
+.ue-tip { font-size: 22rpx; margin-top: 4rpx; }
 .f-title { font-size: 30rpx; font-weight: 800; margin-bottom: 8rpx; }
 .f-sub { font-size: 22rpx; margin: -4rpx 0 16rpx; }
 
