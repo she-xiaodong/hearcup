@@ -4,6 +4,8 @@
 // 通话结束上报实际时长，后端按「套餐价 + 超出部分 × 单价」结算。
 
 const api = require('../../utils/api.js')
+const store = require('../../utils/store.js')
+const mock = require('../../utils/mock.js')
 
 Page({
   data: {
@@ -153,6 +155,8 @@ Page({
           cost: finalYuan,
           costCoins: this.toCoins(finalYuan)
         })
+        // 演示数据模式：本地模拟记账（扣余额 + 生成通话记录），与真实后端行为对齐
+        if (getApp().globalData.config.useMock) this.mockSettle(minutes, Number(finalYuan))
       } else {
         wx.showToast({ title: (r && r.msg) || '结算失败', icon: 'none' })
         this.setData({ status: 'ended', statusText: '通话已结束', cost, costCoins })
@@ -162,6 +166,27 @@ Page({
       wx.showToast({ title: '结算失败，请联系客服', icon: 'none' })
       this.setData({ status: 'ended', statusText: '通话已结束', cost, costCoins })
     }
+  },
+
+  // 演示数据：本地记账
+  mockSettle(minutes, yuanCost) {
+    const now = new Date()
+    const p2 = (n) => String(n).padStart(2, '0')
+    if (yuanCost > 0) {
+      const nb = (store.getBalance() || 0) - yuanCost
+      store.setBalance(nb > 0 ? nb : 0)
+    }
+    const rec = {
+      id: Date.now(),
+      providerName: this.data.callee_nickname || '演示倾听者',
+      callType: 1,
+      durationText: `${p2(minutes)}分${p2(0)}秒`,
+      amount: yuanCost,
+      time: `${p2(now.getMonth() + 1)}-${p2(now.getDate())} ${p2(now.getHours())}:${p2(now.getMinutes())}`,
+      rating: 0
+    }
+    mock.callRecords.unshift(rec)
+    wx.showToast({ title: `演示记账：已扣 ${this.toCoins(yuanCost)} ${this.data.coinName}`, icon: 'none' })
   },
 
   back() {
