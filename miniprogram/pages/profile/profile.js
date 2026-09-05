@@ -44,7 +44,7 @@ Page({
     this.setData({
       user, balance: getApp().toCoins(balance), apply,
       isProvider: !!(apply && apply.status === 1),
-      callCount: (cr.code === 0 && Array.isArray(cr.data)) ? cr.data.length : 0
+      callCount: (cr.code === 0 && cr.data) ? (Number(cr.data.total) || (cr.data.list || []).length) : 0
     })
   },
 

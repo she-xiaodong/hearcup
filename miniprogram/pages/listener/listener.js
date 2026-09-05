@@ -69,7 +69,7 @@ Page({
     }
     if (this._servTimer) { clearInterval(this._servTimer); this._servTimer = null }
     try {
-      const r = await api.getProviderCalls()
+      const r = await api.getProviderCalls(1, 100)
       const list = (r && r.code === 0 && r.data) || []
       const live = list.find(c => c.status === 0 && Number(c.start_time) > 0)
       if (!live) { this.setData({ serving: null }); return }

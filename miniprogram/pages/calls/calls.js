@@ -12,7 +12,10 @@ Page({
     showRate: false,
     rateTarget: null,
     rateStars: 0,
-    rateText: ''
+    rateText: '',
+    page: 1,
+    hasMore: false,
+    loadingMore: false
   },
 
   onShow() {
@@ -22,6 +25,7 @@ Page({
     this.load()
   },
 
+  // 首屏/刷新：回到第 1 页
   async load() {
     if (getApp().globalData.config.useMock) {
       const records = callRecords.map(r => ({
@@ -29,28 +33,56 @@ Page({
         color: '#3A9E8F',
         roomId: r.room_id || r.id
       }))
-      this.applySummary(records)
+      this.applyMock(records)
       return
     }
-    const r = await api.getCallRecords()
-    if (r.code === 0 && Array.isArray(r.data)) {
-      const records = r.data.map(x => ({
-        ...x,
-        color: '#3A9E8F',
-        roomId: x.room_id || x.id
-      }))
-      this.applySummary(records)
-    }
+    this.setData({ page: 1, hasMore: false, loadingMore: false })
+    await this.fetchPage(1, false)
   },
 
-  applySummary(records) {
-    const total = records.reduce((s, r) => s + (r.amount || 0), 0)
+  // 上拉加载下一页（追加）
+  async loadMore() {
+    if (getApp().globalData.config.useMock) return
+    if (!this.data.hasMore || this.data.loadingMore) return
+    const next = this.data.page + 1
+    this.setData({ loadingMore: true })
+    await this.fetchPage(next, true)
+    this.setData({ page: next, loadingMore: false })
+  },
+
+  onPullDownRefresh() {
+    this.load().then(() => wx.stopPullDownRefresh())
+  },
+
+  onReachBottom() {
+    this.loadMore()
+  },
+
+  async fetchPage(page, append) {
+    const r = await api.getCallRecords(page, 20)
+    if (r.code !== 0) return
+    const d = r.data || {}
+    const incoming = (d.list || []).map(x => ({
+      ...x, color: '#3A9E8F', roomId: x.room_id || x.id,
+      coins: getApp().toCoins(x.amount || 0)
+    }))
+    this.setData({
+      records: append ? this.data.records.concat(incoming) : incoming,
+      totalCount: Number(d.total) || incoming.length,
+      totalAmount: getApp().toCoins(Number(d.total_amount) || 0),
+      ratedCount: Number(d.rated_count) || 0,
+      hasMore: !!d.has_more
+    })
+  },
+
+  // 演示数据：一次性展示全部并本地统计
+  applyMock(records) {
+    const total = records.reduce((sum, r) => sum + (r.amount || 0), 0)
     const rated = records.filter(r => r.rating).length
-    // 金额统一以H币展示（内部按元记账，1元=10H币）
     records.forEach(r => { r.coins = getApp().toCoins(r.amount || 0) })
     this.setData({
       records, totalCount: records.length,
-      totalAmount: getApp().toCoins(total), ratedCount: rated
+      totalAmount: getApp().toCoins(total), ratedCount: rated, hasMore: false
     })
   },
 

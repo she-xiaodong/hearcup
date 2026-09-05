@@ -46,5 +46,9 @@
     </view>
   </block>
 
+  <!-- 分页加载状态 -->
+  <view wx:if="{{list.length>0 && loadingMore}}" class="list-foot">加载中…</view>
+  <view wx:elif="{{list.length>0 && hasMore}}" class="list-foot">上拉加载更多</view>
+  <view wx:elif="{{list.length>0}}" class="list-foot">— 没有更多了 —</view>
   <view class="safe-bottom"></view>
 </view>

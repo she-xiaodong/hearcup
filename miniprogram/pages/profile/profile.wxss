@@ -1,9 +1,9 @@
-.profile-head { display: flex; align-items: flex-start; justify-content: flex-start; gap: 20rpx; margin: 24rpx 32rpx; text-align: left; }
-.avatar-btn { padding: 0; margin: 0; background: transparent; line-height: normal; border: none; width: 116rpx; height: 116rpx; min-width: 116rpx; display: block; flex-shrink: 0; }
+.profile-head { display: flex; align-items: center; justify-content: flex-start; gap: 16rpx; margin: 24rpx 32rpx; text-align: left; }
+.avatar-btn { padding: 2rpx; margin: 0; background: transparent; line-height: normal; border: none; width: 120rpx; height: 120rpx; min-width: 120rpx; display: block; flex-shrink: 0; border-radius: 50%; overflow: hidden; }
 .avatar-btn::after { border: none; }
 .head-avatar { width: 116rpx; height: 116rpx; font-size: 52rpx; border-radius: 50%; overflow: hidden; }
-.head-avatar-img { width: 116rpx; height: 116rpx; border-radius: 50%; display: block; }
-.head-info { flex: 1; min-width: 0; display: flex; flex-direction: column; align-items: flex-start; justify-content: flex-start; text-align: left; }
+.head-avatar-img { width: 116rpx; height: 116rpx; border-radius: 50%; display: block; margin: 0 auto; }
+.head-info { flex: 1; min-width: 0; display: flex; flex-direction: column; align-items: flex-start; justify-content: center; text-align: left; padding: 4rpx 0; }
 .head-name { font-size: 38rpx; font-weight: 800; }
 .head-name-input { font-size: 38rpx; font-weight: 800; height: 64rpx; line-height: 64rpx; width: 100%; text-align: left; padding: 0; }
 .h-no { margin-top: 6rpx; font-size: 26rpx; font-weight: 700; color: var(--primary-deep, #2E8578); letter-spacing: 1rpx; text-align: left; }

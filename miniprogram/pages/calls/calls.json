@@ -1,4 +1,6 @@
 {
   "usingComponents": {},
-  "navigationBarTitleText": "通话"
+  "navigationBarTitleText": "通话",
+  "enablePullDownRefresh": true,
+  "backgroundTextStyle": "dark"
 }

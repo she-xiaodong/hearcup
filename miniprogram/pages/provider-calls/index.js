@@ -8,58 +8,89 @@ Page({
     list: [],
     totalCalls: 0,
     todayCalls: 0,
-    totalIncome: 0
+    totalIncome: 0,
+    page: 1,
+    hasMore: false,
+    loadingMore: false
   },
 
   onShow() { this.refresh() },
 
+  // 单条映射（含“服务中”标记与有界参考分钟）
+  mapItem(c) {
+    const nowS = Math.floor(Date.now() / 1000)
+    const startS = Number(c.start_time) || 0
+    const rawMin = startS > 0 ? Math.floor((nowS - startS) / 60) : 0
+    const liveMin = rawMin > 240 ? 0 : Math.max(0, rawMin)
+    const started = startS > 0
+    return {
+      id: c.id,
+      roomId: c.room_id || c.id,
+      name: c.user_name || '来电用户',
+      time: fmtTime(c.created_at),
+      dur: durText(c.duration),
+      minutes: c.minutes || 0,
+      income: Number(c.income) || 0,
+      rating: Number(c.user_rating) || 0,
+      comment: c.comment || '',
+      status: c.status,
+      serving: c.status === 0 && started,
+      liveMin
+    }
+  },
+
+  // 首屏/下拉刷新：第 1 页
   async refresh() {
-    this.setData({ loading: true })
+    this.setData({ loading: true, page: 1, hasMore: false, loadingMore: false })
     try {
-      const r = await api.getProviderCalls()
-      const raw = (r && r.code === 0 && r.data) ? r.data : []
-      const tk = todayKey()
-      let todayN = 0
-      let totalIncome = 0
-      const nowS = Math.floor(Date.now() / 1000)
-      const list = raw.map(c => {
-        if (dateKey(c.created_at) === tk) todayN++
-        totalIncome += Number(c.income) || 0
-        // 服务中(status=0)：已拨号开始但尚未结算。参考"已进行分钟"有界化：
-        // 距开始超 240 分钟视为时间过长（多为挂单），不再推算已用，避免误导代结束默认值
-        const startS = Number(c.start_time) || 0
-        const rawMin = startS > 0 ? Math.floor((nowS - startS) / 60) : 0
-        const liveMin = rawMin > 240 ? 0 : Math.max(0, rawMin)
-        // 服务中必须已拨号（start>0）；仅支付未拨号的单不属服务中，交给退款兜底
-        const started = startS > 0
-        return {
-          id: c.id,
-          roomId: c.room_id || c.id,
-          name: c.user_name || '来电用户',
-          time: fmtTime(c.created_at),
-          dur: durText(c.duration),
-          minutes: c.minutes || 0,
-          income: Number(c.income) || 0,
-          rating: Number(c.user_rating) || 0,
-          comment: c.comment || '',
-          status: c.status,
-          serving: c.status === 0 && started,
-          liveMin
-        }
-      })
-      // 进行中（服务中）订单置顶，便于倾听者第一时间处理代结束
-      const sorted = list.slice().sort((a, b) => (b.serving ? 1 : 0) - (a.serving ? 1 : 0))
-      this.setData({
-        list: sorted,
-        totalCalls: list.length,
-        todayCalls: todayN,
-        totalIncome: Math.round(totalIncome * 100) / 100
-      })
+      await this.fetchPage(1, false)
     } catch (err) {
       wx.showToast({ title: '加载失败', icon: 'none' })
     } finally {
       this.setData({ loading: false })
     }
+  },
+
+  // 上拉加载下一页（追加）
+  async loadMore() {
+    if (!this.data.hasMore || this.data.loadingMore) return
+    const next = this.data.page + 1
+    this.setData({ loadingMore: true })
+    try {
+      await this.fetchPage(next, true)
+      this.setData({ page: next })
+    } finally {
+      this.setData({ loadingMore: false })
+    }
+  },
+
+  onPullDownRefresh() {
+    this.refresh().then(() => wx.stopPullDownRefresh())
+  },
+
+  onReachBottom() {
+    this.loadMore()
+  },
+
+  async fetchPage(page, append) {
+    const r = await api.getProviderCalls(page, 20)
+    if (r.code !== 0) return
+    const d = r.data || {}
+    const nowS = Math.floor(Date.now() / 1000)
+    const raw = d.list || []
+    const tk = todayKey()
+    const mapped = raw.map(c => this.mapItem(c))
+    // 进行中（服务中）订单始终置顶，便于第一时间代结束
+    const merged = append ? this.data.list.concat(mapped) : mapped
+    const sorted = merged.slice().sort((a, b) => (b.serving ? 1 : 0) - (a.serving ? 1 : 0))
+    const st = d.stats || {}
+    this.setData({
+      list: sorted,
+      totalCalls: Number(st.total_calls) || sorted.length,
+      todayCalls: Number(st.today_calls) || 0,
+      totalIncome: Number(st.total_income) || 0,
+      hasMore: !!d.has_more
+    })
   },
 
   // 主叫未主动结束：被叫「代为结束」上报结算（后端允许订单双方结束）

@@ -145,3 +145,6 @@ view, text, button, input { box-sizing: border-box; }
 
 /* 底部安全区（含自定义 tabBar 高度） */
 .safe-bottom { height: calc(180rpx + env(safe-area-inset-bottom)); }
+
+/* 分页加载状态（列表通用） */
+.list-foot { text-align: center; font-size: 24rpx; color: #9AA0B4; padding: 24rpx 0 8rpx; }

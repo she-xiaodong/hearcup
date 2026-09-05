@@ -1044,6 +1044,32 @@ func hCallRating(w http.ResponseWriter, r *http.Request) {
 	fail(w, "通话不存在")
 }
 
+// pager 解析列表分页参数（page 从 1 开始；size 缺省 20，上限 100）
+func pager(r *http.Request) (int, int) {
+	page, _ := strconv.Atoi(r.URL.Query().Get("page"))
+	size, _ := strconv.Atoi(r.URL.Query().Get("size"))
+	if page < 1 {
+		page = 1
+	}
+	if size < 1 || size > 100 {
+		size = 20
+	}
+	return page, size
+}
+
+// slicePage 计算切片区间：返回 [start,end) 与是否还有更多
+func slicePage(total, page, size int) (start, end int, hasMore bool) {
+	start = (page - 1) * size
+	if start >= total {
+		return total, total, false
+	}
+	end = start + size
+	if end > total {
+		end = total
+	}
+	return start, end, end < total
+}
+
 func hCallRecords(w http.ResponseWriter, r *http.Request) {
 	uid, ok := requireUser(r)
 	if !ok {
@@ -1053,12 +1079,18 @@ func hCallRecords(w http.ResponseWriter, r *http.Request) {
 	store.mu.Lock()
 	defer store.mu.Unlock()
 	// 安全：通话记录只返回「当前登录用户」本人的（全局记录走后台订单接口）
-	list := []map[string]interface{}{}
+	all := []map[string]interface{}{}
+	sumAmount := 0.0
+	rated := 0
 	for _, c := range store.db.Calls {
 		if c.UserID != uid {
 			continue
 		}
-		list = append(list, map[string]interface{}{
+		sumAmount += c.Amount
+		if c.UserRating > 0 {
+			rated++
+		}
+		all = append(all, map[string]interface{}{
 			"id": c.ID, "room_id": c.RoomID, "call_type": c.CallType,
 			"duration": c.Duration, "amount": c.Amount, "status": c.Status,
 			"user_rating": c.UserRating, "user_comment": c.UserComment,
@@ -1067,10 +1099,15 @@ func hCallRecords(w http.ResponseWriter, r *http.Request) {
 		})
 	}
 	// 按时间倒序（新到旧）
-	sort.Slice(list, func(i, j int) bool {
-		return list[i]["created_at"].(int64) > list[j]["created_at"].(int64)
+	sort.Slice(all, func(i, j int) bool {
+		return all[i]["created_at"].(int64) > all[j]["created_at"].(int64)
 	})
-	sendOK(w, list)
+	page, size := pager(r)
+	start, end, hasMore := slicePage(len(all), page, size)
+	sendOK(w, map[string]interface{}{
+		"list": all[start:end], "total": len(all), "has_more": hasMore,
+		"total_amount": round2(sumAmount), "rated_count": rated,
+	})
 }
 
 // ---------- 充值 ----------
@@ -1468,11 +1505,18 @@ func hProviderEarnings(w http.ResponseWriter, r *http.Request) {
 			completedIncome += wd.Amount
 		}
 	}
+	// 明细按时间倒序并分页（summary 仍为全量口径）
+	sort.Slice(details, func(i, j int) bool {
+		return details[i]["created_at"].(int64) > details[j]["created_at"].(int64)
+	})
+	page, size := pager(r)
+	ds, de, detailsMore := slicePage(len(details), page, size)
 	sendOK(w, map[string]interface{}{
 		"pending_income":   round2(me.Withdrawable), // 未完成收入（可提现余额）
 		"completed_income": round2(completedIncome), // 已完成收入（已打款）
 		"withdrawable":     me.Withdrawable, "total_earnings": me.TotalEarnings,
-		"today_income": todayIncome, "today_calls": todayCalls, "details": details,
+		"today_income": todayIncome, "today_calls": todayCalls,
+		"details": details[ds:de], "details_total": len(details), "details_has_more": detailsMore,
 	})
 }
 
@@ -1535,7 +1579,9 @@ func hProviderWithdrawals(w http.ResponseWriter, r *http.Request) {
 	sort.Slice(list, func(i, j int) bool {
 		return list[i]["created_at"].(int64) > list[j]["created_at"].(int64)
 	})
-	sendOK(w, map[string]interface{}{"total": len(list), "list": list})
+	page, size := pager(r)
+	ws, we, wMore := slicePage(len(list), page, size)
+	sendOK(w, map[string]interface{}{"total": len(list), "list": list[ws:we], "has_more": wMore})
 }
 
 // hProviderCalls：倾听者本人的「服务订单」（来电服务记录）列表，含每次服务的时长/收益/评价
@@ -1583,7 +1629,24 @@ func hProviderCalls(w http.ResponseWriter, r *http.Request) {
 	sort.Slice(list, func(i, j int) bool {
 		return list[i]["created_at"].(int64) > list[j]["created_at"].(int64)
 	})
-	sendOK(w, list)
+	// 全量统计（不随分页截断），再按页切片
+	tk := time.Now().Format("20060102")
+	todayCallsN, incomeSum := 0, 0.0
+	for _, it := range list {
+		incomeSum += it["income"].(float64)
+		if time.Unix(it["created_at"].(int64), 0).Format("20060102") == tk {
+			todayCallsN++
+		}
+	}
+	page, size := pager(r)
+	ps, pe, pMore := slicePage(len(list), page, size)
+	sendOK(w, map[string]interface{}{
+		"list": list[ps:pe], "total": len(list), "has_more": pMore,
+		"stats": map[string]interface{}{
+			"total_calls": len(list), "today_calls": todayCallsN,
+			"total_income": round2(incomeSum),
+		},
+	})
 }
 
 func hProviderWithdraw(w http.ResponseWriter, r *http.Request) {

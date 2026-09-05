@@ -50,5 +50,9 @@
     <view class="muted wd-foot-tip">提现打款采用微信「商家转账到零钱」，部分转账需在微信中手动点击领取才会到账。</view>
   </block>
 
+  <!-- 分页加载状态 -->
+  <view wx:if="{{list.length>0 && loadingMore}}" class="list-foot">加载中…</view>
+  <view wx:elif="{{list.length>0 && hasMore}}" class="list-foot">上拉加载更多</view>
+  <view wx:elif="{{list.length>0}}" class="list-foot">— 没有更多了 —</view>
   <view class="safe-bottom"></view>
 </view>

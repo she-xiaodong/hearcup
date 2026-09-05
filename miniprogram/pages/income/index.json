@@ -1,4 +1,6 @@
 {
   "usingComponents": {},
-  "navigationBarTitleText": "收益明细"
+  "navigationBarTitleText": "收益明细",
+  "enablePullDownRefresh": true,
+  "backgroundTextStyle": "dark"
 }

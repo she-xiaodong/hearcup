@@ -189,10 +189,27 @@ const api = {
     if (r._mock) return { code: 0, data: { ok: true } }
     return r
   },
-  async getCallRecords(uid) {
-    const r = await request('GET', '/api/v1/call/records' + (uid ? ('?user_id=' + uid) : ''))
-    if (r._mock) return { code: 0, data: mock.callRecords.map(mapRecord) }
-    if (r.code === 0) return { code: 0, data: (r.data || []).map(mapRecord) }
+  async getCallRecords(page, size) {
+    const q = (page ? `?page=${page}` : '') + (size ? ((page ? '&' : '?') + 'size=' + size) : '')
+    const r = await request('GET', '/api/v1/call/records' + q)
+    if (r._mock) {
+      const list = mock.callRecords.map(mapRecord)
+      return { code: 0, data: { list, total: list.length, has_more: false, total_amount: 0, rated_count: 0 } }
+    }
+    if (r.code === 0) {
+      const d = r.data || {}
+      const raw = Array.isArray(d) ? d : (d.list || [])
+      return {
+        code: 0,
+        data: {
+          list: raw.map(mapRecord),
+          total: Array.isArray(d) ? raw.length : (Number(d.total) || raw.length),
+          has_more: Array.isArray(d) ? false : !!d.has_more,
+          total_amount: Array.isArray(d) ? 0 : (Number(d.total_amount) || 0),
+          rated_count: Array.isArray(d) ? 0 : (Number(d.rated_count) || 0)
+        }
+      }
+    }
     return r
   },
 
@@ -252,20 +269,23 @@ const api = {
     return r
   },
 
-  async getProviderEarnings() {
-    const r = await request('GET', '/api/v1/provider/earnings')
-    if (r._mock) return { code: 0, data: { today_income: 0, withdrawable: 0, total_earnings: 0, today_calls: 0, details: [], completed_income: 0, pending_income: 0 } }
+  async getProviderEarnings(page, size) {
+    const q = (page ? `?page=${page}` : '') + (size ? ((page ? '&' : '?') + 'size=' + size) : '')
+    const r = await request('GET', '/api/v1/provider/earnings' + q)
+    if (r._mock) return { code: 0, data: { today_income: 0, withdrawable: 0, total_earnings: 0, today_calls: 0, details: [], details_total: 0, details_has_more: false, completed_income: 0, pending_income: 0 } }
     return r
   },
   // 倾听者本人「服务订单」（来电服务记录）：含时长/收益/评价
-  async getProviderCalls() {
-    const r = await request('GET', '/api/v1/provider/calls')
-    if (r._mock) return { code: 0, data: [] }
+  async getProviderCalls(page, size) {
+    const q = (page ? `?page=${page}` : '') + (size ? ((page ? '&' : '?') + 'size=' + size) : '')
+    const r = await request('GET', '/api/v1/provider/calls' + q)
+    if (r._mock) return { code: 0, data: { list: [], total: 0, has_more: false, stats: { total_calls: 0, today_calls: 0, total_income: 0 } } }
     return r
   },
   // 倾听者本人「提现申请单」：状态/打款关联/是否可微信领取
-  async getProviderWithdrawals() {
-    const r = await request('GET', '/api/v1/provider/withdrawals')
+  async getProviderWithdrawals(page, size) {
+    const q = (page ? `?page=${page}` : '') + (size ? ((page ? '&' : '?') + 'size=' + size) : '')
+    const r = await request('GET', '/api/v1/provider/withdrawals' + q)
     if (r._mock) {
       const t = Math.floor(Date.now() / 1000)
       return {

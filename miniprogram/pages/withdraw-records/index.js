@@ -16,53 +16,85 @@ Page({
     loading: true,
     list: [],
     expandedId: 0,
-    claimingId: 0
+    claimingId: 0,
+    page: 1,
+    hasMore: false,
+    loadingMore: false
   },
 
   onShow() { this.refresh() },
 
+  mapItem(w, now) {
+    const wdText = WD_TEXT[w.status] || '处理中'
+    let stateLine = ''
+    let badge = ''
+    if (w.status === 0) badge = '审核中'
+    else if (w.status === 1) badge = '待打款'
+    else if (w.status === 2) {
+      badge = w.can_claim ? '待领取' : (TF_TEXT[w.transfer_state] || '已打款')
+      if (w.transfer_state) stateLine = '转账：' + (TF_TEXT[w.transfer_state] || w.transfer_state)
+      if (w.transfer_fail) stateLine = '转账失败：' + w.transfer_fail
+    } else if (w.status === 3) {
+      badge = '已拒绝'
+      if (w.remark) stateLine = '原因：' + w.remark
+    }
+    return {
+      id: w.id,
+      amount: w.amount,
+      fee: w.fee || 0,
+      wdText,
+      badge,
+      stateLine,
+      canClaim: !!w.can_claim,
+      transferId: w.transfer_id || 0,
+      transferState: w.transfer_state || '',
+      timeText: fmtTime(w.created_at),
+      approvedText: w.approved_at ? fmtTime(w.approved_at) : '',
+      pseudo: w.created_at > Math.floor(now / 1000) + 100000
+    }
+  },
+
   async refresh() {
-    this.setData({ loading: true })
+    this.setData({ loading: true, page: 1, hasMore: false, loadingMore: false })
     try {
-      const r = await api.getProviderWithdrawals()
-      const raw = (r && r.code === 0 && r.data && r.data.list) || []
-      const now = Date.now()
-      const list = raw.map(w => {
-        const wdText = WD_TEXT[w.status] || '处理中'
-        let stateLine = ''
-        let badge = ''
-        if (w.status === 0) badge = '审核中'
-        else if (w.status === 1) badge = '待打款'
-        else if (w.status === 2) {
-          badge = w.can_claim ? '待领取' : (TF_TEXT[w.transfer_state] || '已打款')
-          if (w.transfer_state) stateLine = '转账：' + (TF_TEXT[w.transfer_state] || w.transfer_state)
-          if (w.transfer_fail) stateLine = '转账失败：' + w.transfer_fail
-        } else if (w.status === 3) {
-          badge = '已拒绝'
-          if (w.remark) stateLine = '原因：' + w.remark
-        }
-        return {
-          id: w.id,
-          amount: w.amount,
-          fee: w.fee || 0,
-          wdText,
-          badge,
-          stateLine,
-          canClaim: !!w.can_claim,
-          transferId: w.transfer_id || 0,
-          transferState: w.transfer_state || '',
-          timeText: fmtTime(w.created_at),
-          approvedText: w.approved_at ? fmtTime(w.approved_at) : '',
-          // 展开详情里的“已到账(近期)”占位提示不用于 mock 时间
-          pseudo: w.created_at > Math.floor(now / 1000) + 100000
-        }
-      })
-      this.setData({ list })
+      await this.fetchPage(1, false)
     } catch (e) {
       wx.showToast({ title: '加载失败', icon: 'none' })
     } finally {
       this.setData({ loading: false })
     }
+  },
+
+  // 上拉加载下一页
+  async loadMore() {
+    if (!this.data.hasMore || this.data.loadingMore) return
+    const next = this.data.page + 1
+    this.setData({ loadingMore: true })
+    try {
+      await this.fetchPage(next, true)
+      this.setData({ page: next })
+    } finally {
+      this.setData({ loadingMore: false })
+    }
+  },
+
+  onPullDownRefresh() {
+    this.refresh().then(() => wx.stopPullDownRefresh())
+  },
+
+  onReachBottom() {
+    this.loadMore()
+  },
+
+  async fetchPage(page, append) {
+    const r = await api.getProviderWithdrawals(page, 20)
+    const raw = (r && r.code === 0 && r.data && r.data.list) || []
+    const now = Date.now()
+    const incoming = raw.map(w => this.mapItem(w, now))
+    this.setData({
+      list: append ? this.data.list.concat(incoming) : incoming,
+      hasMore: !!(r && r.code === 0 && r.data && r.data.has_more)
+    })
   },
 
   toggle(e) {
