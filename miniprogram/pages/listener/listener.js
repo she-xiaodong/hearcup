@@ -53,6 +53,14 @@ Page({
     if (this._servTimer) { clearInterval(this._servTimer); this._servTimer = null }
   },
 
+  // 服务中副文案：套餐 + 已用分钟（或开始时刻）
+  servingSub(usedMin, startAt, packMin) {
+    const p2 = (n) => String(n).padStart(2, '0')
+    const d = new Date(startAt * 1000)
+    const hm = `${d.getMonth() + 1}月${d.getDate()}日 ${p2(d.getHours())}:${p2(d.getMinutes())}`
+    return `套餐 ${packMin || 15} 分钟` + (usedMin > 0 ? ` · 已进行约 ${usedMin} 分钟` : ` · 开始于 ${hm}`)
+  },
+
   // 服务中订单检测：有「已拨号未结算」的服务时置顶提醒（套餐时长/已用分钟），可去代结束
   async loadServing() {
     if (getApp().globalData.config.useMock) {
@@ -66,15 +74,24 @@ Page({
       const live = list.find(c => c.status === 0 && Number(c.start_time) > 0)
       if (!live) { this.setData({ serving: null }); return }
       const startAt = Number(live.start_time)
-      const usedMin = Math.max(1, Math.floor((Date.now() / 1000 - startAt) / 60))
+      const rawMin = Math.floor((Date.now() / 1000 - startAt) / 60)
+      // 距开始超 240 分钟视为挂单过久：不再推算"已用"，改显示开始时刻
+      const usedMin = rawMin > 240 ? 0 : Math.max(0, rawMin)
       this.setData({
-        serving: { userName: live.user_name || '来电用户', minutes: live.minutes || 0, usedMin, startAt }
+        serving: {
+          userName: live.user_name || '来电用户',
+          minutes: live.minutes || 0,
+          usedMin, startAt,
+          subText: this.servingSub(usedMin, startAt, live.minutes || 0)
+        }
       })
-      // 停留在页面时每分钟刷新已用分钟（本地推算，不重复请求）
+      // 停留在页面时每分钟刷新（仅"已进行"状态需要，本地推算不重复请求）
       this._servTimer = setInterval(() => {
         const sv = this.data.serving
         if (sv && sv.startAt) {
-          this.setData({ 'serving.usedMin': Math.max(1, Math.floor((Date.now() / 1000 - sv.startAt) / 60)) })
+          const rm = Math.floor((Date.now() / 1000 - sv.startAt) / 60)
+          const um = rm > 240 ? 0 : Math.max(0, rm)
+          this.setData({ 'serving.usedMin': um, 'serving.subText': this.servingSub(um, sv.startAt, sv.minutes || 0) })
         }
       }, 60000)
     } catch (e) {

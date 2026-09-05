@@ -23,7 +23,7 @@ App({
       counselorPrice: 2.0,
       coinRate: 10,      // 虚拟币比例：1元 = 10 H币
       coinName: 'H币',
-      minBalance: 3.0,
+      minBalance: 3.0, 
       freeCall: false,   // 免费通话模式：true 时跳过余额校验（支付被限制时由后端下发）
       platformRate: 0.2
     }

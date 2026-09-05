@@ -47,7 +47,8 @@
         <view class="serving-dot"></view>
         <view class="row-main">
           <view class="serving-title">服务中 · {{serving.userName}}</view>
-          <view class="muted">套餐 {{serving.minutes}} 分钟 · 已用约 {{serving.usedMin}} 分钟 · 用户可能还在通话，结束后请点右侧去结算</view>
+          <view class="muted">{{serving.subText}}</view>
+          <view class="muted serving-tip">通话结束后点右侧去服务订单代结算</view>
         </view>
         <view class="serving-go">去结束 ›</view>
       </view>

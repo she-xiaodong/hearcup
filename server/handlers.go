@@ -941,14 +941,14 @@ func hCallEndWithMinutes(w http.ResponseWriter, r *http.Request) {
 	if minutes < 1 {
 		minutes = 1
 	}
-	// 防虚报上限：超套餐 3 倍或超 240 分钟，需人工处理
+	// 防虚报上限：单次最多 240 分钟，超出需人工核实（曾按套餐 3 倍拦截，误伤真实长聊/代结束场景）
+	if minutes > 240 {
+		fail(w, "上报时长异常（单次最多 240 分钟），请联系客服核实")
+		return
+	}
 	packMinutes := rec.PackageMinutes
 	if packMinutes <= 0 {
 		packMinutes = int(rec.Amount / rec.UnitPrice)
-	}
-	if minutes > 240 || minutes > packMinutes*3 {
-		fail(w, "上报时长异常（单次最多按套餐 3 倍/240 分钟计），请联系客服核实")
-		return
 	}
 	duration := minutes * 60 // 转换为秒
 

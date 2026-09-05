@@ -57,3 +57,4 @@
 .serving-dot { width: 16rpx; height: 16rpx; border-radius: 50%; background: var(--primary); flex-shrink: 0; }
 .serving-title { font-size: 30rpx; font-weight: 800; color: #1E6F63; }
 .serving-go { color: var(--primary); font-size: 26rpx; font-weight: 700; flex-shrink: 0; }
+.serving-tip { font-size: 22rpx; margin-top: 2rpx; }

@@ -35,7 +35,7 @@
           <view class="muted call-sub">{{item.time}} · {{item.dur}}</view>
           <view class="call-rate" wx:if="{{item.rating}}">★ {{item.rating}}<text class="muted" wx:if="{{item.comment}}"> · {{item.comment}}</text></view>
           <view class="serve-row" wx:if="{{item.serving}}">
-            <text class="serve-tag">服务中 · 套餐{{item.minutes || 15}}分 · 已用约{{item.liveMin}}分</text>
+            <text class="serve-tag">服务中 · 套餐{{item.minutes || 15}}分<text wx:if="{{item.liveMin > 0}}"> · 已进行约{{item.liveMin}}分</text></text>
             <button class="serve-end" data-id="{{item.id}}" bindtap="endService" style="margin:0;">结束服务</button>
           </view>
         </view>
