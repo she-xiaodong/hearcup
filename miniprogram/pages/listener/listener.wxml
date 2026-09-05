@@ -42,6 +42,16 @@
         </view>
       </view>
 
+      <!-- 服务中：有已拨号未结算的订单时置顶提醒（让倾听者把握服务时长） -->
+      <view wx:if="{{serving}}" class="card listener-card serving-card" bindtap="goProviderCalls">
+        <view class="serving-dot"></view>
+        <view class="row-main">
+          <view class="serving-title">服务中 · {{serving.userName}}</view>
+          <view class="muted">套餐 {{serving.minutes}} 分钟 · 已用约 {{serving.usedMin}} 分钟 · 用户可能还在通话，结束后请点右侧去结算</view>
+        </view>
+        <view class="serving-go">去结束 ›</view>
+      </view>
+
       <!-- 资料与价格设置入口 -->
       <view class="card listener-card pv-edit-card" bindtap="goProviderEdit">
         <view class="ico ico-gear ico-sm pv-edit-ico"></view>

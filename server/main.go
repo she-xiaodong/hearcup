@@ -47,6 +47,7 @@ var routes = []route{
 	{http.MethodPost, "/api/v1/call/confirm", hCallConfirmPay},
 	{http.MethodPost, "/api/v1/call/start", hCallStart},
 	{http.MethodPost, "/api/v1/call/refund", hCallRefund},
+	{http.MethodGet, "/api/v1/call/pending", hCallPending},
 	// 电话拨号方案：上报通话时长并结算
 	{http.MethodPost, "/api/v1/call/end/minutes", hCallEndWithMinutes},
 	{http.MethodPost, "/api/v1/call/rating", hCallRating},

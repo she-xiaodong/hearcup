@@ -166,6 +166,15 @@ const api = {
     if (useMock()) return { code: 0, data: { refunded: 0 } }
     return request('POST', '/api/v1/call/refund', { room_id: roomId, call_id: callId || 0 })
   },
+  // 用户「待处理订单」：冷启动/回首页找回未结算通话（演示模式读本地进行中单）
+  async getPendingCall() {
+    if (useMock()) {
+      let act = null
+      try { act = wx.getStorageSync('hc_mock_active') } catch (e) {}
+      return { code: 0, data: { list: (act && act.call_id) ? [act] : [] } }
+    }
+    return request('GET', '/api/v1/call/pending')
+  },
 
   async reportCallResultWithMinutes(kind, roomId, callId, minutes) {
     if (useMock()) return { code: 0, data: { result: kind, minutes } }

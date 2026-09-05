@@ -26,6 +26,7 @@ Page({
       this.getTabBar().setData({ selected: 0 })
     }
     this.loadData()
+    this.checkPending()
   },
 
   async loadData() {
@@ -69,6 +70,61 @@ Page({
   },
 
   goRecharge() { wx.navigateTo({ url: '/pages/recharge/recharge' }) },
+
+  // —— 找回未结束结算的通话 ——
+  // 冷启动/回到首页时检测：有已支付未结束的订单就提示回到拨号页继续（已拨号→结算，未拨号→拨打或退款）
+  async checkPending() {
+    const app = getApp()
+    const cfg = (app && app.globalData && app.globalData.config) || {}
+    if (!cfg.useMock && typeof app.waitLogin === 'function') {
+      app.waitLogin(async () => {
+        try {
+          const r = await api.getPendingCall()
+          const list = (r && r.code === 0 && r.data && r.data.list) || []
+          if (!list.length) { app.globalData._pendShown = false; return }
+          if (app.globalData._pendShown) return
+          app.globalData._pendShown = true
+          this.promptResume(list[0])
+        } catch (e) {}
+      })
+      return
+    }
+    // 演示模式：读本地"进行中订单"模拟找回
+    let act = null
+    try { act = wx.getStorageSync('hc_mock_active') } catch (e) {}
+    if (!act || !act.call_id) { app.globalData._pendShown = false; return }
+    if (app.globalData._pendShown) return
+    app.globalData._pendShown = true
+    this.promptResume(act)
+  },
+
+  promptResume(o) {
+    const dialed = Number(o.start_time) > 0
+    const name = o.callee_nickname || '倾听者'
+    const packMin = o.minutes || 0
+    wx.showModal({
+      title: dialed ? '继续上次通话' : '你有未处理的订单',
+      content: dialed
+        ? `与「${name}」的通话还没结束结算${packMin ? `（套餐 ${packMin} 分钟）` : ''}，现在去结算吗？`
+        : `已下单「${name}」${packMin ? `${packMin} 分钟` : ''}但还未拨号，要继续拨打或退款吗？`,
+      confirmText: dialed ? '去结束结算' : '去处理',
+      cancelText: '稍后',
+      success: (r) => {
+        if (!r.confirm) return
+        const q = '?resume=1' +
+          `&call_id=${o.id || o.call_id || 0}` +
+          `&room_id=${encodeURIComponent(o.room_id || '')}` +
+          `&callee_phone=${encodeURIComponent(o.callee_phone || '')}` +
+          `&callee_phone_masked=${encodeURIComponent(o.callee_phone_masked || '')}` +
+          `&callee_nickname=${encodeURIComponent(name)}` +
+          `&minutes=${packMin}` +
+          `&amount=${o.amount || 0}` +
+          `&unit_price=${o.unit_price || 0}` +
+          `&started=${o.start_time || 0}`
+        wx.navigateTo({ url: '/pages/calling-phone/index' + q })
+      }
+    })
+  },
 
   // 新流程：先进入倾听师详情页选时长→支付→再拨号。
   // 因此这里不再做余额校验（金额由所选时长决定，余额是否够在下单时判断）。

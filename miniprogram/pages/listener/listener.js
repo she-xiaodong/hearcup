@@ -14,7 +14,9 @@ Page({
     // 入驻状态：-1 未申请 / 0 待审核 / 1 已通过 / 2 已拒绝
     applyStatus: -1,
     isOnline: false,
-    earnings: { today_income: 0, withdrawable: 0, total_earnings: 0, today_calls: 0 }
+    earnings: { today_income: 0, withdrawable: 0, total_earnings: 0, today_calls: 0 },
+    // 服务中订单（已拨号未结算）：置顶提醒倾听者把握服务时长
+    serving: null
   },
 
   async onShow() {
@@ -35,11 +37,48 @@ Page({
           const e = Object.assign({ today_income: 0, withdrawable: 0, total_earnings: 0, today_calls: 0 }, er.data || {})
           this.setData({ earnings: e })
         }
+        this.loadServing()
       }
     } catch (e) {
       wx.showToast({ title: '加载失败', icon: 'none' })
     } finally {
       this.setData({ loading: false })
+    }
+  },
+
+  onHide() {
+    if (this._servTimer) { clearInterval(this._servTimer); this._servTimer = null }
+  },
+  onUnload() {
+    if (this._servTimer) { clearInterval(this._servTimer); this._servTimer = null }
+  },
+
+  // 服务中订单检测：有「已拨号未结算」的服务时置顶提醒（套餐时长/已用分钟），可去代结束
+  async loadServing() {
+    if (getApp().globalData.config.useMock) {
+      this.setData({ serving: null })
+      return
+    }
+    if (this._servTimer) { clearInterval(this._servTimer); this._servTimer = null }
+    try {
+      const r = await api.getProviderCalls()
+      const list = (r && r.code === 0 && r.data) || []
+      const live = list.find(c => c.status === 0 && Number(c.start_time) > 0)
+      if (!live) { this.setData({ serving: null }); return }
+      const startAt = Number(live.start_time)
+      const usedMin = Math.max(1, Math.floor((Date.now() / 1000 - startAt) / 60))
+      this.setData({
+        serving: { userName: live.user_name || '来电用户', minutes: live.minutes || 0, usedMin, startAt }
+      })
+      // 停留在页面时每分钟刷新已用分钟（本地推算，不重复请求）
+      this._servTimer = setInterval(() => {
+        const sv = this.data.serving
+        if (sv && sv.startAt) {
+          this.setData({ 'serving.usedMin': Math.max(1, Math.floor((Date.now() / 1000 - sv.startAt) / 60)) })
+        }
+      }, 60000)
+    } catch (e) {
+      this.setData({ serving: null })
     }
   },
 

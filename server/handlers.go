@@ -806,6 +806,40 @@ func hCallRefund(w http.ResponseWriter, r *http.Request) {
 	sendOK(w, map[string]interface{}{"refunded": amount, "msg": "未使用，已全额退回"})
 }
 
+// GET /api/v1/call/pending —— 用户「待处理订单」找回入口
+// 返回最新一条「已支付且未结束」的订单（已拨号待结算 / 已支付未拨号），供冷启动后回到通话页
+func hCallPending(w http.ResponseWriter, r *http.Request) {
+	uid, ok := requireUser(r)
+	if !ok {
+		fail(w, "未登录")
+		return
+	}
+	store.mu.Lock()
+	defer store.mu.Unlock()
+	cands := []*CallRecord{}
+	for _, c := range store.db.Calls {
+		if c.UserID == uid && c.PayStatus == 1 && c.Status == 0 {
+			cands = append(cands, c)
+		}
+	}
+	if len(cands) == 0 {
+		sendOK(w, map[string]interface{}{"list": []interface{}{}})
+		return
+	}
+	sort.Slice(cands, func(i, j int) bool { return cands[i].CreatedAt > cands[j].CreatedAt })
+	c := cands[0]
+	phone, masked, name := "", "", ""
+	if p := store.db.Providers[c.ProviderID]; p != nil {
+		phone, masked, name = p.Phone, maskPhone(p.Phone), p.RealName
+	}
+	sendOK(w, map[string]interface{}{"list": []map[string]interface{}{{
+		"id": c.ID, "room_id": c.RoomID, "call_type": c.CallType,
+		"start_time": c.StartTime, "created_at": c.CreatedAt,
+		"minutes": c.PackageMinutes, "amount": c.Amount, "unit_price": c.UnitPrice,
+		"callee_phone": phone, "callee_phone_masked": masked, "callee_nickname": name,
+	}}})
+}
+
 // autoRefundLoop 兜底：支付后 10 分钟仍未拨号的订单自动全额退款（每 60s 扫一次）
 func autoRefundLoop() {
 	for {

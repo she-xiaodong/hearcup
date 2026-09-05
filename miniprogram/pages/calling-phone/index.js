@@ -30,6 +30,8 @@ Page({
     startTime: 0,
     duration: 0, // 实际通话分钟
     cost: 0,
+    resume: false,    // 恢复进入（退出小程序后再回来）
+    startEpoch: 0,    // 后端拨号开始时间（秒），>0 表示已拨号过
   },
 
   // 元 → H币（rate 可显式传入，避免初始化时读到尚未写入的 data）
@@ -44,6 +46,8 @@ Page({
       callee_phone_masked, callee_phone, callee_nickname, callee_avatar,
       call_id, room_id, unit_price, minutes, amount
     } = options
+    const resume = options.resume === '1'
+    const startEpoch = parseInt(options.started) || 0
 
     // H币配置与详情页保持一致
     const cfg = (getApp() && getApp().globalData && getApp().globalData.config) || {}
@@ -68,21 +72,53 @@ Page({
       unitPriceCoins: this.toCoins(unitVal, coinRate),
       status: 'ready',
       statusText: '等待呼叫',
+      resume, startEpoch,
     })
   },
 
   onReady() {
+    if (this.data.resume && this.data.startEpoch > 0) {
+      // 已拨号过（中途退出/杀进程后找回）：直接回到"服务中"，计时以拨号时刻为基准，离开的时间也计入
+      this.setData({
+        status: 'connected',
+        statusText: '通话进行中 · 如已结束请点「结束结算」',
+        startTime: this.data.startEpoch * 1000
+      })
+      this.startTimer()
+      return
+    }
     // 自动拨号：真机先上报开始再调起电话；演示模式直接模拟通话
     this.autoDial()
   },
 
   async autoDial() {
     if (getApp().globalData.config.useMock) {
-      this.setData({ status: 'connected', statusText: '正在通话', startTime: Date.now() })
+      const now = Date.now()
+      this.setData({ status: 'connected', statusText: '正在通话', startTime: now })
       this.startTimer()
+      this.saveMockActive(Math.floor(now / 1000))
       return
     }
     await this.makeCall()
+  },
+
+  // 演示模式：把"进行中订单"写本地，模拟退出小程序后仍能找回
+  saveMockActive(startEpoch) {
+    try {
+      wx.setStorageSync('hc_mock_active', {
+        id: this.data.call_id || Date.now(), room_id: this.data.room_id || '',
+        callee_phone: this.data.callee_phone || '',
+        callee_phone_masked: this.data.callee_phone_masked || '',
+        callee_nickname: this.data.callee_nickname || '',
+        minutes: this.data.minutes || 0, amount: this.data.amount || 0,
+        unit_price: this.data.unit_price || 0,
+        start_time: startEpoch || Math.floor(Date.now() / 1000),
+        status: 0, pay_status: 1
+      })
+    } catch (e) {}
+  },
+  clearMockActive() {
+    try { wx.removeStorageSync('hc_mock_active') } catch (e) {}
   },
 
   onUnload() {
@@ -127,6 +163,7 @@ Page({
         const res = await api.refundCall(this.data.room_id, this.data.call_id)
         wx.hideLoading()
         if (res && res.code === 0) {
+          this.clearMockActive()
           wx.showModal({ title: '退款成功', content: `已退回 ${this.data.amountCoins} ${this.data.coinName} 到余额`, showCancel: false, success: () => wx.navigateBack() })
         } else {
           wx.showToast({ title: (res && res.msg) || '退款失败', icon: 'none' })
@@ -249,6 +286,7 @@ Page({
       rating: 0
     }
     mock.callRecords.unshift(rec)
+    this.clearMockActive()
     wx.showToast({ title: `演示记账：已扣 ${this.toCoins(yuanCost)} ${this.data.coinName}`, icon: 'none' })
   },
 

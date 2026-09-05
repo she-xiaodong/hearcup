@@ -43,8 +43,10 @@ Page({
           liveMin
         }
       })
+      // 进行中（服务中）订单置顶，便于倾听者第一时间处理代结束
+      const sorted = list.slice().sort((a, b) => (b.serving ? 1 : 0) - (a.serving ? 1 : 0))
       this.setData({
-        list,
+        list: sorted,
         totalCalls: list.length,
         todayCalls: todayN,
         totalIncome: Math.round(totalIncome * 100) / 100
