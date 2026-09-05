@@ -34,6 +34,10 @@
           <view class="call-name">{{item.name}}<text class="tag">语音</text></view>
           <view class="muted call-sub">{{item.time}} · {{item.dur}}</view>
           <view class="call-rate" wx:if="{{item.rating}}">★ {{item.rating}}<text class="muted" wx:if="{{item.comment}}"> · {{item.comment}}</text></view>
+          <view class="serve-row" wx:if="{{item.serving}}">
+            <text class="serve-tag">服务中 · 约 {{item.liveMin}} 分钟</text>
+            <button class="serve-end" data-id="{{item.id}}" bindtap="endService" style="margin:0;">结束服务</button>
+          </view>
         </view>
         <view class="call-right">
           <view class="call-inc">+¥{{item.income}}</view>

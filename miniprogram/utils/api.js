@@ -50,6 +50,7 @@ function mapRecord(r) {
   const m = Math.floor(dur / 60), s = dur % 60
   const d = new Date((r.created_at || Date.now() / 1000) * 1000)
   const p2 = n => String(n).padStart(2, '0')
+  const refunded = r.status === 4
   return {
     id: r.id,
     roomId: r.room_id || r.id,
@@ -59,7 +60,9 @@ function mapRecord(r) {
     amount: r.amount || 0,
     time: `${p2(d.getMonth() + 1)}-${p2(d.getDate())} ${p2(d.getHours())}:${p2(d.getMinutes())}`,
     rating: r.user_rating || 0,
-    comment: r.user_comment || ''
+    comment: r.user_comment || '',
+    refunded,
+    statusText: refunded ? '已退款' : ''
   }
 }
 
@@ -153,6 +156,17 @@ const api = {
     return r
   },
   // —— 电话拨号方案：前端上报通话时长并结算 ——
+  // 拨号开始服务（拨号成功时上报，后端记录开始时间；幂等）
+  async startCall(roomId, callId) {
+    if (useMock()) return { code: 0, data: { start_at: Math.floor(Date.now() / 1000), room_id: roomId } }
+    return request('POST', '/api/v1/call/start', { room_id: roomId, call_id: callId || 0 })
+  },
+  // 未拨号退款（全额退回余额并关单）
+  async refundCall(roomId, callId) {
+    if (useMock()) return { code: 0, data: { refunded: 0 } }
+    return request('POST', '/api/v1/call/refund', { room_id: roomId, call_id: callId || 0 })
+  },
+
   async reportCallResultWithMinutes(kind, roomId, callId, minutes) {
     if (useMock()) return { code: 0, data: { result: kind, minutes } }
     return request('POST', '/api/v1/call/' + kind + '/minutes', {

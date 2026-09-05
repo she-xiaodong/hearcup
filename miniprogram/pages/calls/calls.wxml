@@ -31,7 +31,8 @@
       <view class="call-right">
         <view class="call-amt">-{{item.coins}}</view>
         <view class="stars" wx:if="{{item.rating}}">★ {{item.rating}}</view>
-        <view class="rate-btn" wx:else data-id="{{item.id}}" catchtap="openRate">待评价</view>
+        <view class="rate-btn" wx:elif="{{!item.refunded}}" data-id="{{item.id}}" catchtap="openRate">待评价</view>
+        <view class="refund-tag" wx:else>已退款</view>
       </view>
     </view>
     <view wx:if="{{records.length===0}}" class="empty">还没有通话记录，去首页找个倾听者聊聊吧</view>

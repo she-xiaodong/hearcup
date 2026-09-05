@@ -154,3 +154,6 @@
   color: rgba(255, 255, 255, 0.85);
   padding: 6rpx 0;
 }
+
+/* 未拨号退款入口 */
+.refund-link { text-align: center; margin-top: 24rpx; color: rgba(255,255,255,0.85); text-decoration: underline; font-size: 24rpx; padding: 12rpx; }

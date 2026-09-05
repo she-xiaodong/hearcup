@@ -71,16 +71,37 @@ Page({
     })
   },
 
+  onReady() {
+    // 自动拨号：真机先上报开始再调起电话；演示模式直接模拟通话
+    this.autoDial()
+  },
+
+  async autoDial() {
+    if (getApp().globalData.config.useMock) {
+      this.setData({ status: 'connected', statusText: '正在通话', startTime: Date.now() })
+      this.startTimer()
+      return
+    }
+    await this.makeCall()
+  },
+
   onUnload() {
     if (this.data._timer) clearInterval(this.data._timer)
   },
 
-  // 调起系统电话
-  makeCall() {
+  // 调起系统电话：先上报“拨号开始”（后端记时），再拨号（幂等可重拨）
+  async makeCall() {
     const phone = String(this.data.callee_phone || '')
     if (!/^1\d{10}$/.test(phone)) {
       wx.showToast({ title: '号码无效，请联系客服', icon: 'none' })
       return
+    }
+    if (!getApp().globalData.config.useMock) {
+      const st = await api.startCall(this.data.room_id, this.data.call_id)
+      if (st && st.code !== 0) {
+        wx.showToast({ title: (st && st.msg) || '开始服务失败', icon: 'none' })
+        return
+      }
     }
     wx.makePhoneCall({
       phoneNumber: phone,
@@ -90,6 +111,26 @@ Page({
       },
       fail: () => {
         wx.showToast({ title: '已取消拨号', icon: 'none' })
+      }
+    })
+  },
+
+  // 未拨号退款：全额退回余额
+  doRefund() {
+    wx.showModal({
+      title: '申请退款',
+      content: `未使用本次服务，将全额退回 ${this.data.amountCoins} ${this.data.coinName}，确定吗？`,
+      confirmText: '退款',
+      success: async (r) => {
+        if (!r.confirm) return
+        wx.showLoading({ title: '处理中', mask: true })
+        const res = await api.refundCall(this.data.room_id, this.data.call_id)
+        wx.hideLoading()
+        if (res && res.code === 0) {
+          wx.showModal({ title: '退款成功', content: `已退回 ${this.data.amountCoins} ${this.data.coinName} 到余额`, showCancel: false, success: () => wx.navigateBack() })
+        } else {
+          wx.showToast({ title: (res && res.msg) || '退款失败', icon: 'none' })
+        }
       }
     })
   },
@@ -122,26 +163,38 @@ Page({
   // 结束通话：上报实际时长，后端结算
   async endCall() {
     this.stopTimer()
-    const minutes = this.data.duration
+    let minutes = this.data.duration
     // 费用展示：套餐预付价 + 超出部分 × 单价
     const pack = Number(this.data.minutes) || 0
     const unit = Number(this.data.unit_price) || 0
     const extra = minutes > pack ? (minutes - pack) * unit : 0
-    const cost = (Number(this.data.amount || 0) + extra).toFixed(2)
+    let cost = (Number(this.data.amount || 0) + extra).toFixed(2)
 
     const coinName = this.data.coinName || 'H币'
-    const costCoins = this.toCoins(cost)
+    let costCoins = this.toCoins(cost)
 
     const ok = await new Promise((resolve) => {
       wx.showModal({
         title: '结束通话',
-        content: `本次通话 ${minutes} 分钟，费用 ${costCoins} ${coinName}，确认结束？`,
-        confirmText: '结束',
-        cancelText: '继续',
-        success: (r) => resolve(!!r.confirm)
+        content: `已通话约 ${minutes} 分钟，将按实际时长结算，多退少补。
+（如需微调可直接改为实际分钟数，留空则按 ${minutes} 分钟）`,
+        confirmText: '结束结算',
+        cancelText: '继续聊',
+        editable: true,
+        placeholderText: String(minutes),
+        success: (r) => resolve(r)
       })
     })
-    if (!ok) { this.startTimer(); return }
+    if (!ok.confirm) { this.startTimer(); return }
+    const typed = parseInt(ok.content, 10)
+    const finalMinutes = (typed && typed > 0) ? typed : minutes
+    if (finalMinutes !== minutes) {
+      // 用户微调过，重算展示费用
+      const adjExtra = finalMinutes > pack ? (finalMinutes - pack) * unit : 0
+      cost = (Number(this.data.amount || 0) + adjExtra).toFixed(2)
+      costCoins = this.toCoins(cost)
+      minutes = finalMinutes
+    }
 
     wx.showLoading({ title: '结算中', mask: true })
     try {
@@ -155,6 +208,16 @@ Page({
           cost: finalYuan,
           costCoins: this.toCoins(finalYuan)
         })
+        // 多退少补提示
+        const rr = Number(r.data.refund) || 0
+        const ex = Number(r.data.extra) || 0
+        if (rr > 0 || ex > 0) {
+          const lines = []
+          lines.push(`本次实际 ${r.data.minutes} 分钟，应付 ${this.toCoins(finalYuan)} ${coinName}`)
+          if (rr > 0) lines.push(`未用完退回 ${this.toCoins(rr)} ${coinName}（已入余额）`)
+          if (ex > 0) lines.push(`超出补扣 ${this.toCoins(ex)} ${coinName}（余额已扣）`)
+          wx.showModal({ title: '结算完成', content: lines.join('\n'), showCancel: false })
+        }
         // 演示数据模式：本地模拟记账（扣余额 + 生成通话记录），与真实后端行为对齐
         if (getApp().globalData.config.useMock) this.mockSettle(minutes, Number(finalYuan))
       } else {

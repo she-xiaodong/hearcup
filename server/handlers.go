@@ -657,10 +657,7 @@ func hCallConfirmPay(w http.ResponseWriter, r *http.Request) {
 		fail(w, "订单已结束")
 		return
 	}
-	if rec.StartTime == 0 {
-		rec.StartTime = now()
-		rec.UpdatedAt = now()
-	}
+	// 注：确认仅返回号码，不开启计时；真正的“服务开始”由 /call/start（用户拨号成功）标记
 	p := store.db.Providers[rec.ProviderID]
 	u := store.db.Users[uid]
 
@@ -689,6 +686,158 @@ func hCallConfirmPay(w http.ResponseWriter, r *http.Request) {
 		"coin_name":        coinName(),
 		"unit_price":       rec.UnitPrice,
 	})
+}
+
+// POST /api/v1/call/start —— 拨号开始服务（用户在拨号成功/拨号时上报，开始记时）
+// 幂等：重复上报不重置开始时间
+func hCallStart(w http.ResponseWriter, r *http.Request) {
+	uid, ok := requireUser(r)
+	if !ok {
+		fail(w, "未登录")
+		return
+	}
+	var b struct {
+		RoomID string `json:"room_id"`
+		CallID int64  `json:"call_id"`
+	}
+	readJSON(r, &b)
+	store.mu.Lock()
+	defer store.mu.Unlock()
+	var rec *CallRecord
+	if b.CallID > 0 {
+		rec = store.db.Calls[b.CallID]
+	}
+	if rec == nil && b.RoomID != "" {
+		for _, c := range store.db.Calls {
+			if c.RoomID == b.RoomID {
+				rec = c
+				break
+			}
+		}
+	}
+	if rec == nil {
+		fail(w, "订单不存在")
+		return
+	}
+	if rec.UserID != uid {
+		fail(w, "无权操作")
+		return
+	}
+	if rec.Status == 1 {
+		fail(w, "订单已结束")
+		return
+	}
+	if rec.Status == 4 {
+		fail(w, "订单已退款")
+		return
+	}
+	if rec.PayStatus != 1 && !appCfg.FreeCall {
+		fail(w, "订单未支付，请先完成支付")
+		return
+	}
+	if rec.StartTime == 0 {
+		rec.StartTime = now()
+		rec.UpdatedAt = now()
+		store.save()
+	}
+	sendOK(w, map[string]interface{}{"start_at": rec.StartTime, "room_id": rec.RoomID})
+}
+
+// POST /api/v1/call/refund —— 未拨号退款（支付后未拨打即全额退回余额并关单）
+func hCallRefund(w http.ResponseWriter, r *http.Request) {
+	uid, ok := requireUser(r)
+	if !ok {
+		fail(w, "未登录")
+		return
+	}
+	var b struct {
+		RoomID string `json:"room_id"`
+		CallID int64  `json:"call_id"`
+	}
+	readJSON(r, &b)
+	store.mu.Lock()
+	defer store.mu.Unlock()
+	var rec *CallRecord
+	if b.CallID > 0 {
+		rec = store.db.Calls[b.CallID]
+	}
+	if rec == nil && b.RoomID != "" {
+		for _, c := range store.db.Calls {
+			if c.RoomID == b.RoomID {
+				rec = c
+				break
+			}
+		}
+	}
+	if rec == nil {
+		fail(w, "订单不存在")
+		return
+	}
+	if rec.UserID != uid {
+		fail(w, "无权操作")
+		return
+	}
+	if rec.Status == 1 {
+		fail(w, "服务已完成，无法自助退款，请联系客服")
+		return
+	}
+	if rec.Status == 4 {
+		fail(w, "该订单已退款")
+		return
+	}
+	if rec.StartTime != 0 {
+		fail(w, "已开始拨号服务，如需售后请联系客服")
+		return
+	}
+	if rec.PayStatus != 1 && !appCfg.FreeCall {
+		fail(w, "订单未支付，无需退款")
+		return
+	}
+	amount := rec.Amount
+	if !appCfg.FreeCall {
+		// 退回主叫余额（演示口径；真实微信直付场景原路退回可后续接平台退款）
+		if u := store.db.Users[rec.UserID]; u != nil {
+			u.Balance += amount
+		}
+	}
+	rec.Status = 4
+	rec.UpdatedAt = now()
+	store.save()
+	sendOK(w, map[string]interface{}{"refunded": amount, "msg": "未使用，已全额退回"})
+}
+
+// autoRefundLoop 兜底：支付后 10 分钟仍未拨号的订单自动全额退款（每 60s 扫一次）
+func autoRefundLoop() {
+	for {
+		time.Sleep(60 * time.Second)
+		st := store
+		if st == nil {
+			continue
+		}
+		st.mu.Lock()
+		nowT := now()
+		refunded := false
+		for _, rec := range st.db.Calls {
+			if rec.PayStatus == 1 && rec.Status == 0 && rec.StartTime == 0 && rec.UserID != 0 {
+				if nowT-rec.CreatedAt >= 10*60 {
+					amount := rec.Amount
+					if !appCfg.FreeCall {
+						if u := st.db.Users[rec.UserID]; u != nil {
+							u.Balance += amount
+						}
+					}
+					rec.Status = 4
+					rec.UpdatedAt = nowT
+					fmt.Printf("[call] 超时未拨号自动退款 order=%s user=%d amount=%.2f\n", rec.OrderNo, rec.UserID, amount)
+					refunded = true
+				}
+			}
+		}
+		if refunded {
+			st.save()
+		}
+		st.mu.Unlock()
+	}
 }
 
 // userOwnsProvider 判断该用户是否是此服务者账号的持有者
@@ -740,6 +889,15 @@ func hCallEndWithMinutes(w http.ResponseWriter, r *http.Request) {
 		sendOK(w, map[string]interface{}{"amount": rec.Amount})
 		return
 	}
+	if rec.Status == 4 {
+		fail(w, "该订单已退款")
+		return
+	}
+	// 必须先“拨号开始”（/call/start 记录了拨号时间）才能结算，防止未拨打乱报时长
+	if rec.StartTime == 0 && !appCfg.FreeCall {
+		fail(w, "尚未拨号开始服务，如未拨打可申请退款")
+		return
+	}
 
 	u := store.db.Users[rec.UserID]
 	p := store.db.Providers[rec.ProviderID]
@@ -749,33 +907,46 @@ func hCallEndWithMinutes(w http.ResponseWriter, r *http.Request) {
 	if minutes < 1 {
 		minutes = 1
 	}
-	duration := minutes * 60 // 转换为秒
-
-	// 套餐预付制：已付金额 = 套餐价；实际通话超出套餐时按单价补扣超出部分
+	// 防虚报上限：超套餐 3 倍或超 240 分钟，需人工处理
 	packMinutes := rec.PackageMinutes
 	if packMinutes <= 0 {
 		packMinutes = int(rec.Amount / rec.UnitPrice)
 	}
-	amount := rec.Amount
-	extra := 0.0
-	if minutes > packMinutes {
-		extra = round2(float64(minutes-packMinutes) * rec.UnitPrice)
-		amount = round2(amount + extra)
+	if minutes > 240 || minutes > packMinutes*3 {
+		fail(w, "上报时长异常（单次最多按套餐 3 倍/240 分钟计），请联系客服核实")
+		return
 	}
+	duration := minutes * 60 // 转换为秒
+
+	// 计费模型：按「实际分钟 × 单价」从已付套餐中多退少补
+	// 已付 = 套餐价 rec.Amount；应计 = minutes × 单价（线性）
+	paid := rec.Amount
+	due := round2(float64(minutes) * rec.UnitPrice) // 实际应付（元）
+	extra := 0.0
+	refund := 0.0
+	if due > paid {
+		extra = round2(due - paid) // 超出套餐：补扣
+	} else if due < paid {
+		refund = round2(paid - due) // 没讲满：退回差额
+	}
+	amount := due
 	platformFee := round2(amount * store.db.Config.PlatformRate)
 	providerIncome := round2(amount - platformFee)
 
 	if appCfg.FreeCall {
 		// 免费通话模式：不扣费、不动余额，金额记 0
 		amount = 0
+		extra = 0
+		refund = 0
 		platformFee = 0
 		providerIncome = 0
 	} else if extra > 0 {
-		// 超出套餐：从余额补扣（允许小额透支，按配置兜底）
 		u.Balance -= extra
 		if u.Balance < -store.db.Config.Overdraft {
 			u.Balance = -store.db.Config.Overdraft
 		}
+	} else if refund > 0 {
+		u.Balance += refund
 	}
 
 	// 服务者收益
@@ -796,7 +967,7 @@ func hCallEndWithMinutes(w http.ResponseWriter, r *http.Request) {
 
 	sendOK(w, map[string]interface{}{
 		"duration": duration, "minutes": minutes, "amount": amount,
-		"extra": extra, "package_minutes": packMinutes,
+		"extra": extra, "refund": refund, "package_minutes": packMinutes,
 		"provider_income": providerIncome, "platform_fee": platformFee, "balance": u.Balance,
 		// H币口径（内部按元结算，对外统一 H币）
 		"amount_coins":  round2(amount * coinRate()),
@@ -1363,6 +1534,7 @@ func hProviderCalls(w http.ResponseWriter, r *http.Request) {
 			"room_id":    c.RoomID,
 			"call_type":  c.CallType,
 			"user_name":  store.db.Users[c.UserID].Nickname,
+			"start_time": c.StartTime,
 			"duration":   c.Duration, // 秒
 			"minutes":    c.PackageMinutes,
 			"amount":     c.Amount,         // 用户实付（元）

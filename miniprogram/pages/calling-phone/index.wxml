@@ -37,6 +37,7 @@
         <view class="btn-ring btn-green" bindtap="makeCall"><text class="btn-icon">📞</text></view>
         <text class="btn-caption">呼叫</text>
       </view>
+      <view class="refund-link" bindtap="doRefund">没打通？申请全额退款</view>
     </block>
 
     <block wx:elif="{{status === 'connected'}}">

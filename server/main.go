@@ -45,6 +45,8 @@ var routes = []route{
 	{http.MethodPost, "/api/v1/call/invite", hCallInvite},
 	{http.MethodPost, "/api/v1/call/pay", hCallPay},
 	{http.MethodPost, "/api/v1/call/confirm", hCallConfirmPay},
+	{http.MethodPost, "/api/v1/call/start", hCallStart},
+	{http.MethodPost, "/api/v1/call/refund", hCallRefund},
 	// 电话拨号方案：上报通话时长并结算
 	{http.MethodPost, "/api/v1/call/end/minutes", hCallEndWithMinutes},
 	{http.MethodPost, "/api/v1/call/rating", hCallRating},
@@ -210,6 +212,7 @@ func main() {
 
 	loadConfig()
 	store = loadStore(dataDir())
+	go autoRefundLoop()
 	fmt.Printf("Hearcup server started. data=%s\n", store.path)
 
 	mux := http.NewServeMux()

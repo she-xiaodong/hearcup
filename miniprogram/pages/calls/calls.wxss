@@ -55,3 +55,5 @@
 .rate-actions { display: flex; gap: 20rpx; margin-top: 28rpx; }
 .rate-cancel { flex: 1; margin: 0; }
 .rate-confirm { flex: 1; margin: 0; }
+
+.refund-tag { font-size: 22rpx; color: #8A8FA3; }

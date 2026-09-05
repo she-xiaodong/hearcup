@@ -20,3 +20,8 @@
 .call-rate { font-size: 22rpx; color: var(--gold); margin-top: 4rpx; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .call-right { flex-shrink: 0; }
 .call-inc { font-size: 28rpx; font-weight: 800; color: var(--primary-deep); }
+
+/* 服务中（待结算）行 */
+.serve-row { display: flex; align-items: center; gap: 16rpx; margin-top: 10rpx; }
+.serve-tag { font-size: 22rpx; color: #B8860B; background: #FFF3D6; padding: 4rpx 14rpx; border-radius: 999rpx; }
+.serve-end { height: 56rpx; line-height: 56rpx; font-size: 24rpx; padding: 0 24rpx; background: var(--primary); color: #fff; border-radius: 999rpx; }
